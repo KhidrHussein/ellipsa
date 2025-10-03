@@ -1,0 +1,289 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' file: data:; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline';">
+  <title>ellipsa</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap');
+    
+    :root {
+      --bg-color: #2b2b2b;
+      --active-color: #c62828;
+      --text-color: #ffffff;
+      --border-color: rgba(255, 255, 255, 0.2);
+      --shadow: 0 6px 18px rgba(0, 0, 0, 0.25);
+    }
+    
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    
+    html, body { 
+      margin: 0; 
+      padding: 0; 
+      background: transparent; 
+      width: 64px; 
+      height: 64px; 
+      overflow: hidden;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    }
+    
+    #root {
+      position: relative; 
+      width: 64px; 
+      height: 64px; 
+      overflow: hidden;
+    }
+    
+    .btn {
+      position: absolute; 
+      inset: 0;
+      width: 64px; 
+      height: 64px; 
+      border-radius: 50%;
+      display: grid; 
+      place-items: center; 
+      cursor: pointer; 
+      user-select: none;
+      box-shadow: var(--shadow);
+      border: 1px solid var(--border-color);
+      background: var(--bg-color);
+      transition: all 0.2s ease;
+    }
+    
+    .btn:hover {
+      transform: scale(1.05);
+    }
+    
+    .btn:active {
+      transform: scale(0.95);
+    }
+    
+    .btn.observing { 
+      background: var(--active-color); 
+      animation: pulse 1.5s infinite;
+    }
+    
+    .icon { 
+      width: 36px; 
+      height: 36px; 
+      object-fit: contain; 
+      pointer-events: none; 
+      filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.2));
+      transition: transform 0.2s ease;
+    }
+    
+    .btn.observing .icon {
+      transform: scale(0.9);
+    }
+    
+    .audio-level {
+      position: absolute;
+      bottom: 2px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 16px;
+      height: 4px;
+      background: rgba(255, 255, 255, 0.2);
+      border-radius: 2px;
+      overflow: hidden;
+      opacity: 0;
+      transition: opacity 0.3s ease;
+    }
+    
+    .audio-level::after {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      height: 100%;
+      width: var(--level, 0%);
+      background: #ffffff;
+      transition: width 0.1s ease-out;
+    }
+    
+    .observing .audio-level {
+      opacity: 1;
+    }
+    
+    .status-tooltip {
+      position: absolute;
+      bottom: 100%;
+      left: 50%;
+      transform: translateX(-50%) translateY(-8px);
+      background: rgba(0, 0, 0, 0.8);
+      color: white;
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-size: 12px;
+      white-space: nowrap;
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 0.2s ease, transform 0.2s ease;
+    }
+    
+    .btn:hover .status-tooltip {
+      opacity: 1;
+      transform: translateX(-50%) translateY(-12px);
+    }
+    
+    @keyframes pulse { 
+      0% { box-shadow: 0 0 0 0 rgba(198, 40, 40, 0.6); } 
+      70% { box-shadow: 0 0 0 12px rgba(198, 40, 40, 0); } 
+      100% { box-shadow: 0 0 0 0 rgba(198, 40, 40, 0); } 
+    }
+  </style>
+</head>
+<body>
+  <div id="root">
+    <div id="btn" class="btn" title="ellipsa">
+      <img id="icon" class="icon" alt="ellipsa" />
+      <div id="audio-level" class="audio-level"></div>
+      <div class="status-tooltip" id="status-tooltip">Click to start observing</div>
+    </div>
+  </div>
+  <script>
+    console.log('Script started');
+    const btn = document.getElementById('btn');
+    const iconEl = document.getElementById('icon');
+    const audioLevelEl = document.getElementById('audio-level');
+    const statusTooltip = document.getElementById('status-tooltip');
+    let observing = false;
+    let audioLevel = 0;
+    let audioLevelInterval;
+    
+    // Simulate audio level for now - will be replaced with real audio data
+    function startAudioLevelSimulation() {
+      clearInterval(audioLevelInterval);
+      audioLevelInterval = setInterval(() => {
+        // Random level between 0 and 100%
+        audioLevel = Math.random() * 100;
+        updateAudioLevel(audioLevel);
+      }, 100);
+    }
+    
+    function stopAudioLevelSimulation() {
+      clearInterval(audioLevelInterval);
+      updateAudioLevel(0);
+    }
+    
+    function updateAudioLevel(level) {
+      if (audioLevelEl) {
+        audioLevelEl.style.setProperty('--level', `${level}%`);
+      }
+    }
+    
+    function updateStatus(message, isError = false) {
+      if (statusTooltip) {
+        statusTooltip.textContent = message;
+        statusTooltip.style.color = isError ? '#ff6b6b' : 'white';
+      }
+    }
+
+    const setState = (v) => {
+      observing = v;
+      btn.classList.toggle('observing', observing);
+      
+      if (observing) {
+        updateStatus('Observing... Click to stop');
+        startAudioLevelSimulation();
+      } else {
+        updateStatus('Idle. Click to start observing');
+        stopAudioLevelSimulation();
+      }
+    };
+
+    // Initialize
+    window.ellipsa.getObserveStatus().then(({ observing, error }) => {
+      if (error) {
+        updateStatus(`Error: ${error}`, true);
+      }
+      setState(observing);
+    });
+    
+    // Listen for status updates
+    window.ellipsa.onObserveStatus(({ observing, error }) => {
+      if (error) {
+        updateStatus(`Error: ${error}`, true);
+        setTimeout(() => updateStatus('Idle. Click to try again'), 3000);
+      }
+      setState(observing);
+    });
+    
+    // Listen for audio level updates (to be implemented)
+    window.ellipsa.onAudioLevel(({ level }) => {
+      updateAudioLevel(level * 100);
+    });
+
+    // Prefer base64 icon from main; fallback to path and then relative URL
+    (async () => {
+      try {
+        console.log('Attempting to load icon...');
+        const data = await window.ellipsa.getIconData();
+        console.log('Icon data received:', data);
+        if (data && data.base64) {
+          iconEl.src = `data:${data.mime};base64,${data.base64}`;
+          console.log('Icon set via base64');
+          return;
+        }
+      } catch (e) {
+        console.error('Error loading icon data:', e);
+      }
+      try {
+        const p = await window.ellipsa.getIconPath();
+        console.log('Icon path received:', p);
+        if (p && typeof p === 'string') {
+          const u = 'file:///' + p.replace(/\\/g, '/');
+          iconEl.src = encodeURI(u);
+          console.log('Icon set via path:', u);
+          return;
+        }
+      } catch (e) {
+        console.error('Error loading icon path:', e);
+      }
+      try {
+        const rel = new URL('../../assets/icon-white.png', window.location.href).href;
+        iconEl.src = encodeURI(rel);
+        console.log('Icon set via relative URL:', rel);
+      } catch (e) {
+        console.error('Error loading icon via relative URL:', e);
+      }
+    })();
+
+    // drag to move (Pointer Events with capture)
+    let dragging = false; let moved = false; let start = { x: 0, y: 0 }; let winStart = { x: 0, y: 0 };
+    const getCurrentWindowPos = async () => window.ellipsa.getWindowPos();
+    btn.addEventListener('pointerdown', async (e) => {
+      if (e.button !== 0) return;
+      dragging = true; moved = false;
+      start = { x: e.screenX, y: e.screenY };
+      winStart = await getCurrentWindowPos();
+      btn.setPointerCapture(e.pointerId);
+      e.preventDefault();
+      console.log('Drag started');
+    });
+    btn.addEventListener('pointermove', (e) => {
+      if (!dragging) return;
+      const dx = e.screenX - start.x; const dy = e.screenY - start.y;
+      if (Math.abs(dx) > 2 || Math.abs(dy) > 2) moved = true;
+      window.ellipsa.moveWindow(winStart.x + dx, winStart.y + dy);
+    });
+    btn.addEventListener('pointerup', (e) => {
+      if (!dragging) return;
+      dragging = false;
+      try { btn.releasePointerCapture(e.pointerId); } catch {}
+      if (!moved) {
+        console.log('Click detected, toggling observe');
+        window.ellipsa.toggleObserve();
+      } else {
+        console.log('Drag ended');
+      }
+    });
+    
+    console.log('Script loaded successfully');
+  </script>
+</body>
+</html>

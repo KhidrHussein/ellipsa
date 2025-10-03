@@ -1,0 +1,28 @@
+{
+  "name": "@ellipsa/edge-agent",
+  "version": "0.1.0",
+  "private": true,
+  "main": "main.js",
+  "scripts": {
+    "dev": "electron .",
+    "start": "electron ."
+  },
+  "dependencies": {
+    "electron": "^31.3.0"
+  },
+  "devDependencies": {
+    "@types/dom-mediacapture-record": "^1.0.22",
+    "@types/dom-webcodecs": "^0.1.16",
+    "@types/electron": "^1.6.12",
+    "@types/fs-extra": "^11.0.4",
+    "@types/node": "^24.6.2",
+    "@types/uuid": "^11.0.0",
+    "@types/w3c-web-usb": "^1.0.13",
+    "@types/webrtc": "^0.0.46",
+    "@types/wicg-mediasession": "^1.1.8",
+    "axios": "^1.12.2",
+    "fs-extra": "^11.3.2",
+    "uuid": "^13.0.0",
+    "zod": "^3.23.8"
+  }
+}

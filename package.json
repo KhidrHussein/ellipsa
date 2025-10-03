@@ -1,0 +1,20 @@
+{
+  "name": "ellipsa",
+  "private": true,
+  "version": "0.1.0",
+  "description": "ellipsa v1 monorepo",
+  "packageManager": "pnpm@9",
+  "scripts": {
+    "build": "pnpm -r build",
+    "dev:memory": "pnpm --filter @ellipsa/memory dev",
+    "dev:processor": "pnpm --filter @ellipsa/processor dev",
+    "dev:prompt": "pnpm --filter @ellipsa/prompt dev",
+    "dev:action": "pnpm --filter @ellipsa/action dev",
+    "dev": "concurrently -n mem,proc,prompt,act -c blue,magenta,green,yellow \"pnpm dev:memory\" \"pnpm dev:processor\" \"pnpm dev:prompt\" \"pnpm dev:action\""
+  },
+  "devDependencies": {
+    "concurrently": "^9.0.0",
+    "typescript": "^5.5.4",
+    "zod": "^3.23.8"
+  }
+}
