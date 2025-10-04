@@ -1,8 +1,9 @@
 import { Knex } from 'knex';
 import { z, type ZodType } from 'zod';
-import { BaseModel } from './BaseModel';
+import { BaseModel, type PaginationOptions, type PaginatedResult } from './BaseModel';
 import { Session } from 'neo4j-driver';
 import { getEmbeddingFunction } from '../db/vector/chroma';
+import type { BaseModel as BaseModelType } from './BaseModel';
 
 // Event types based on the design document
 export const EventType = z.enum([
@@ -73,23 +74,26 @@ export const EventSchema = BaseEventSchema.transform(data => ({
 type BaseEvent = z.infer<typeof BaseEventSchema>;
 
 // Event types
-export type EventInput = z.infer<typeof EventInputSchema>;
-export type Event = z.infer<typeof EventSchema>;
+type EventBaseInput = z.infer<typeof EventInputSchema>;
+type EventBase = z.infer<typeof EventSchema>;
 
-// Type guard for Event
+export type Event = EventBase;
+export type EventInput = Omit<EventBaseInput, 'id' | 'created_at' | 'updated_at' | 'deleted_at'>;
+export type EventUpdate = Partial<Omit<EventBaseInput, 'id' | 'created_at' | 'updated_at' | 'deleted_at'>>;
+
 export function isEvent(data: unknown): data is Event {
   return EventSchema.safeParse(data).success;
 }
+
 export type Participant = z.infer<typeof ParticipantSchema>;
 
-export class EventModel extends BaseModel<Event, EventInput> {
+export class EventModel extends BaseModel<BaseEvent, EventInput, EventUpdate> {
   constructor(
     protected db: Knex,
     private neo4jSession: Session,
     private collection: any // ChromaDB collection
   ) {
-    // Use BaseEventSchema for the base model to avoid transformation issues
-    super('events', BaseEventSchema as unknown as ZodType<Event, any, any>, db);
+    super('events', BaseEventSchema as unknown as ZodType<BaseEvent, any, any>, db);
   }
 
   /**
@@ -117,32 +121,62 @@ export class EventModel extends BaseModel<Event, EventInput> {
   /**
    * Find all events with optional filtering
    */
-  async findAll(options: {
-    limit?: number;
-    offset?: number;
-    startTime?: Date | string;
-    endTime?: Date | string;
-  } = {}): Promise<Event[]> {
-    let query = this.db(this.tableName);
+  override async findAll(
+    filters: Record<string, unknown> = {},
+    options: PaginationOptions = {},
+    trx?: Knex.Transaction
+  ): Promise<PaginatedResult<Event>> {
+    let query = trx ? trx(this.tableName) : this.db(this.tableName);
     
-    if (options.startTime) {
-      query = query.where('start_time', '>=', options.startTime);
+    // Apply time filters
+    if (filters.startTime) {
+      query = query.where('start_time', '>=', filters.startTime);
     }
     
-    if (options.endTime) {
-      query = query.where('start_time', '<=', options.endTime);
+    if (filters.endTime) {
+      query = query.where('start_time', '<=', filters.endTime);
     }
     
-    if (options.limit) {
-      query = query.limit(options.limit);
+    // Apply other filters
+    Object.entries(filters).forEach(([key, value]) => {
+      if (key !== 'startTime' && key !== 'endTime' && value !== undefined) {
+        query = query.where(key, value);
+      }
+    });
+
+    // Get total count for pagination
+    const countResult = await query.clone().count('* as count').first();
+    const totalCount = countResult ? parseInt(countResult.count as string, 10) : 0;
+
+    // Apply pagination
+    const page = options.page || 1;
+    const pageSize = options.pageSize || 10;
+    const totalPages = Math.ceil(totalCount / pageSize);
+
+    query = query.offset((page - 1) * pageSize).limit(pageSize);
+
+    // Apply sorting
+    if (options.sortBy) {
+      const sortOrder = options.sortOrder === 'desc' ? 'desc' : 'asc';
+      query = query.orderBy(options.sortBy, sortOrder);
+    } else {
+      // Default sorting by start_time descending
+      query = query.orderBy('start_time', 'desc');
     }
-    
-    if (options.offset) {
-      query = query.offset(options.offset);
-    }
-    
+
     const results = await query;
-    return results.map(result => this.toEvent(result));
+    
+    return {
+      data: results.map(result => this.toEvent(result)),
+      pagination: {
+        page,
+        pageSize,
+        totalItems: totalCount,
+        totalPages,
+        hasNextPage: page < totalPages,
+        hasPreviousPage: page > 1,
+      },
+    };
   }
   
   /**

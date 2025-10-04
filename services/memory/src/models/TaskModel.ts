@@ -1,7 +1,13 @@
 import { Knex } from 'knex';
-import { z } from 'zod';
+import { z, type ZodType } from 'zod';
 import { BaseModel } from './BaseModel';
-import { Session } from 'neo4j-driver';
+import type { PaginationOptions, PaginatedResult } from './BaseModel';
+import type { Session, Transaction } from 'neo4j-driver';
+
+// Extend PaginationOptions to include status filter
+type TaskPaginationOptions = PaginationOptions & {
+  status?: string[];
+};
 
 export const TaskStatus = z.enum([
   'pending',
@@ -21,8 +27,9 @@ export const TaskPriority = z.enum([
 export type TaskStatus = z.infer<typeof TaskStatus>;
 export type TaskPriority = z.infer<typeof TaskPriority>;
 
+// Schema with defaults for runtime validation
 export const TaskSchema = z.object({
-  id: z.string().uuid(),
+  id: z.string().uuid().optional(),
   title: z.string(),
   description: z.string().optional(),
   status: TaskStatus.default('pending'),
@@ -33,31 +40,46 @@ export const TaskSchema = z.object({
   created_by: z.string().uuid().optional(),
   related_entity_id: z.string().uuid().optional(),
   related_event_id: z.string().uuid().optional(),
-  metadata: z.record(z.any()).default({}),
+  metadata: z.record(z.unknown()).default({}),
   created_at: z.date().or(z.string()).optional(),
   updated_at: z.date().or(z.string()).optional(),
+  deleted_at: z.date().or(z.string()).nullable().optional(),
 });
 
 export type Task = z.infer<typeof TaskSchema>;
+type TaskInput = Omit<Task, 'id' | 'created_at' | 'updated_at' | 'deleted_at'>;
+type TaskUpdate = Partial<Omit<Task, 'id' | 'created_at' | 'updated_at' | 'deleted_at'>>;
 
-export class TaskModel extends BaseModel<Task> {
+export class TaskModel extends BaseModel<Task, TaskInput, TaskUpdate> {
   private neo4jSession: Session;
 
   constructor(db: Knex, neo4jSession: Session) {
-    super('tasks', TaskSchema, db);
+    super('tasks', TaskSchema as unknown as ZodType<Task>, db, true);
     this.neo4jSession = neo4jSession;
   }
 
   /**
    * Create a new task with graph relationships
    */
-  override async create(data: Omit<Task, 'id' | 'created_at' | 'updated_at'>): Promise<Task> {
+  override async create(
+    data: TaskInput,
+    trx?: Knex.Transaction,
+    _options?: Record<string, unknown>
+  ): Promise<Task> {
+    // Ensure required fields have default values
+    const taskData: TaskInput = {
+      ...data,
+      status: data.status || 'pending',
+      priority: data.priority || 'medium',
+      metadata: data.metadata || {},
+    };
+    
     // Create in relational DB
-    const task = await super.create(data);
+    const task = await super.create(taskData, trx);
 
     try {
       // Create in graph DB
-      await this.neo4jSession.writeTransaction(tx =>
+      await this.neo4jSession.writeTransaction((tx: Transaction) =>
         tx.run(
           `CREATE (t:Task {
             id: $id,
@@ -77,209 +99,195 @@ export class TaskModel extends BaseModel<Task> {
         )
       );
 
-      // Create relationship with assignee if exists
+      // Create relationships if assignee or related entities exist
       if (task.assignee_id) {
-        await this.neo4jSession.writeTransaction(tx =>
+        await this.neo4jSession.writeTransaction((tx: Transaction) =>
           tx.run(
-            `MATCH (t:Task {id: $taskId}), (u:Entity {id: $userId})
-             MERGE (u)-[:ASSIGNED_TO {assignedAt: datetime()}]->(t)`,
+            `MATCH (e:Entity {id: $assigneeId}), (t:Task {id: $taskId})
+             MERGE (e)-[:ASSIGNED_TO]->(t)`,
             {
+              assigneeId: task.assignee_id,
               taskId: task.id,
-              userId: task.assignee_id,
             }
           )
         );
       }
 
-      // Create relationship with creator if exists
-      if (task.created_by) {
-        await this.neo4jSession.writeTransaction(tx =>
-          tx.run(
-            `MATCH (t:Task {id: $taskId}), (u:Entity {id: $userId})
-             MERGE (u)-[:CREATED {createdAt: datetime()}]->(t)`,
-            {
-              taskId: task.id,
-              userId: task.created_by,
-            }
-          )
-        );
-      }
-
-      // Create relationship with related entity if exists
       if (task.related_entity_id) {
-        await this.neo4jSession.writeTransaction(tx =>
+        await this.neo4jSession.writeTransaction((tx: Transaction) =>
           tx.run(
-            `MATCH (t:Task {id: $taskId}), (e:Entity {id: $entityId})
-             MERGE (t)-[:RELATED_TO {relationType: 'entity'}]->(e)`,
+            `MATCH (e:Entity {id: $entityId}), (t:Task {id: $taskId})
+             MERGE (t)-[:RELATED_TO]->(e)`,
             {
-              taskId: task.id,
               entityId: task.related_entity_id,
+              taskId: task.id,
             }
           )
         );
       }
 
-      // Create relationship with related event if exists
-      if (task.related_event_id) {
-        await this.neo4jSession.writeTransaction(tx =>
-          tx.run(
-            `MATCH (t:Task {id: $taskId}), (e:Event {id: $eventId})
-             MERGE (t)-[:RELATED_TO {relationType: 'event'}]->(e)`,
-            {
-              taskId: task.id,
-              eventId: task.related_event_id,
-            }
-          )
-        );
-      }
+      return task;
     } catch (error) {
-      // Clean up if anything fails
-      await super.delete(task.id);
+      console.error('Error creating task in graph DB:', error);
       throw error;
     }
-
-    return task;
-  }
-
-  /**
-   * Update a task and its graph relationships
-   */
-  override async update(
-    id: string,
-    data: Partial<Omit<Task, 'id' | 'created_at'>>
-  ): Promise<Task | null> {
-    const existing = await this.findById(id);
-    if (!existing) return null;
-
-    // Update in relational DB
-    const updated = await super.update(id, data);
-    if (!updated) return null;
-
-    try {
-      // Update in graph DB
-      await this.neo4jSession.writeTransaction(tx =>
-        tx.run(
-          `MATCH (t:Task {id: $id})
-           SET t.title = $title,
-               t.status = $status,
-               t.priority = $priority,
-               t.dueDate = $dueDate ? datetime($dueDate) : null,
-               t.updatedAt = datetime()`,
-          {
-            id,
-            title: updated.title,
-            status: updated.status,
-            priority: updated.priority,
-            dueDate: updated.due_date,
-          }
-        )
-      );
-
-      // Update assignee relationship if changed
-      if (data.assignee_id !== undefined && data.assignee_id !== existing.assignee_id) {
-        // Remove existing assignee relationship
-        await this.neo4jSession.writeTransaction(tx =>
-          tx.run(
-            'MATCH (u)-[r:ASSIGNED_TO]->(t:Task {id: $taskId}) DELETE r',
-            { taskId: id }
-          )
-        );
-
-        // Add new assignee relationship if assignee_id is not null
-        if (data.assignee_id) {
-          await this.neo4jSession.writeTransaction(tx =>
-            tx.run(
-              `MATCH (t:Task {id: $taskId}), (u:Entity {id: $userId})
-               MERGE (u)-[:ASSIGNED_TO {assignedAt: datetime()}]->(t)`,
-              {
-                taskId: id,
-                userId: data.assignee_id,
-              }
-            )
-          );
-        }
-      }
-    } catch (error) {
-      console.error('Error updating task in graph store:', error);
-      // We don't want to fail the entire operation if graph update fails
-    }
-
-    return updated;
-  }
-
-  /**
-   * Delete a task and its graph relationships
-   */
-  override async delete(id: string): Promise<boolean> {
-    const deleted = await super.delete(id);
-    if (!deleted) return false;
-
-    try {
-      // Delete from graph DB (all relationships will be automatically deleted due to DETACH DELETE)
-      await this.neo4jSession.writeTransaction(tx =>
-        tx.run('MATCH (t:Task {id: $id}) DETACH DELETE t', { id })
-      );
-    } catch (error) {
-      console.error('Error deleting task from graph store:', error);
-      // We don't want to fail the entire operation if graph delete fails
-    }
-
-    return true;
   }
 
   /**
    * Find tasks by assignee
    */
-  async findByAssignee(
-    userId: string,
-    options: { 
-      status?: TaskStatus[];
-      limit?: number; 
-      offset?: number;
-    } = {}
-  ): Promise<Task[]> {
-    const { status, limit = 10, offset = 0 } = options;
+  override async findAll(
+    filters: Record<string, unknown> = {},
+    options: TaskPaginationOptions = {},
+    trx?: Knex.Transaction
+  ): Promise<PaginatedResult<Task>> {
+    const { status } = options;
     
-    let cypher = `
-      MATCH (u:Entity {id: $userId})-[:ASSIGNED_TO]->(t:Task)
-      WHERE 1=1
-    `;
-    
-    const params: any = { userId };
-    
-    if (status && status.length > 0) {
-      cypher += ' AND t.status IN $status';
-      params.status = status;
+    // If we have an assignee_id filter, use the graph DB for the query
+    if (filters.assignee_id) {
+      return this.findByAssignee(filters.assignee_id as string, options, trx);
     }
     
-    cypher += `
-      RETURN t
-      ORDER BY t.dueDate ASC, t.priority DESC
-      SKIP $offset
-      LIMIT $limit
-    `;
+    // Otherwise, use the standard SQL-based query with proper pagination
+    const query = (trx || this.db)(this.tableName).where(filters);
     
-    params.offset = offset;
-    params.limit = limit;
-
+    // Apply pagination
+    const page = options.page || 1;
+    const pageSize = options.pageSize || 10;
+    const queryOffset = (page - 1) * pageSize;
+    
+    // Get total count for pagination
+    const countResult = await (trx || this.db)(this.tableName)
+      .where(filters)
+      .count('* as count')
+      .first();
+      
+    const totalCount = countResult ? parseInt(countResult.count as string, 10) : 0;
+    const totalPages = Math.ceil(totalCount / pageSize);
+    
+    // Get paginated results
+    const results = await query
+      .clone()
+      .orderBy('due_date', 'asc')
+      .orderBy('priority', 'desc')
+      .offset(queryOffset)
+      .limit(pageSize);
+    
+    return {
+      data: results.map(item => this.toEntity(item)),
+      pagination: {
+        page,
+        pageSize,
+        totalItems: totalCount,
+        totalPages,
+        hasNextPage: page < totalPages,
+        hasPreviousPage: page > 1,
+      },
+    };
+  }
+  
+  /**
+   * Find tasks by assignee using graph DB
+   */
+  private async findByAssignee(
+    userId: string,
+    options: TaskPaginationOptions = {},
+    trx?: Knex.Transaction
+  ): Promise<PaginatedResult<Task>> {
+    const { status } = options;
+    const page = options.page || 1;
+    const pageSize = options.pageSize || 10;
+    const queryOffset = (page - 1) * pageSize;
+    
     try {
-      const result = await this.neo4jSession.readTransaction(tx =>
+      // First, get the count of all tasks for this assignee
+      let countCypher = `
+        MATCH (u:Entity {id: $userId})-[:ASSIGNED_TO]->(t:Task)
+        RETURN count(t) as count
+      `;
+      
+      const countParams: Record<string, unknown> = { userId };
+      const countResult = await this.neo4jSession.readTransaction((tx: Transaction) =>
+        tx.run(countCypher, countParams)
+      );
+      
+      const totalCount = countResult.records[0]?.get('count').toNumber() || 0;
+      const totalPages = Math.ceil(totalCount / pageSize);
+      
+      // Then get the paginated results
+      let cypher = `
+        MATCH (u:Entity {id: $userId})-[:ASSIGNED_TO]->(t:Task)
+        WHERE 1=1
+      `;
+      
+      const params: Record<string, unknown> = { 
+        userId,
+        offset: queryOffset,
+        limit: pageSize 
+      };
+      
+      if (status && status.length > 0) {
+        cypher += ' AND t.status IN $status';
+        params.status = status;
+      }
+      
+      cypher += `
+        RETURN t
+        ORDER BY t.dueDate ASC, t.priority DESC
+        SKIP $offset
+        LIMIT $limit
+      `;
+
+      const result = await this.neo4jSession.readTransaction((tx: Transaction) =>
         tx.run(cypher, params)
       );
 
       // Get full task details from the database
       const taskIds = result.records.map(record => record.get('t').properties.id);
-      if (taskIds.length === 0) return [];
+      if (taskIds.length === 0) {
+        return {
+          data: [],
+          pagination: {
+            page,
+            pageSize,
+            totalItems: 0,
+            totalPages: 0,
+            hasNextPage: false,
+            hasPreviousPage: false,
+          },
+        };
+      }
       
-      const tasks = await this.db('tasks')
+      const tasks = await (trx || this.db)('tasks')
         .whereIn('id', taskIds)
         .orderBy('due_date', 'asc')
         .orderBy('priority', 'desc');
       
-      return tasks.map(task => this.validate(task));
+      return {
+        data: tasks.map(task => this.toEntity(task)),
+        pagination: {
+          page,
+          pageSize,
+          totalItems: totalCount,
+          totalPages,
+          hasNextPage: page < totalPages,
+          hasPreviousPage: page > 1,
+        },
+      };
     } catch (error) {
       console.error('Error finding tasks by assignee:', error);
-      return [];
+      // Return empty result on error
+      return {
+        data: [],
+        pagination: {
+          page: 1,
+          pageSize: 10,
+          totalItems: 0,
+          totalPages: 0,
+          hasNextPage: false,
+          hasPreviousPage: false,
+        },
+      };
     }
   }
 
@@ -301,7 +309,7 @@ export class TaskModel extends BaseModel<Task> {
       WHERE 1=1
     `;
     
-    const params: any = { entityId };
+    const params: Record<string, unknown> = { entityId };
     
     if (status && status.length > 0) {
       cypher += ' AND t.status IN $status';
@@ -319,7 +327,7 @@ export class TaskModel extends BaseModel<Task> {
     params.limit = limit;
 
     try {
-      const result = await this.neo4jSession.readTransaction(tx =>
+      const result = await this.neo4jSession.readTransaction((tx: Transaction) =>
         tx.run(cypher, params)
       );
 

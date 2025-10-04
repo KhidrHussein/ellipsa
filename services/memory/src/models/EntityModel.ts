@@ -1,8 +1,47 @@
 import { Knex } from 'knex';
 import { z } from 'zod';
-import { BaseModel } from './BaseModel';
-import { Session, auth as neo4jAuth } from 'neo4j-driver';
+import { Session, Transaction } from 'neo4j-driver';
+import { v4 as uuidv4 } from 'uuid';
+import { BaseModel, PaginationOptions, PaginatedResult, DatabaseError, ValidationError } from './BaseModel';
 import { getEmbeddingFunction } from '../db/vector/chroma';
+
+// Types for entity relationships
+export const RelationshipType = z.enum([
+  'part_of',
+  'related_to',
+  'works_at',
+  'knows',
+  'attended',
+  'authored',
+  'mentions',
+  'custom'
+]);
+
+export type RelationshipType = z.infer<typeof RelationshipType>;
+
+export interface EntityRelationship {
+  id: string;
+  sourceId: string;
+  targetId: string;
+  type: RelationshipType;
+  metadata?: Record<string, unknown>;
+  created_at?: Date | string;
+  updated_at?: Date | string;
+}
+
+export interface EntitySearchOptions extends PaginationOptions {
+  type?: EntityType;
+  minSimilarity?: number;
+  includeRelated?: boolean;
+  relationshipTypes?: RelationshipType[];
+  [key: string]: unknown;
+}
+
+export interface EntityDedupeOptions {
+  similarityThreshold?: number;
+  mergeStrategy?: 'keep_earliest' | 'keep_latest' | 'merge';
+  mergeMetadata?: boolean;
+}
 
 export const EntityType = z.enum([
   'person',
@@ -11,331 +50,712 @@ export const EntityType = z.enum([
   'event',
   'document',
   'concept',
+  'task',
+  'action_item',
   'other',
 ]);
 
 export type EntityType = z.infer<typeof EntityType>;
 
-// Define base schema without metadata default to avoid type issues
 const BaseEntitySchema = z.object({
-  id: z.string().uuid(),
+  id: z.string().uuid().optional(),
   name: z.string().min(1),
   type: EntityType,
   description: z.string().optional(),
-  metadata: z.record(z.any()),
+  metadata: z.record(z.unknown()).optional(),
   created_at: z.date().or(z.string()).optional(),
   updated_at: z.date().or(z.string()).optional(),
+  deleted_at: z.date().or(z.string()).nullable().optional(),
   last_seen_at: z.date().or(z.string()).optional(),
   embedding: z.array(z.number()).optional(),
 });
 
-// Create a type from the base schema
 type BaseEntity = z.infer<typeof BaseEntitySchema>;
 
-// Create the final schema with default values
 export const EntitySchema = BaseEntitySchema.extend({
-  metadata: z.record(z.any()).default({}),
+  metadata: z.record(z.unknown()).default({}),
 }).transform((data) => ({
   ...data,
-  // Ensure metadata is always an object
   metadata: data.metadata || {},
 }));
 
 export type Entity = z.infer<typeof EntitySchema>;
 
-// Use BaseEntity for the model to avoid type issues with the transformed schema
-export class EntityModel extends BaseModel<BaseEntity> {
+type EntityInput = Omit<BaseEntity, 'id' | 'created_at' | 'updated_at' | 'deleted_at'>;
+type EntityUpdate = Partial<Omit<BaseEntity, 'id' | 'created_at' | 'updated_at' | 'deleted_at'>>;
+
+export class EntityModel extends BaseModel<BaseEntity, EntityInput, EntityUpdate> {
   private neo4jSession: Session;
-  private collection: any; // ChromaDB collection
+  private collection: any;
+  private embeddingFunction: any;
+  private readonly SIMILARITY_THRESHOLD = 0.85;
+  private readonly DEDUPE_SIMILARITY_THRESHOLD = 0.9;
+  private readonly FUZZY_SEARCH_MIN_LENGTH = 3;
+  private readonly FUZZY_SEARCH_MAX_DISTANCE = 2;
 
   constructor(db: Knex, neo4jSession: Session, collection: any) {
-    // Use BaseEntitySchema for the base model to avoid type issues
-    super('entities', BaseEntitySchema, db);
+    super('entities', BaseEntitySchema, db, true);
     this.neo4jSession = neo4jSession;
     this.collection = collection;
+    this.embeddingFunction = getEmbeddingFunction();
   }
 
   /**
    * Create a new entity with vector and graph data
    */
-  override async create(data: Omit<BaseEntity, 'id' | 'created_at' | 'updated_at'>): Promise<BaseEntity> {
-    // Generate embedding for the entity name and description
+  override async create(
+    data: EntityInput,
+    trx?: Knex.Transaction,
+    _options?: Record<string, unknown>
+  ): Promise<BaseEntity> {
+    const duplicates = await this.findPotentialDuplicates(data.name, data.type);
+    if (duplicates.length > 0) {
+      console.warn('Potential duplicate entities found:', duplicates);
+    }
+    
     const textToEmbed = `${data.name} ${data.description || ''}`.trim();
     const embedding = await this.generateEmbedding(textToEmbed);
     
-    // Ensure metadata is an object
-    const entityData = {
+    const entityData: EntityInput = {
       ...data,
       metadata: data.metadata || {},
+      last_seen_at: new Date().toISOString(),
     };
     
-    // Create in relational DB
-    const entity = await super.create({
-      ...data,
-      embedding,
-    });
+    const createFn = async (tx: Knex.Transaction): Promise<BaseEntity> => {
+      const entity = await super.create({
+        ...entityData,
+        embedding,
+      }, tx);
 
-    try {
-      // Add to vector store
-      await this.collection.add(
-        [entity.id],
-        [embedding],
-        [{
-          name: entity.name,
-          type: entity.type,
-          ...entity.metadata,
-        }],
-        [textToEmbed]
-      );
+      if (!entity?.id) {
+        throw new Error('Failed to create entity: missing ID');
+      }
 
-          // Create in graph DB
-      await this.neo4jSession.writeTransaction(tx =>
-        tx.run(
-          `CREATE (e:Entity {
-            id: $id,
-            name: $name,
-            type: $type,
-            createdAt: datetime()
-          })`,
-          {
-            id: entity.id,
+      try {
+        await this.collection.add(
+          [entity.id],
+          [embedding],
+          [{
             name: entity.name,
             type: entity.type,
-          }
-        )
-      );
-    } catch (error) {
-      // Clean up if anything fails
-      await super.delete(entity.id);
-      throw error;
-    }
+            ...(entity.metadata || {}),
+          }],
+          [textToEmbed]
+        );
 
-    return entity;
-  }
+        await this.neo4jSession.writeTransaction((neo4jTx: Transaction) =>
+          neo4jTx.run(
+            `CREATE (e:Entity {
+              id: $id,
+              name: $name,
+              type: $type,
+              createdAt: datetime()
+            })`,
+            {
+              id: entity.id,
+              name: entity.name,
+              type: entity.type,
+            }
+          )
+        );
 
-  /**
-   * Find similar entities using vector search
-   */
-  async findSimilar(
-    text: string,
-    options: { limit?: number; threshold?: number } = {}
-  ): Promise<{ entity: Entity; score: number }[]> {
-    const { limit = 5, threshold = 0.7 } = options;
-    
-    // Generate embedding for the query
-    const queryEmbedding = await this.generateEmbedding(text);
-    
-    // Query the vector store
-    const results = await this.collection.query(
-      queryEmbedding,
-      limit,
-      undefined,
-      undefined,
-      ['documents', 'metadatas', 'distances']
-    );
-
-    // Get full entity details from the database
-    const entities = await Promise.all(
-      results.ids[0].map(async (id: string, index: number) => {
-        const entity = await this.findById(id);
-        const score = 1 - (results.distances?.[0]?.[index] || 0); // Convert distance to similarity score
-        return entity ? { entity, score } : null;
-      })
-    );
-
-    // Filter out nulls and apply threshold, then sort by score
-    return entities
-      .filter((item): item is { entity: Entity; score: number } => 
-        item !== null && item.score >= threshold
-      )
-      .sort((a, b) => b.score - a.score);
-  }
-
-  /**
-   * Update an entity and its vector/graph data
-   */
-  override async update(
-    id: string, 
-    data: Partial<Omit<BaseEntity, 'id' | 'created_at'>>
-  ): Promise<BaseEntity | null> {
-    const existing = await this.findById(id);
-    if (!existing) return null;
-
-    // If name or description changed, update the embedding
-    let embedding = existing.embedding;
-    if (data.name || data.description) {
-      const textToEmbed = `${data.name || existing.name} ${data.description || existing.description || ''}`.trim();
-      if (existing.type === 'person') {
-        embedding = await this.generateEmbedding(textToEmbed, 'person');
-      } else if (existing.type === 'organization') {
-        embedding = await this.generateEmbedding(textToEmbed, 'organization');
-      } else if (existing.type === 'location') {
-        embedding = await this.generateEmbedding(textToEmbed, 'location');
-      } else if (existing.type === 'event') {
-        embedding = await this.generateEmbedding(textToEmbed, 'event');
-      } else if (existing.type === 'document') {
-        embedding = await this.generateEmbedding(textToEmbed, 'document');
-      } else if (existing.type === 'concept') {
-        embedding = await this.generateEmbedding(textToEmbed, 'concept');
-      } else {
-        embedding = await this.generateEmbedding(textToEmbed, 'other');
+        return entity;
+      } catch (error) {
+        if (entity?.id) {
+          await this.hardDeleteById(entity.id, tx);
+        }
+        throw error;
       }
-    }
+    };
 
-    // Update in relational DB
-    const updated = await super.update(id, { ...data, embedding });
-    if (!updated) return null;
-
-    try {
-      // Update in vector store
-      await this.collection.update(
-        [id],
-        [embedding],
-        [{
-          name: updated.name,
-          type: updated.type,
-          ...updated.metadata,
-        }],
-        [`${updated.name} ${updated.description || ''}`.trim()]
-      );
-
-      // Update in graph DB
-      await this.neo4jSession.writeTransaction(tx =>
-        tx.run(
-          `MATCH (e:Entity {id: $id})
-           SET e.name = $name,
-               e.type = $type,
-               e.updatedAt = datetime()`,
-          {
-            id,
-            name: updated.name,
-            type: updated.type,
-          }
-        )
-      );
-    } catch (error) {
-      console.error('Error updating entity in vector/graph store:', error);
-      // We don't want to fail the entire operation if vector/graph update fails
-    }
-
-    return updated;
+    return trx ? await createFn(trx) : await this.withTransaction(createFn);
   }
 
   /**
-   * Delete an entity and its vector/graph representations
+   * Generate embedding for the given text
    */
-  override async delete(id: string): Promise<boolean> {
-    const deleted = await super.delete(id);
-    if (!deleted) return false;
-
+  private async generateEmbedding(text: string): Promise<number[]> {
+    if (!text) return [];
+    
     try {
-      // Delete from vector store
-      await this.collection.delete([id]);
-
-      // Delete from graph DB
-      await this.neo4jSession.writeTransaction(tx =>
-        tx.run(
-          'MATCH (e:Entity {id: $id}) DETACH DELETE e',
-          { id }
-        )
-      );
+      const result = await this.embeddingFunction.generate([text]);
+      return result.embeddings[0] as number[];
     } catch (error) {
-      console.error('Error deleting entity from vector/graph store:', error);
-      // We don't want to fail the entire operation if vector/graph delete fails
+      throw new DatabaseError('Failed to generate embedding', error as Error);
     }
+  }
 
-    return true;
+  /**
+   * Find potential duplicate entities
+   */
+  private async findPotentialDuplicates(
+    name: string,
+    type?: EntityType,
+    threshold: number = this.SIMILARITY_THRESHOLD
+  ): Promise<BaseEntity[]> {
+    if (!name) return [];
+    
+    try {
+      const embedding = await this.generateEmbedding(name);
+      
+      const queryOptions: any = {
+        queryEmbeddings: [embedding],
+        nResults: 5,
+        include: ['metadatas', 'documents', 'distances'],
+      };
+
+      if (type) {
+        queryOptions.where = { type };
+      }
+
+      const results = await this.collection.query(queryOptions);
+      
+      if (!results.matches || !results.matches[0]) return [];
+
+      return results.matches[0]
+        .filter((match: any) => match?.score >= threshold)
+        .map((match: any) => ({
+          id: String(match?.id || ''),
+          name: String(match?.metadata?.name || ''),
+          type: match?.metadata?.type as EntityType,
+          description: match?.metadata?.description as string | undefined,
+          metadata: match?.metadata?.metadata || {},
+          created_at: match?.metadata?.created_at,
+          updated_at: match?.metadata?.updated_at,
+          last_seen_at: match?.metadata?.last_seen_at,
+        }));
+    } catch (error) {
+      console.error('Error finding potential duplicates:', error);
+      return [];
+    }
   }
 
   /**
    * Create a relationship between two entities
    */
   async createRelationship(
-    fromId: string,
-    toId: string,
-    type: string,
-    properties: Record<string, any> = {}
-  ): Promise<boolean> {
-    try {
-      await this.neo4jSession.writeTransaction(tx =>
-        tx.run(
-          `MATCH (a:Entity {id: $fromId}), (b:Entity {id: $toId})
-           MERGE (a)-[r:${type} $props]->(b)`,
+    sourceId: string,
+    targetId: string,
+    type: RelationshipType,
+    metadata: Record<string, unknown> = {},
+    trx?: Knex.Transaction
+  ): Promise<EntityRelationship> {
+    if (!sourceId || !targetId) {
+      throw new ValidationError('Source and target IDs are required');
+    }
+
+    const relationshipId = uuidv4();
+    const now = new Date().toISOString();
+    
+    const createFn = async (tx: Knex.Transaction): Promise<EntityRelationship> => {
+      const [relationship] = await tx('entity_relationships')
+        .insert({
+          id: relationshipId,
+          source_id: sourceId,
+          target_id: targetId,
+          type,
+          metadata: JSON.stringify(metadata),
+          created_at: now,
+          updated_at: now,
+        })
+        .returning('*');
+
+      await this.neo4jSession.writeTransaction((neo4jTx: Transaction) =>
+        neo4jTx.run(
+          `MATCH (a:Entity {id: $sourceId}), (b:Entity {id: $targetId})
+           MERGE (a)-[r:${type} {id: $id}]->(b)
+           SET r.metadata = $metadata,
+               r.created_at = $createdAt,
+               r.updated_at = $updatedAt
+           RETURN r`,
           {
-            fromId,
-            toId,
-            props: {
-              ...properties,
-              createdAt: new Date().toISOString(),
-            },
+            sourceId,
+            targetId,
+            id: relationshipId,
+            metadata: JSON.stringify(metadata),
+            createdAt: now,
+            updatedAt: now,
           }
         )
       );
-      return true;
+
+      return {
+        id: relationshipId,
+        sourceId,
+        targetId,
+        type,
+        metadata,
+        created_at: now,
+        updated_at: now,
+      };
+    };
+
+    return trx ? createFn(trx) : this.withTransaction(createFn);
+  }
+
+  /**
+   * Get all relationships for an entity
+   */
+  async getRelationships(
+    entityId: string,
+    options: { type?: RelationshipType; direction?: 'incoming' | 'outgoing' | 'both' } = {}
+  ): Promise<EntityRelationship[]> {
+    if (!entityId) return [];
+    
+    const { type, direction = 'both' } = options;
+    
+    let directionClause = '';
+    if (direction === 'incoming') directionClause = '<-';
+    else if (direction === 'outgoing') directionClause = '->';
+    else directionClause = '-';
+    
+    const typeFilter = type ? `:${type}` : '';
+    
+    try {
+      const result = await this.neo4jSession.readTransaction((tx: Transaction) =>
+        tx.run(
+          `MATCH (a:Entity {id: $entityId})${directionClause}[r${typeFilter}]-${directionClause}(b:Entity)
+           RETURN r, startNode(r).id as sourceId, endNode(r).id as targetId`,
+          { entityId }
+        )
+      );
+
+      if (!result.records || !Array.isArray(result.records)) return [];
+
+      return result.records.map((record: any) => {
+        const rel = record.get('r');
+        const props = rel?.properties || {};
+        
+        let parsedMetadata = {};
+        if (props.metadata) {
+          try {
+            parsedMetadata = typeof props.metadata === 'string' 
+              ? JSON.parse(props.metadata)
+              : props.metadata;
+          } catch (e) {
+            console.warn('Failed to parse relationship metadata:', e);
+          }
+        }
+        
+        return {
+          id: String(props.id || ''),
+          sourceId: String(record.get('sourceId') || ''),
+          targetId: String(record.get('targetId') || ''),
+          type: rel.type as RelationshipType,
+          metadata: parsedMetadata,
+          created_at: props.created_at,
+          updated_at: props.updated_at,
+        };
+      });
     } catch (error) {
-      console.error('Error creating relationship:', error);
-      return false;
+      console.error('Error getting relationships:', error);
+      return [];
     }
   }
 
   /**
-   * Find related entities
+   * Remove a relationship between entities
    */
-  async findRelated(
-    id: string,
-    options: { type?: string; direction?: 'incoming' | 'outgoing' | 'both' } = {}
-  ): Promise<{ entity: Entity; relationship: string; properties: Record<string, any> }[]> {
-    const { type = '*', direction = 'outgoing' } = options;
+  async removeRelationship(relationshipId: string, trx?: Knex.Transaction): Promise<void> {
+    await this.neo4jSession.writeTransaction((tx: Transaction) =>
+      tx.run(
+        `MATCH ()-[r {id: $id}]->()
+         DELETE r`,
+        { id: relationshipId }
+      )
+    );
+
+    await (trx || this.db)('entity_relationships')
+      .where('id', relationshipId)
+      .delete();
+  }
+
+  /**
+   * Merge duplicate entities
+   */
+  async mergeEntities(
+    primaryId: string,
+    duplicateIds: string[],
+    options: EntityDedupeOptions = {}
+  ): Promise<BaseEntity> {
+    const trx = await this.db.transaction();
     
-    let cypher = '';
-    const params: any = { id };
-
-    if (direction === 'outgoing') {
-      cypher = `MATCH (a:Entity {id: $id})-[r${type ? ':' + type : ''}]->(b:Entity) RETURN b, type(r) as relType, properties(r) as relProps`;
-    } else if (direction === 'incoming') {
-      cypher = `MATCH (a:Entity {id: $id})<-[r${type ? ':' + type : ''}]-(b:Entity) RETURN b, type(r) as relType, properties(r) as relProps`;
-    } else {
-      cypher = `MATCH (a:Entity {id: $id})-[r${type ? ':' + type : ''}]-(b:Entity) RETURN b, type(r) as relType, properties(r) as relProps`;
-    }
-
     try {
-      const result = await this.neo4jSession.readTransaction(tx =>
-        tx.run(cypher, params)
+      const primary = await this.findById(primaryId, trx);
+      if (!primary) {
+        throw new Error(`Primary entity ${primaryId} not found`);
+      }
+
+      const duplicates = await Promise.all(
+        duplicateIds
+          .filter(id => id !== primaryId)
+          .map(id => this.findById(id, trx))
       );
 
-      return await Promise.all(
-        result.records.map(async record => {
-          const entityData = record.get('b').properties;
-          const entity = await this.findById(entityData.id);
+      if (options.mergeMetadata) {
+        const mergedMetadata: Record<string, any> = { ...primary.metadata };
+        duplicates.forEach(dup => {
+          if (dup && dup.id) {
+            mergedMetadata.mergedFrom = [
+              ...(Array.isArray(mergedMetadata.mergedFrom) ? mergedMetadata.mergedFrom : []),
+              { id: dup.id, name: dup.name, mergedAt: new Date().toISOString() }
+            ];
+            Object.entries(dup.metadata || {}).forEach(([key, value]) => {
+              if (!(key in mergedMetadata)) {
+                mergedMetadata[key] = value;
+              }
+            });
+          }
+        });
+
+        await this.update(primaryId, { metadata: mergedMetadata }, trx);
+      }
+
+      for (const dup of duplicates) {
+        if (!dup || !dup.id) continue;
+
+        const relationships = await this.getRelationships(dup.id);
+        
+        for (const rel of relationships) {
+          try {
+            const isSource = rel.sourceId === dup.id;
+            const otherId = isSource ? rel.targetId : rel.sourceId;
+            const newSourceId = isSource ? primaryId : otherId;
+            const newTargetId = isSource ? otherId : primaryId;
+
+            const exists = await this.getRelationships(primaryId, {
+              type: rel.type,
+              direction: isSource ? 'outgoing' : 'incoming'
+            }).then(rels => rels.some(r => 
+              (isSource ? r.targetId : r.sourceId) === otherId
+            ));
+
+            if (!exists) {
+              await this.createRelationship(
+                newSourceId,
+                newTargetId,
+                rel.type,
+                rel.metadata,
+                trx
+              );
+            }
+          } catch (error) {
+            console.error(`Error processing relationship for duplicate ${dup.id}:`, error);
+          }
+        }
+
+        await this.delete(dup.id, trx);
+      }
+
+      await trx.commit();
+      return await this.findById(primaryId) as BaseEntity;
+    } catch (error) {
+      await trx.rollback();
+      console.error('Error merging entities:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Calculate text similarity using various methods
+   */
+  private calculateTextSimilarity(a: string, b: string): number {
+    if (!a || !b) return 0;
+    
+    const str1 = a.toLowerCase();
+    const str2 = b.toLowerCase();
+    
+    if (str1 === str2) return 1.0;
+    if (str1.startsWith(str2) || str2.startsWith(str1)) return 0.9;
+    if (str1.endsWith(str2) || str2.endsWith(str1)) return 0.8;
+    if (str1.includes(str2) || str2.includes(str1)) return 0.7;
+    
+    const distance = this.levenshteinDistance(str1, str2);
+    const maxLength = Math.max(str1.length, str2.length);
+    return 1 - (distance / maxLength);
+  }
+
+  /**
+   * Calculate Levenshtein distance between two strings
+   */
+  private levenshteinDistance(a: string, b: string): number {
+    if (!a || !b) return Math.max(a?.length || 0, b?.length || 0);
+    
+    const matrix: number[][] = [];
+    
+    for (let i = 0; i <= b.length; i++) {
+      matrix[i] = [i];
+    }
+    for (let j = 0; j <= a.length; j++) {
+      matrix[0][j] = j;
+    }
+
+    for (let i = 1; i <= b.length; i++) {
+      for (let j = 1; j <= a.length; j++) {
+        if (b.charAt(i - 1) === a.charAt(j - 1)) {
+          matrix[i][j] = matrix[i - 1][j - 1];
+        } else {
+          matrix[i][j] = Math.min(
+            matrix[i - 1][j - 1] + 1,
+            Math.min(
+              matrix[i][j - 1] + 1,
+              matrix[i - 1][j] + 1
+            )
+          );
+        }
+      }
+    }
+
+    return matrix[b.length][a.length];
+  }
+
+  /**
+   * Perform a fuzzy search for entities by name
+   */
+  async fuzzySearch(
+    query: string,
+    options: {
+      type?: EntityType;
+      limit?: number;
+      minScore?: number;
+      fields?: (keyof BaseEntity)[];
+    } = {}
+  ): Promise<Array<{ entity: BaseEntity; score: number }>> {
+    if (!query) return [];
+    const {
+      type,
+      limit = 10,
+      minScore = 0.7,
+      fields = ['name', 'description']
+    } = options;
+
+    try {
+      if (query.length < this.FUZZY_SEARCH_MIN_LENGTH) {
+        const exactMatches = await this.db(this.tableName)
+          .where(function() {
+            this.where('name', 'like', `%${query}%`);
+            if (type) this.andWhere('type', type);
+          })
+          .limit(limit)
+          .select('*');
+
+        return exactMatches.map(entity => ({
+          entity: this.toEntity(entity),
+          score: 1.0
+        }));
+      }
+
+      const embedding = await this.generateEmbedding(query);
+      
+      const queryOptions: any = {
+        queryEmbeddings: [embedding],
+        nResults: limit * 2,
+        include: ['metadatas', 'distances'],
+      };
+
+      if (type) {
+        queryOptions.where = { type };
+      }
+
+      const results = await this.collection.query(queryOptions);
+      
+      if (!results.matches || !results.matches[0]) return [];
+      
+      const scoredResults = results.matches[0]
+        .map((match: any) => {
+          const entity = {
+            id: match.id,
+            ...match.metadata,
+            metadata: typeof match.metadata.metadata === 'string' 
+              ? JSON.parse(match.metadata.metadata) 
+              : match.metadata.metadata || {}
+          };
+          
+          const fieldValues = fields
+            .map(field => {
+              const value = entity[field];
+              return typeof value === 'string' ? value : '';
+            })
+            .filter(Boolean)
+            .join(' ');
+            
+          const textScore = this.calculateTextSimilarity(query, fieldValues);
+          const combinedScore = (match.score * 0.7) + (textScore * 0.3);
+          
           return {
-            entity: entity || entityData,
-            relationship: record.get('relType'),
-            properties: record.get('relProps'),
+            entity: this.toEntity(entity),
+            score: combinedScore
           };
         })
-      );
-    } catch (error) {
-      console.error('Error finding related entities:', error);
-      return [];
-  }
-}
+        .filter((result: any) => result.score >= minScore)
+        .sort((a: any, b: any) => b.score - a.score)
+        .slice(0, limit);
 
-  /**
-   * Generate an embedding for the given text
-   * @param text The text to generate an embedding for
-   * @param entityType Optional entity type to include in the embedding context
-   */
-  private async generateEmbedding(text: string, entityType?: string): Promise<number[]> {
-    if (!text) return [];
-    
-    try {
-      // Include entity type in the text to generate more relevant embeddings
-      const textToEmbed = entityType ? `[${entityType}] ${text}` : text;
-      const embedding = await getEmbeddingFunction().generate([textToEmbed]);
-      return embedding[0]; // Return the first (and only) embedding vector
+      return scoredResults;
     } catch (error) {
-      console.error('Error generating embedding:', error);
+      console.error('Error in fuzzy search:', error);
       return [];
     }
   }
+
+  /**
+   * Get entities related to a given entity
+   */
+  async getRelatedEntities(
+    entityId: string,
+    options: {
+      types?: RelationshipType[];
+      limit?: number;
+    } = {}
+  ): Promise<BaseEntity[]> {
+    if (!entityId) return [];
+    
+    const { types, limit = 10 } = options;
+    
+    try {
+      const typeClause = types && types.length > 0 
+        ? `:${types.join('|')}` 
+        : '';
+        
+      const cypher = `
+        MATCH (e:Entity {id: $entityId})-[r${typeClause}]-(related:Entity)
+        RETURN DISTINCT related
+        ${limit ? 'LIMIT $limit' : ''}
+      `;
+      
+      const result = await this.neo4jSession.readTransaction((tx: Transaction) =>
+        tx.run(cypher, { entityId, limit })
+      );
+      
+      return result.records.map(record => {
+        const node = record.get('related');
+        const props = node.properties as Record<string, any>;
+        
+        let metadata: Record<string, unknown> = {};
+        if (props.metadata) {
+          try {
+            metadata = typeof props.metadata === 'string' 
+              ? JSON.parse(props.metadata)
+              : props.metadata;
+          } catch (e) {
+            console.warn('Failed to parse metadata:', e);
+          }
+        }
+        
+        return this.toEntity({
+          ...props,
+          id: String(props.id || ''),
+          metadata
+        });
+      });
+    } catch (error) {
+      console.error('Error getting related entities:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Search entities with both exact and fuzzy matching
+   */
+  async search(
+    query: string,
+    options: EntitySearchOptions = {}
+  ): Promise<PaginatedResult<BaseEntity>> {
+    const {
+      page = 1,
+      pageSize = 10,
+      minSimilarity = 0.7,
+      includeRelated = false,
+      relationshipTypes
+    } = options;
+
+    try {
+      const exactMatch = await this.db(this.tableName)
+        .where('name', query)
+        .first();
+
+      if (exactMatch) {
+        const entity = this.toEntity(exactMatch);
+        return {
+          data: [entity],
+          pagination: {
+            page: 1,
+            pageSize: 1,
+            totalItems: 1,
+            totalPages: 1,
+            hasNextPage: false,
+            hasPreviousPage: false
+          }
+        };
+      }
+
+      const fuzzySearchOpts: {
+        type?: EntityType;
+        limit: number;
+        minScore: number;
+        fields?: (keyof BaseEntity)[];
+      } = {
+        limit: pageSize,
+        minScore: minSimilarity
+      };
+      
+      if (options.type) {
+        fuzzySearchOpts.type = options.type;
+      }
+      
+      const fuzzyResults = await this.fuzzySearch(query, fuzzySearchOpts);
+
+      let relatedEntities: BaseEntity[] = [];
+      if (includeRelated && fuzzyResults.length > 0) {
+        const relatedPromises = fuzzyResults
+          .filter(result => result.entity.id)
+          .map(result =>
+            this.getRelatedEntities(result.entity.id as string, { types: relationshipTypes })
+          );
+        const relatedResults = await Promise.all(relatedPromises);
+        relatedEntities = relatedResults.flat();
+      }
+
+      const allResults = [
+        ...fuzzyResults.map(r => r.entity),
+        ...relatedEntities
+      ];
+      
+      const uniqueResults = Array.from(
+        new Map(allResults.filter(item => item.id).map(item => [item.id, item])).values()
+      );
+
+      const start = (page - 1) * pageSize;
+      const end = start + pageSize;
+      const paginatedResults = uniqueResults.slice(start, end);
+
+      return {
+        data: paginatedResults,
+        pagination: {
+          page,
+          pageSize,
+          totalItems: uniqueResults.length,
+          totalPages: Math.ceil(uniqueResults.length / pageSize),
+          hasNextPage: end < uniqueResults.length,
+          hasPreviousPage: start > 0
+        }
+      };
+    } catch (error) {
+      console.error('Error in entity search:', error);
+      return {
+        data: [],
+        pagination: {
+          page,
+          pageSize,
+          totalItems: 0,
+          totalPages: 0,
+          hasNextPage: false,
+          hasPreviousPage: false
+        }
+      };
+    }
+  }
 }
+
+export default EntityModel;
