@@ -1,7 +1,8 @@
 import express from "express";
 import cors from "cors";
 import { z } from "zod";
-import { EntitySchema, EventSchema } from "@ellipsa/shared/dist/index.js";
+// @ts-ignore - Dynamic import to work around module resolution issues
+const { EntitySchema, EventSchema } = await import("@ellipsa/shared");
 
 const app = express();
 app.use(cors());
