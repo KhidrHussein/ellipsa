@@ -1,6 +1,7 @@
 import knex, { Knex } from 'knex';
 import { DatabaseConfig } from '../../config';
 import config from '../../config';
+import { logger } from '../../utils/logger';
 
 let connection: Knex | null = null;
 
@@ -14,17 +15,25 @@ export function getConnection(cfg: DatabaseConfig = config.database): Knex {
       connection: cfg.connection,
       pool: cfg.pool,
       useNullAsDefault: true,
+      debug: process.env.NODE_ENV === 'development',
     });
 
     // Test the connection
     connection.raw('SELECT 1')
-      .then(() => console.log('✅ Database connection established'))
+      .then(() => logger.info('Database connection established'))
       .catch((err) => {
-        console.error('❌ Database connection failed:', err);
+        logger.error('Database connection failed:', err);
         process.exit(1);
       });
   }
   return connection;
+}
+
+/**
+ * Get a Knex client instance
+ */
+export function getKnexClient(cfg: DatabaseConfig = config.database): Knex {
+  return getConnection(cfg);
 }
 
 /**
@@ -34,7 +43,7 @@ export async function closeConnection(): Promise<void> {
   if (connection) {
     await connection.destroy();
     connection = null;
-    console.log('Database connection closed');
+    logger.info('Database connection closed');
   }
 }
 

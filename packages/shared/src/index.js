@@ -1,4 +1,10 @@
 import { z } from "zod";
+// Export service clients
+export { ServiceClient } from './clients/ServiceClient.js';
+export { MemoryClient } from './clients/MemoryClient.js';
+// Export utilities
+export { logger } from './utils/logger.js';
+// Existing schema exports
 export const EntitySchema = z.object({
     id: z.string(),
     canonical_name: z.string(),
@@ -12,42 +18,23 @@ export const EntitySchema = z.object({
 });
 export const TaskSchema = z.object({
     id: z.string(),
-    text: z.string(),
-    owner: z.string(),
-    due_ts: z.string().optional(),
-    status: z.string().default("open"),
-    linked_entities: z.array(z.string()).default([]),
-    origin_event_id: z.string().optional(),
-    actionability_score: z.number().optional()
+    description: z.string(),
+    status: z.enum(['pending', 'in_progress', 'completed', 'failed']).default('pending'),
+    priority: z.enum(['low', 'medium', 'high']).default('medium'),
+    metadata: z.record(z.any()).optional()
 });
 export const EventSchema = z.object({
     id: z.string(),
     type: z.string(),
-    start_ts: z.string(),
-    end_ts: z.string().optional(),
-    participants: z.array(z.string()).default([]),
-    source_app: z.string().optional(),
-    summary_text: z.string(),
-    action_items: z.array(TaskSchema).default([]),
-    tone_summary: z.any().optional(),
-    confidence_score: z.number().optional(),
-    provenance: z.array(z.string()).default([])
+    content: z.string(),
+    metadata: z.record(z.any()).default({}),
+    start_time: z.union([z.string(), z.date()]),
+    end_time: z.union([z.string(), z.date()]).optional(),
+    participants: z.array(z.object({
+        entity_id: z.string(),
+        name: z.string().optional(),
+        metadata: z.record(z.any()).optional()
+    })).default([]),
+    tasks: z.array(TaskSchema).default([])
 });
-export const MemorySummarySchema = z.object({
-    id: z.string(),
-    scope: z.string(),
-    scope_id: z.string(),
-    period_start: z.string(),
-    period_end: z.string(),
-    summary_text: z.string(),
-    embedding_id: z.string().optional()
-});
-export const IngestSchema = z.object({
-    agent_id: z.string(),
-    session_id: z.string(),
-    segment_ts: z.string(),
-    audio_ref: z.string().optional(),
-    screenshot_ref: z.string().optional(),
-    active_window: z.string().optional(),
-    meta: z.record(z.any()).optional()
-});
+//# sourceMappingURL=index.js.map

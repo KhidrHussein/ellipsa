@@ -3,8 +3,10 @@
   "compilerOptions": {
     "outDir": "dist",
     "rootDir": "src",
+    "baseUrl": ".",
     "module": "NodeNext",
     "moduleResolution": "NodeNext",
+    "target": "ES2022",
     "declaration": true,
     "declarationMap": true,
     "sourceMap": true,
@@ -15,8 +17,18 @@
     "typeRoots": [
       "./node_modules/@types",
       "../../types"
-    ]
+    ],
+    "paths": {
+      "@ellipsa/shared": ["./src/index.ts"]
+    },
+    "allowSyntheticDefaultImports": true,
+    "resolveJsonModule": true,
+    "composite": true
   },
-  "include": ["src"],
-  "exclude": ["node_modules", "dist"]
+  "include": ["src/**/*.ts"],
+  "exclude": ["node_modules", "dist"],
+  "ts-node": {
+    "esm": true,
+    "experimentalSpecifierResolution": "node"
+  }
 }

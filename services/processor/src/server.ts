@@ -5,6 +5,8 @@ import type { Ingest } from "@ellipsa/shared";
 import axios, { type AxiosError } from "axios";
 import * as dotenv from "dotenv";
 import { processAudio } from "./audioProcessor";
+import { MemoryService } from "./services/MemoryService";
+import { logger } from "./utils/logger";
 // Load environment variables
 dotenv.config();
 
@@ -38,8 +40,11 @@ type ProcessResult = {
 const app = express();
 app.use(express.json({ limit: "10mb" }));
 
-// In-memory storage (would be database in production)
-const events = new Map<string, z.infer<typeof EventSchema>>();
+// In-memory storage for events (replace with a database in production)
+const events = new Map<string, any>();
+
+// Initialize MemoryService
+const memoryService = new MemoryService(process.env.MEMORY_SERVICE_URL);
 
 // Enhanced logging middleware
 app.use((req: Request, res: Response, next: NextFunction) => {
@@ -273,15 +278,106 @@ app.post("/processor/v1/ingest", rateLimit(), validateIngestRequest, async (req:
     
     const { event, tasks, entities } = await processInput(ingest.data);
     
-    // Store the event in memory (in production, this would be in a database)
-    events.set(event.id, event);
+    // Prepare the event data for storage
+    const eventMetadata = {
+      ...(event as any).metadata || {},
+      // Include original event data
+      ...event,
+      // Remove properties that are already mapped to top-level fields
+      summary_text: undefined,
+      action_items: undefined,
+      id: undefined,
+      type: undefined,
+      participants: undefined,
+      start_ts: undefined,
+      end_ts: undefined
+    };
     
-    console.log(`[${new Date().toISOString()}] Processed event ${event.id} with ${tasks.length} tasks and ${entities.length} entities`);
+    // Remove undefined values from metadata
+    Object.keys(eventMetadata).forEach(key => 
+      eventMetadata[key] === undefined && delete eventMetadata[key]
+    );
+
+    const eventData = {
+      id: event.id || `evt_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      type: event.type || 'conversation',
+      content: event.summary_text || 'No content',
+      metadata: eventMetadata,
+      start_time: new Date(event.start_ts || Date.now()),
+      end_time: event.end_ts ? new Date(event.end_ts) : undefined,
+      participants: (event.participants || []).map((p: any) => ({
+        entity_id: typeof p === 'string' ? p : p.id || p.entity_id || `ent_${Math.random().toString(36).substr(2, 9)}`,
+        name: typeof p === 'string' ? p : p.name || p.entity_id || 'Unknown',
+        metadata: typeof p === 'string' ? {} : p.metadata || {}
+      })),
+      tasks: (event.action_items || []).map((t: any) => ({
+        text: t.text || t.description || '',
+        owner: t.owner || 'system',
+        status: (t.status ? t.status.toLowerCase() : 'pending'),
+        priority: (t.priority ? t.priority.toLowerCase() : 'medium'),
+        due_ts: t.due_ts,
+        ...(t.metadata || {})
+      }))
+    };
+
+    // Store the event in the memory service and local map
+    const storedEvent = await memoryService.storeEvent({
+      ...eventData,
+      // Convert tasks to the correct format
+      tasks: eventData.tasks.map(t => ({
+        ...t,
+        // Ensure required fields are present
+        text: t.text || '',
+        owner: t.owner || 'system',
+        status: t.status || 'pending',
+        priority: t.priority || 'medium'
+      }))
+    });
     
-    // In a production environment, we would:
-    // 1. Store the event in the memory service
-    // 2. Create any tasks in the task service
-    // 3. Update entities in the knowledge graph
+    // Store in local map
+    events.set(eventData.id, eventData);
+
+    logger.info(`Stored event ${storedEvent} with ${tasks.length} tasks and ${entities.length} entities`);
+    
+    // Store entities in the knowledge graph through the memory service
+    await Promise.all(entities.map(async (entity) => {
+      if (!entity) {
+        logger.warn('Skipping null/undefined entity');
+        return;
+      }
+      
+      const entityId = entity.id || `ent_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      if (!entityId) {
+        logger.warn('Skipping entity with no ID:', entity);
+        return;
+      }
+
+      try {
+        // This would be more sophisticated in a real implementation
+        const entityEvent = {
+          id: `evt_entity_${entityId}_${Date.now()}`,
+          type: 'entity_update',
+          content: `Entity ${entity.canonical_name || entityId} updated`,
+          metadata: {
+            ...(entity.metadata || {}),
+            entity_id: entityId,
+            entity_type: entity.type || 'unknown',
+            canonical_name: entity.canonical_name
+          },
+          start_time: new Date(),
+          participants: [{
+            entity_id: entityId,
+            name: entity.canonical_name || entityId,
+            metadata: entity.metadata || {}
+          }],
+          tasks: []
+        };
+        
+        await memoryService.storeEvent(entityEvent);
+      } catch (error) {
+        logger.error(`Failed to store entity ${entity.id}:`, error);
+      }
+    }));
     
     // Return the results
     res.json({
@@ -342,11 +438,11 @@ app.post("/processor/v1/ingest", rateLimit(), validateIngestRequest, async (req:
  */
 app.get("/processor/v1/events", (req: Request, res: Response) => {
   try {
-    const all = Array.from(events.values());
+    const allEvents = Array.from(events.values());
     res.json({ 
       success: true,
-      events: all,
-      count: all.length,
+      events: allEvents,
+      count: allEvents.length,
       timestamp: new Date().toISOString()
     });
   } catch (error) {
