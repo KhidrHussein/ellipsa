@@ -113,6 +113,16 @@ async function executePlan(plan: z.infer<typeof ExecuteSchema>["plan"]): Promise
 const app = express();
 app.use(express.json());
 
+// Health check endpoint
+app.get('/health', (req: Request, res: Response) => {
+  res.status(200).json({
+    status: 'ok',
+    service: 'action',
+    version: process.env.npm_package_version || '0.1.0',
+    timestamp: new Date().toISOString()
+  });
+});
+
 app.post("/action/v1/execute", async (req: Request, res: Response) => {
   const parsed = ExecuteSchema.safeParse(req.body);
   if (!parsed.success) {

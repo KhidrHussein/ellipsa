@@ -1,8 +1,8 @@
 const { app, BrowserWindow, Tray, Menu, ipcMain, nativeImage, screen } = require('electron');
 const path = require('path');
 const fs = require('fs');
-const { startAudioCapture, stopAudioCapture } = require('./src/audio/capture');
-const { screenCapture } = require('./src/capture/screenCapture');
+const { startAudioCapture, stopAudioCapture } = require('./dist/audio/capture');
+const { screenCapture } = require('./dist/capture/screenCapture');
 
 let mainWindow;
 let tray;
@@ -158,12 +158,21 @@ app.whenReady().then(() => {
     observeMode = status.observing;
     updateTrayMenu();
   });
-  ipcMain.on('move-window', (_e, { x, y }) => {
+  ipcMain.on('move-window', (_e, pos) => {
     if (!mainWindow) return;
+    // Destructure the x and y from the 'pos' object
+    const { x, y } = pos; 
+    
+    // Get work area size
     const { workAreaSize } = screen.getPrimaryDisplay();
-    const W = 64, H = 64, M = 0; // window size and margin
+    // Constants for window size and margin from `main.js`'s logic
+    const W = 64, H = 64, M = 0; 
+
+    // Clamping logic
     const nx = Math.max(M, Math.min(x, workAreaSize.width - W - M));
     const ny = Math.max(M, Math.min(y, workAreaSize.height - H - M));
+    
+    // Set new position
     mainWindow.setPosition(Math.round(nx), Math.round(ny));
   });
   ipcMain.handle('get-window-pos', () => {

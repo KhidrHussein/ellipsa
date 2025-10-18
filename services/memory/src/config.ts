@@ -12,7 +12,7 @@ export interface DatabaseConfig {
     port?: number;
     user?: string;
     password?: string;
-    database: string;
+    database?: string;
     filename?: string; // For SQLite
   };
   pool?: {
@@ -50,25 +50,31 @@ export interface Config {
 }
 
 const isDev = process.env.NODE_ENV !== 'production';
-
 const config: Config = {
   port: parseInt(process.env.PORT || '4001', 10),
   env: isDev ? 'development' : 'production',
   
   database: {
-    client: process.env.DB_CLIENT || 'sqlite3',
-    connection: {
-      host: process.env.DB_HOST,
-      port: process.env.DB_PORT ? parseInt(process.env.DB_PORT, 10) : undefined,
-      user: process.env.DB_USER,
-      password: process.env.DB_PASSWORD,
-      database: process.env.DB_NAME || 'ellipsa_memory',
-      filename: path.resolve(process.cwd(), 'data/ellipsa.db'), // For SQLite
-    },
-    pool: {
+    client: process.env.DB_CLIENT || 'pg',
+    connection: (() => {
+      if (process.env.DB_CLIENT === 'pg') {
+        return {
+          host: process.env.PGHOST || 'localhost',
+          port: parseInt(process.env.PGPORT || '5432', 10),
+          user: process.env.PGUSER || 'ellipsa',
+          password: process.env.PGPASSWORD || 'ellipsa',
+          database: process.env.PGDATABASE || 'ellipsa',
+        };
+      } else {
+        return {
+          filename: process.env.DB_FILENAME || './data/ellipsa.db'
+        };
+      }
+    })(),
+    pool: process.env.DB_CLIENT !== 'pg' ? {
       min: 2,
-      max: 10,
-    },
+      max: 10
+    } : undefined,
     migrations: {
       tableName: 'knex_migrations',
       directory: path.resolve(process.cwd(), 'migrations'),
@@ -84,7 +90,7 @@ const config: Config = {
   },
 
   chroma: {
-    path: path.resolve(process.cwd(), 'data/chroma'),
+    path: process.env.CHROMA_PATH ? path.resolve(process.cwd(), process.env.CHROMA_PATH) : undefined,
     host: process.env.CHROMA_HOST || 'localhost',
     port: process.env.CHROMA_PORT ? parseInt(process.env.CHROMA_PORT, 10) : 8000,
     ssl: process.env.CHROMA_SSL === 'true',

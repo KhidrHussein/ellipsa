@@ -1,11 +1,12 @@
 import { ipcMain, desktopCapturer, app, BrowserWindow } from 'electron';
-import { ensureDir, writeFile } from 'fs-extra';
+import fs from 'fs-extra';
+const { ensureDir, writeFile } = fs;
 import { join } from 'path';
 import { v4 as uuidv4 } from 'uuid';
-import type { Ingest as IngestType } from '@ellipsa/shared';
 import axios from 'axios';
-import { whisperASR } from './asr';
-import { audioPreprocessor } from './audioPreprocessor';
+import type { Ingest } from '@ellipsa/shared';
+import { whisperASR } from './asr.js';
+import { audioPreprocessor } from './audioPreprocessor.js';
 
 // Extend the Window interface to include Electron-specific APIs
 declare global {
@@ -33,7 +34,26 @@ let recordingStartTime: number | null = null;
  * @param mainWindow The main browser window for sending IPC messages
  * @returns Promise that resolves to true if capture started successfully
  */
-export async function startAudioCapture(mainWindow: BrowserWindow | null): Promise<boolean> {
+interface ProcessedAudioResult {
+  audioData: ArrayBuffer;
+  text?: string;
+  event?: any;
+  error?: Error;
+}
+
+type AudioProcessor = (audioData: ArrayBuffer, metadata: Record<string, any>) => Promise<ProcessedAudioResult>;
+
+// Add this if not already present
+declare global {
+  interface Window {
+    require: NodeRequire;
+  }
+}
+
+export async function startAudioCapture(
+  mainWindow: BrowserWindow | null,
+  onAudioProcessed?: AudioProcessor
+): Promise<boolean> {
   try {
     await ensureDir(getAudioDir());
     
@@ -71,7 +91,7 @@ export async function startAudioCapture(mainWindow: BrowserWindow | null): Promi
     recordingStartTime = Date.now();
 
     // Handle data availability
-    audioRecorder.ondataavailable = (event: BlobEvent) => {
+    audioRecorder.ondataavailable = async (event: BlobEvent) => {
       if (event.data.size > 0) {
         audioChunks.push(event.data);
         
@@ -81,9 +101,27 @@ export async function startAudioCapture(mainWindow: BrowserWindow | null): Promi
           audioChunks = [];
           recordingStartTime = Date.now();
           
-          processAudioSegment(chunksToProcess, mainWindow).catch(error => {
+          try {
+            const result = await processAudioSegment(chunksToProcess, mainWindow);
+            
+            // If a processor callback is provided, call it with the processed data
+            if (onAudioProcessed) {
+              const audioData = await chunksToProcess[0].arrayBuffer();
+              await onAudioProcessed(audioData, {
+                timestamp: new Date().toISOString(),
+                duration: SEGMENT_DURATION / 1000,
+                sampleRate: 16000, // Default, adjust based on actual configuration
+                format: 'wav',
+                source: 'microphone'
+              });
+            }
+          } catch (error) {
             console.error('Error processing audio segment:', error);
-          });
+            mainWindow?.webContents.send('audio-error', {
+              message: 'Failed to process audio',
+              error: error instanceof Error ? error.message : String(error)
+            });
+          }
         }
       }
     };
@@ -149,7 +187,7 @@ async function processAudioSegment(chunks: Blob[], mainWindow: BrowserWindow | n
     await ensureDir(getAudioDir());
     await writeFile(filePath, buffer);
     
-    const ingest: IngestType = {
+    const ingest: Ingest = {
       agent_id: 'edge-agent',
       session_id: 'current-session',
       segment_ts: new Date().toISOString(),
@@ -172,12 +210,12 @@ async function processAudioSegment(chunks: Blob[], mainWindow: BrowserWindow | n
       console.log('Transcription:', transcription.text);
       
       // Add transcription to the ingest data
-      const enhancedIngest: IngestType = {
+      const enhancedIngest: Ingest = {
         ...ingest,
         transcription: {
           text: transcription.text,
           language: transcription.language,
-          segments: transcription.segments.map(segment => ({
+          segments: transcription.segments.map((segment: { start: number; end: number; text: string; noSpeechProb: number }) => ({
             start: segment.start,
             end: segment.end,
             text: segment.text,

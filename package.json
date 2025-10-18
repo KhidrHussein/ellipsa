@@ -3,7 +3,7 @@
   "private": true,
   "version": "0.1.0",
   "description": "ellipsa v1 monorepo",
-  "packageManager": "pnpm@9",
+  "packageManager": "pnpm@9.0.0",
   "scripts": {
     "build": "pnpm -r build",
     "dev:memory": "pnpm --filter @ellipsa/memory dev",
@@ -13,6 +13,8 @@
     "dev": "concurrently -n mem,proc,prompt,act -c blue,magenta,green,yellow \"pnpm dev:memory\" \"pnpm dev:processor\" \"pnpm dev:prompt\" \"pnpm dev:action\""
   },
   "devDependencies": {
+    "@types/electron": "^1.6.12",
+    "@types/node": "^20.0.0",
     "concurrently": "^9.0.0",
     "rimraf": "^5.0.5",
     "ts-node": "^10.9.2",

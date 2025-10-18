@@ -15,7 +15,7 @@ services:
     image: dpage/pgadmin4:latest
     container_name: ellipsa-pgadmin
     environment:
-      PGADMIN_DEFAULT_EMAIL: admin@local
+      PGADMIN_DEFAULT_EMAIL: admin@example.com
       PGADMIN_DEFAULT_PASSWORD: admin
     ports:
       - "5050:80"

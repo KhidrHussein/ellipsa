@@ -1,12 +1,27 @@
 import express, { type Request, type Response, type NextFunction } from "express";
 import { z } from "zod";
-import { EventSchema, TaskSchema, EntitySchema, IngestSchema } from "@ellipsa/shared";
-import type { Ingest } from "@ellipsa/shared";
 import axios, { type AxiosError } from "axios";
 import * as dotenv from "dotenv";
+import { EventSchema, TaskSchema, EntitySchema } from "@ellipsa/shared";
 import { processAudio } from "./audioProcessor";
 import { MemoryService } from "./services/MemoryService";
 import { logger } from "./utils/logger";
+
+// Define IngestSchema locally since it's not in the shared package
+export const IngestSchema = z.object({
+  id: z.string(),
+  type: z.enum(['audio', 'screenshot', 'clipboard', 'window']),
+  content: z.string(),
+  timestamp: z.string().datetime(),
+  metadata: z.record(z.any()).optional(),
+  audio_ref: z.string().optional(),
+  screenshot_ref: z.string().optional(),
+  active_window: z.string().optional(),
+  segment_ts: z.number(),
+  meta: z.record(z.any()).optional()
+});
+
+export type Ingest = z.infer<typeof IngestSchema>;
 // Load environment variables
 dotenv.config();
 
@@ -174,6 +189,16 @@ async function processInput(ingest: z.infer<typeof IngestSchema>): Promise<Proce
     throw error;
   }
 }
+
+// Health check endpoint
+app.get('/health', (req: Request, res: Response) => {
+  res.status(200).json({
+    status: 'ok',
+    service: 'processor',
+    version: process.env.npm_package_version || '0.1.0',
+    timestamp: new Date().toISOString()
+  });
+});
 
 // API Endpoints
 

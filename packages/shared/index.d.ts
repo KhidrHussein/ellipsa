@@ -42,14 +42,27 @@ declare module '@ellipsa/shared' {
   }>;
   export type Event = z.infer<typeof EventSchema>;
 
-  export const IngestSchema: z.ZodObject<{
-    agent_id: z.ZodString;
-    session_id: z.ZodString;
-    segment_ts: z.ZodString;
-    audio_ref: z.ZodOptional<z.ZodString>;
-    screenshot_ref: z.ZodOptional<z.ZodString>;
-    active_window: z.ZodOptional<z.ZodString>;
-    meta: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodAny>>;
-  }>;
-  export type Ingest = z.infer<typeof IngestSchema>;
+  export type TranscriptionSegment = {
+    start: number;
+    end: number;
+    text: string;
+    confidence: number;
+  };
+
+  export type Transcription = {
+    text: string;
+    language: string;
+    segments: TranscriptionSegment[];
+  };
+
+  export type Ingest = {
+    agent_id: string;
+    session_id: string;
+    segment_ts: string;
+    audio_ref?: string;
+    screenshot_ref?: string;
+    active_window?: string;
+    meta?: Record<string, any>;
+    transcription?: Transcription;
+  };
 }

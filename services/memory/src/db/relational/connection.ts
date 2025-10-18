@@ -10,23 +10,44 @@ let connection: Knex | null = null;
  */
 export function getConnection(cfg: DatabaseConfig = config.database): Knex {
   if (!connection) {
-    connection = knex({
-      client: cfg.client,
-      connection: cfg.connection,
-      pool: cfg.pool,
-      useNullAsDefault: true,
-      debug: process.env.NODE_ENV === 'development',
-    });
-
-    // Test the connection
-    connection.raw('SELECT 1')
-      .then(() => logger.info('Database connection established'))
-      .catch((err) => {
-        logger.error('Database connection failed:', err);
-        process.exit(1);
+    try {
+      const isPg = cfg.client === 'pg';
+      
+      connection = knex({
+        client: cfg.client,
+        connection: cfg.connection,
+        pool: cfg.pool || {
+          min: 2,
+          max: 10
+        },
+        useNullAsDefault: true,
+        debug: process.env.NODE_ENV === 'development',
       });
+
+      // Test the connection with a database-specific query
+      const testQuery = isPg ? 'SELECT 1' : 'SELECT 1 as test';
+      
+      connection.raw(testQuery)
+        .then(() => {
+          logger.info(`Successfully connected to ${isPg ? 'PostgreSQL' : 'SQLite'} database`);
+          
+          // For PostgreSQL, enable UUID extension if it doesn't exist
+          if (isPg) {
+            return connection!.raw('CREATE EXTENSION IF NOT EXISTS "uuid-ossp"')
+              .then(() => logger.info('PostgreSQL UUID extension is ready'))
+              .catch(err => logger.warn('Could not enable UUID extension:', err));
+          }
+        })
+        .catch((err) => {
+          logger.error('Database connection failed:', err);
+          process.exit(1);
+        });
+    } catch (err) {
+      logger.error('Failed to initialize database connection:', err);
+      process.exit(1);
+    }
   }
-  return connection;
+  return connection!;
 }
 
 /**
