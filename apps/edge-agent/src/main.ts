@@ -5,16 +5,18 @@ import * as os from 'os';
 import { startAudioCapture, stopAudioCapture } from './audio/capture';
 import { screenCapture } from './capture/screenCapture';
 import { initializeServices, memoryClient, processorClient } from './services/api';
+import { screenCaptureHandlers } from './ipc/screenCaptureHandlers';
 
 // For resolving paths in the app
 const appRoot = path.join(__dirname, '..');
 
 let mainWindow: BrowserWindow | null = null;
 let chatWindow: BrowserWindow | null = null;
+let isCapturing = false; // Track if we're currently capturing
 let tray: Tray | null = null;
 let observeMode = false;
 let debugMode = false;
-let isCapturing = false;
+// isCapturing is now managed by screenCaptureHandlers
 let windowPosition = { x: 0, y: 0 };
 
 // Helper function to get the path to the assets directory
@@ -263,9 +265,12 @@ async function toggleObserve(): Promise<void> {
         if (!success) {
           console.warn('Audio capture may not have stopped cleanly');
         }
+        
+        // Stop screen capture
+        screenCapture.stopCapture();
       }
       observeMode = false;
-      isCapturing = false;
+      // isCapturing is managed by screenCaptureHandlers
       mainWindow?.webContents.send('observe-status', { 
         observing: false,
         error: null
@@ -309,6 +314,27 @@ async function toggleObserve(): Promise<void> {
         }
       }
       
+      // Start screen capture with 5-second intervals
+      if (mainWindow) {
+        console.log('[Main] Starting screen capture...');
+        const captureStarted = await screenCapture.startCapture(5000, mainWindow);
+        console.log('[Main] Screen capture started:', captureStarted);
+        
+        // Test immediate capture
+        console.log('[Main] Testing immediate capture...');
+        try {
+          const testCapture = await screenCapture.captureActiveWindow();
+          console.log('[Main] Test capture result:', testCapture ? 'success' : 'failed');
+          if (testCapture) {
+            console.log('[Main] Screenshot saved to:', testCapture.filePath);
+          }
+        } catch (error) {
+          console.error('[Main] Test capture failed:', error);
+        }
+      } else {
+        console.error('[Main] Cannot start screen capture: mainWindow is null');
+      }
+      
       observeMode = true;
       isCapturing = true;
       mainWindow?.webContents.send('observe-status', { 
@@ -334,7 +360,7 @@ async function toggleObserve(): Promise<void> {
       
       // Reset state
       observeMode = false;
-      isCapturing = false;
+      // isCapturing is managed by screenCaptureHandlers
       return;
     }
   }
@@ -615,10 +641,15 @@ app.on('browser-window-created', (_, window) => {
 });
 
 // Handle the app before it quits
-app.on('before-quit', async (e) => {
-  if (isCapturing) {
+app.on('before-quit', (e) => {
+  if (observeMode) {
     e.preventDefault();
-    await stopAudioCapture(mainWindow);
+    // Stop any ongoing captures
+    if (isCapturing) {
+      screenCapture.stopCapture().catch(console.error);
+      isCapturing = false;
+    }
+    stopAudioCapture(mainWindow);
     app.quit();
   }
 });
