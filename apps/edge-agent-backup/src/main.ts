@@ -1,4 +1,4 @@
-import { app, BrowserWindow, Tray, Menu, ipcMain, nativeImage, screen, nativeTheme, dialog, desktopCapturer } from 'electron';
+import { app, BrowserWindow, Tray, Menu, ipcMain, nativeImage, screen, nativeTheme, dialog } from 'electron';
 import * as path from 'path';
 import * as fs from 'fs';
 import * as os from 'os';
@@ -10,12 +10,10 @@ import { initializeServices, memoryClient, processorClient } from './services/ap
 const appRoot = path.join(__dirname, '..');
 
 let mainWindow: BrowserWindow | null = null;
-let chatWindow: BrowserWindow | null = null;
 let tray: Tray | null = null;
 let observeMode = false;
-let debugMode = false;
+let debugMode = false; // Set to true for debugging, false for production
 let isCapturing = false;
-let windowPosition = { x: 0, y: 0 };
 
 // Helper function to get the path to the assets directory
 const getAssetsPath = (...paths: string[]): string => {
@@ -36,28 +34,11 @@ const getIconPath = (): string => {
 function createWindow(): void {
   const size = debugMode ? 400 : 64;
   
-  const display = screen.getPrimaryDisplay();
-  const { width: screenWidth, height: screenHeight } = display.workAreaSize;
-  
-  // Load saved window position or default to bottom-right
-  const defaultX = screenWidth - size - 20;
-  const defaultY = screenHeight - size - 60; // 60px from bottom
-  
-  windowPosition = {
-    x: defaultX,
-    y: defaultY
-  };
-
   mainWindow = new BrowserWindow({
     width: size,
     height: size,
-    x: windowPosition.x,
-    y: windowPosition.y,
-    frame: false,
-    transparent: true,
-    alwaysOnTop: true,
-    resizable: false,
-    skipTaskbar: true,
+    frame: debugMode,
+    resizable: debugMode,
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
@@ -66,40 +47,6 @@ function createWindow(): void {
       allowRunningInsecureContent: false,
       webgl: false,
       plugins: true
-    },
-    show: false // Don't show until ready
-  });
-
-  // Load a blank page with the app's background color
-  mainWindow.loadURL(`data:text/html;charset=utf-8,
-    <!DOCTYPE html>
-    <html>
-      <head>
-        <style>
-          body { 
-            margin: 0; 
-            padding: 0; 
-            width: 100vw; 
-            height: 100vh; 
-            background: transparent;
-            overflow: hidden;
-          }
-        </style>
-      </head>
-      <body>
-        <script>
-          window.onload = () => {
-            const { ipcRenderer } = require('electron');
-            ipcRenderer.send('main-window-loaded');
-          };
-        </script>
-      </body>
-    </html>
-  `);
-
-  mainWindow.once('ready-to-show', () => {
-    if (mainWindow) {
-      mainWindow.show();
     }
   });
 
@@ -150,11 +97,6 @@ function updateTrayMenu(): void {
   
   const contextMenu = Menu.buildFromTemplate([
     {
-      label: 'Open Chat',
-      click: () => toggleChatWindow()
-    },
-    { type: 'separator' },
-    {
       label: observeMode ? 'Stop Observing' : 'Start Observing',
       click: toggleObserve
     },
@@ -181,76 +123,6 @@ function toggleDebugMode(): void {
     createWindow();
   }
   updateTrayMenu();
-}
-
-async function toggleChatWindow() {
-  if (chatWindow) {
-    if (chatWindow.isDestroyed()) {
-      chatWindow = null;
-    } else {
-      if (chatWindow.isVisible()) {
-        chatWindow.hide();
-      } else {
-        chatWindow.show();
-        chatWindow.focus();
-      }
-      return;
-    }
-  }
-
-  const size = debugMode ? 800 : 350;
-  const height = debugMode ? 600 : 500;
-  
-  // Get the current window position and display bounds
-  const currentWindow = BrowserWindow.getFocusedWindow();
-  const [currentX, currentY] = currentWindow ? currentWindow.getPosition() : [windowPosition.x, windowPosition.y];
-  const display = screen.getDisplayNearestPoint({ x: currentX, y: currentY });
-  const { workArea } = display;
-  
-  // Calculate position to ensure it's within the display bounds
-  let x = currentX - size - 20;
-  let y = currentY;
-  
-  // Ensure the window is not off-screen
-  if (x < workArea.x) x = workArea.x + 10;
-  if (y + height > workArea.y + workArea.height) y = workArea.y + workArea.height - height - 10;
-  
-  chatWindow = new BrowserWindow({
-    width: size,
-    height: height,
-    x: x,
-    y: y,
-    frame: false,
-    alwaysOnTop: true,
-    resizable: debugMode,
-    webPreferences: {
-      nodeIntegration: false,
-      contextIsolation: true,
-      preload: path.join(__dirname, '..', 'preload.js'),
-      webSecurity: true
-    },
-    backgroundColor: '#2b2b2b',
-    show: false
-  });
-
-  // Load the chat interface
-  const chatHtmlPath = path.join(__dirname, '..', 'chat.html');
-  console.log('Loading chat window from:', chatHtmlPath);
-  
-  chatWindow.loadFile(chatHtmlPath).catch(err => {
-    console.error('Failed to load chat window:', err);
-    dialog.showErrorBox('Error', 'Failed to load chat interface');
-    chatWindow?.destroy();
-    chatWindow = null;
-  });
-
-  chatWindow.once('ready-to-show', () => {
-    chatWindow?.show();
-  });
-
-  chatWindow.on('closed', () => {
-    chatWindow = null;
-  });
 }
 
 async function toggleObserve(): Promise<void> {
@@ -346,129 +218,6 @@ ipcMain.handle('get-observe-status', async () => {
   return { observing: observeMode };
 });
 
-// Chat window controls
-ipcMain.on('toggle-chat', () => {
-  toggleChatWindow();
-});
-
-ipcMain.on('close-chat', () => {
-  if (chatWindow && !chatWindow.isDestroyed()) {
-    chatWindow.hide();
-  }
-});
-
-ipcMain.on('minimize-chat', () => {
-  if (chatWindow && !chatWindow.isDestroyed()) {
-    chatWindow.minimize();
-  }
-});
-
-// Handle chat messages
-ipcMain.on('send-message', async (event, message) => {
-  try {
-    // Process the message (in a real app, this would call your AI service)
-    console.log('Message received:', message);
-    
-    // Simulate a response after a short delay
-    setTimeout(() => {
-      if (chatWindow && !chatWindow.isDestroyed()) {
-        chatWindow.webContents.send('message-received', 'I received your message: ' + message);
-      }
-    }, 1000);
-    
-  } catch (error) {
-    console.error('Error processing message:', error);
-    if (chatWindow && !chatWindow.isDestroyed()) {
-      chatWindow.webContents.send('message-received', 'Sorry, I encountered an error processing your message.');
-    }
-  }
-});
-
-// Quit application
-ipcMain.on('quit-app', () => {
-  app.quit();
-});
-
-// Handle window movement
-ipcMain.on('move-window', (event, data, ...args) => {
-  try {
-    let x: number, y: number;
-    
-    // Handle both object and direct coordinate formats
-    if (data && typeof data === 'object' && 'x' in data && 'y' in data) {
-      x = data.x;
-      y = data.y;
-    } else if (Array.isArray(data) && data.length === 2) {
-      x = data[0];
-      y = data[1];
-    } else if (args.length >= 2) {
-      // Handle case where x, y are passed as separate arguments
-      x = args[0];
-      y = args[1];
-    } else {
-      console.error('Invalid data format for move-window:', data);
-      return;
-    }
-    
-    // Validate coordinates
-    if (typeof x !== 'number' || typeof y !== 'number' || isNaN(x) || isNaN(y)) {
-      console.error('Invalid coordinates received in move-window handler:', { x, y });
-      return;
-    }
-    
-    // Round coordinates to integers
-    x = Math.round(x);
-    y = Math.round(y);
-    
-    if (mainWindow) {
-      // Get the screen dimensions
-      const display = screen.getDisplayNearestPoint({ x, y });
-      const { width, height } = display.workArea;
-      
-      // Get window size
-      const [winWidth, winHeight] = mainWindow.getSize();
-      
-      // Ensure window stays within screen bounds
-      x = Math.max(display.bounds.x, Math.min(x, display.bounds.x + width - winWidth));
-      y = Math.max(display.bounds.y, Math.min(y, display.bounds.y + height - winHeight));
-      
-      // Only set position if it's different from current position
-      const [currentX, currentY] = mainWindow.getPosition();
-      if (currentX !== x || currentY !== y) {
-        mainWindow.setPosition(x, y, false);
-      }
-      
-      // Update window position
-      windowPosition = { x, y };
-    }
-  } catch (error) {
-    console.error('Error in move-window handler:', error);
-  }
-});
-
-ipcMain.handle('get-window-pos', () => {
-  if (mainWindow) {
-    const [x, y] = mainWindow.getPosition();
-    return { x, y };
-  }
-  return windowPosition;
-});
-
-ipcMain.on('toggle-chat', () => {
-  toggleChatWindow();
-});
-
-ipcMain.on('close-chat', () => {
-  if (chatWindow) {
-    chatWindow.close();
-    chatWindow = null;
-  }
-});
-
-ipcMain.on('toggle-observe', () => {
-  toggleObserve();
-});
-
 // Audio processing handler
 ipcMain.handle('process-audio', async (event, audioData: ArrayBuffer) => {
   try {
@@ -520,7 +269,51 @@ ipcMain.handle('get-icon-data', async () => {
   }
 });
 
+ipcMain.handle('get-window-pos', async () => {
+  if (!mainWindow) return { x: 0, y: 0 };
+  const [x, y] = mainWindow.getPosition();
+  return { x, y };
+});
 
+// Handle window movement
+ipcMain.on('move-window', (event, data) => {
+  try {
+    if (!data || typeof data !== 'object') {
+      console.error('Invalid data received in move-window handler:', data);
+      return;
+    }
+    
+    let { x, y } = data;
+    
+    if (typeof x !== 'number' || typeof y !== 'number' || isNaN(x) || isNaN(y)) {
+      console.error('Invalid coordinates received in move-window handler:', { x, y });
+      return;
+    }
+    
+    // Ensure we're working with integers
+    x = Math.round(x);
+    y = Math.round(y);
+    
+    if (mainWindow) {
+      // Get the screen dimensions
+      const display = screen.getDisplayNearestPoint({ x, y });
+      const { width, height } = display.workArea;
+      
+      // Ensure window stays within screen bounds
+      const windowSize = mainWindow.getSize();
+      x = Math.max(display.bounds.x, Math.min(x, display.bounds.x + width - windowSize[0]));
+      y = Math.max(display.bounds.y, Math.min(y, display.bounds.y + height - windowSize[1]));
+      
+      // Only set position if it's different from current position
+      const [currentX, currentY] = mainWindow.getPosition();
+      if (currentX !== x || currentY !== y) {
+        mainWindow.setPosition(x, y, false);
+      }
+    }
+  } catch (error) {
+    console.error('Error in move-window handler:', error);
+  }
+});
 
 // This method will be called when Electron has finished
 // initialization and is ready to create browser windows.
@@ -539,16 +332,10 @@ app.whenReady().then(async () => {
   createTray();
 
   app.on('activate', () => {
+    // On macOS it's common to re-create a window in the app when the
+    // dock icon is clicked and there are no other windows open.
     if (BrowserWindow.getAllWindows().length === 0) {
       createWindow();
-    }
-  });
-
-  // Handle main window loaded event
-  ipcMain.on('main-window-loaded', () => {
-    if (mainWindow) {
-      // Load the actual app content
-      mainWindow.loadFile(path.join(process.cwd(), 'index.html'));
     }
   });
 });
@@ -574,19 +361,6 @@ ipcMain.handle('toggle-debug', () => {
 });
 
 // Handle screen capture request
-ipcMain.handle('start-screen-capture', async () => {
-  try {
-    if (mainWindow) {
-      const sources = await desktopCapturer.getSources({ types: ['window', 'screen'] });
-      // Implementation for screen capture
-      return { success: true, sources };
-    }
-    return { success: false, error: 'Main window not available' };
-  } catch (error) {
-    console.error('Screen capture error:', error);
-    return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
-  }
-});
 ipcMain.handle('capture-screen', async () => {
   if (!mainWindow) return null;
   

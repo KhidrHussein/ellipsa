@@ -1,0 +1,415 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline' 'unsafe-eval';">
+  <title>Ellipsa Chat</title>
+  <style>
+    :root {
+      --bg-color: #1e1e1e;
+      --bg-secondary: #252526;
+      --text-color: #e0e0e0;
+      --text-secondary: #a0a0a0;
+      --accent-color: #c62828;
+      --accent-hover: #e53935;
+      --border-color: #3c3c3c;
+      --input-bg: #333333;
+      --message-bg: #2d2d2d;
+      --message-user-bg: #3a3a3a;
+      --shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+      --transition: all 0.2s ease;
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      background-color: var(--bg-color);
+      color: var(--text-color);
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .chat-header {
+      padding: 12px 16px;
+      background-color: var(--bg-secondary);
+      border-bottom: 1px solid var(--border-color);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      -webkit-app-region: drag;
+      user-select: none;
+    }
+
+    .chat-title {
+      font-size: 14px;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .chat-controls {
+      display: flex;
+      gap: 8px;
+      -webkit-app-region: no-drag;
+    }
+
+    .chat-button {
+      width: 24px;
+      height: 24px;
+      border-radius: 4px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: none;
+      border: none;
+      color: var(--text-secondary);
+      cursor: pointer;
+      transition: var(--transition);
+    }
+
+    .chat-button:hover {
+      background-color: rgba(255, 255, 255, 0.1);
+      color: var(--text-color);
+    }
+
+    .chat-close {
+      color: #f44336;
+    }
+
+    .chat-close:hover {
+      background-color: rgba(244, 67, 54, 0.2);
+    }
+
+    .chat-messages {
+      flex: 1;
+      overflow-y: auto;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .message {
+      max-width: 80%;
+      padding: 8px 12px;
+      border-radius: 12px;
+      line-height: 1.4;
+      font-size: 13px;
+      position: relative;
+      animation: messageIn 0.2s ease-out;
+    }
+
+    @keyframes messageIn {
+      from {
+        opacity: 0;
+        transform: translateY(10px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .message-user {
+      align-self: flex-end;
+      background-color: var(--accent-color);
+      color: white;
+      border-bottom-right-radius: 4px;
+    }
+
+    .message-assistant {
+      align-self: flex-start;
+      background-color: var(--message-bg);
+      border-bottom-left-radius: 4px;
+    }
+
+    .message-time {
+      font-size: 10px;
+      color: rgba(255, 255, 255, 0.5);
+      margin-top: 2px;
+      text-align: right;
+    }
+
+    .chat-input-container {
+      padding: 12px 16px;
+      border-top: 1px solid var(--border-color);
+      background-color: var(--bg-secondary);
+    }
+
+    .chat-input-wrapper {
+      display: flex;
+      gap: 8px;
+      align-items: flex-end;
+    }
+
+    .chat-input {
+      flex: 1;
+      background-color: var(--input-bg);
+      border: 1px solid var(--border-color);
+      border-radius: 16px;
+      padding: 8px 16px;
+      color: var(--text-color);
+      font-family: inherit;
+      font-size: 13px;
+      resize: none;
+      max-height: 120px;
+      min-height: 36px;
+      line-height: 1.4;
+      transition: var(--transition);
+    }
+
+    .chat-input:focus {
+      outline: none;
+      border-color: var(--accent-color);
+      box-shadow: 0 0 0 2px rgba(198, 40, 40, 0.2);
+    }
+
+    .send-button {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      background-color: var(--accent-color);
+      border: none;
+      color: white;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: var(--transition);
+      flex-shrink: 0;
+    }
+
+    .send-button:hover {
+      background-color: var(--accent-hover);
+      transform: scale(1.05);
+    }
+
+    .send-button:active {
+      transform: scale(0.95);
+    }
+
+    .send-button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      transform: none !important;
+    }
+
+    .typing-indicator {
+      display: flex;
+      gap: 4px;
+      padding: 8px 16px;
+      align-self: flex-start;
+    }
+
+    .typing-dot {
+      width: 6px;
+      height: 6px;
+      background-color: var(--text-secondary);
+      border-radius: 50%;
+      animation: typing 1.4s infinite ease-in-out;
+    }
+
+    .typing-dot:nth-child(1) { animation-delay: 0s; }
+    .typing-dot:nth-child(2) { animation-delay: 0.2s; }
+    .typing-dot:nth-child(3) { animation-delay: 0.4s; }
+
+    @keyframes typing {
+      0%, 60%, 100% { transform: translateY(0); }
+      30% { transform: translateY(-4px); }
+    }
+
+    /* Scrollbar styling */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+
+    ::-webkit-scrollbar-track {
+      background: transparent;
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background: #555;
+      border-radius: 3px;
+    }
+
+    ::-webkit-scrollbar-thumb:hover {
+      background: #777;
+    }
+  </style>
+</head>
+<body>
+  <div class="chat-header">
+    <div class="chat-title">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M12 2C6.48 2 2 6.48 2 12C2 17.52 6.48 22 12 22C13.66 22 15.21 21.58 16.57 20.84L20 22L18.26 18.67C19.03 17.4 19.5 15.96 19.5 14.44C19.5 8.41 16.21 3.39 12 2Z" fill="var(--accent-color)"/>
+      </svg>
+      <span>ellipsa</span>
+    </div>
+    <div class="chat-controls">
+      <button class="chat-button" id="minimize-btn" title="Minimize">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="5" y1="12" x2="19" y2="12"></line>
+        </svg>
+      </button>
+      <button class="chat-button chat-close" id="close-btn" title="Close">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="18" y1="6" x2="6" y2="18"></line>
+          <line x1="6" y1="6" x2="18" y2="18"></line>
+        </svg>
+      </button>
+    </div>
+  </div>
+
+  <div class="chat-messages" id="messages">
+    <div class="message message-assistant">
+      Hello! I'm ellipsa. How can I help you today?
+      <div class="message-time">Just now</div>
+    </div>
+  </div>
+
+  <div class="chat-input-container">
+    <div class="chat-input-wrapper">
+      <textarea 
+        id="message-input" 
+        class="chat-input" 
+        placeholder="Type a message..." 
+        rows="1"
+        spellcheck="false"
+      ></textarea>
+      <button id="send-button" class="send-button" disabled>
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="22" y1="2" x2="11" y2="13"></line>
+          <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+        </svg>
+      </button>
+    </div>
+  </div>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const messagesContainer = document.getElementById('messages');
+      const messageInput = document.getElementById('message-input');
+      const sendButton = document.getElementById('send-button');
+      const closeButton = document.getElementById('close-btn');
+      const minimizeButton = document.getElementById('minimize-btn');
+      
+      // Auto-resize textarea
+      messageInput.addEventListener('input', () => {
+        messageInput.style.height = 'auto';
+        messageInput.style.height = `${Math.min(messageInput.scrollHeight, 120)}px`;
+        
+        // Enable/disable send button based on input
+        sendButton.disabled = messageInput.value.trim() === '';
+      });
+      
+      // Send message on Enter (Shift+Enter for new line)
+      messageInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' && !e.shiftKey) {
+          e.preventDefault();
+          sendMessage();
+        }
+      });
+      
+      // Send button click handler
+      sendButton.addEventListener('click', sendMessage);
+      
+      // Close button
+      closeButton.addEventListener('click', () => {
+        window.ellipsa.closeChat();
+      });
+      
+      // Minimize button
+      minimizeButton.addEventListener('click', () => {
+        window.ellipsa.minimizeChat();
+      });
+      
+      // Focus input when chat is opened
+      messageInput.focus();
+      
+      // Handle messages from main process
+      window.ellipsa.onMessage((message) => {
+        addMessage('assistant', message);
+      });
+      
+      function sendMessage() {
+        const text = messageInput.value.trim();
+        if (!text) return;
+        
+        // Add user message to chat
+        addMessage('user', text);
+        
+        // Show typing indicator
+        showTypingIndicator();
+        
+        // Send message to main process
+        window.ellipsa.sendMessage(text);
+        
+        // Clear input and reset height
+        messageInput.value = '';
+        messageInput.style.height = 'auto';
+        sendButton.disabled = true;
+      }
+      
+      function addMessage(sender, text) {
+        // Remove typing indicator if present
+        const typingIndicator = document.querySelector('.typing-indicator');
+        if (typingIndicator) {
+          typingIndicator.remove();
+        }
+        
+        const messageDiv = document.createElement('div');
+        messageDiv.className = `message message-${sender}`;
+        
+        // Format message with line breaks
+        const formattedText = text.replace(/\n/g, '<br>');
+        
+        // Get current time
+        const now = new Date();
+        const timeString = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        
+        messageDiv.innerHTML = `
+          ${formattedText}
+          <div class="message-time">${timeString}</div>
+        `;
+        
+        messagesContainer.appendChild(messageDiv);
+        scrollToBottom();
+      }
+      
+      function showTypingIndicator() {
+        // Remove any existing typing indicator
+        const existingIndicator = document.querySelector('.typing-indicator');
+        if (existingIndicator) return;
+        
+        const typingDiv = document.createElement('div');
+        typingDiv.className = 'typing-indicator';
+        typingDiv.innerHTML = `
+          <div class="typing-dot"></div>
+          <div class="typing-dot"></div>
+          <div class="typing-dot"></div>
+        `;
+        
+        messagesContainer.appendChild(typingDiv);
+        scrollToBottom();
+      }
+      
+      function scrollToBottom() {
+        messagesContainer.scrollTop = messagesContainer.scrollHeight;
+      }
+      
+      // Initial scroll to bottom
+      scrollToBottom();
+    });
+  </script>
+</body>
+</html>

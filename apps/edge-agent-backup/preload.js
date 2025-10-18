@@ -184,24 +184,6 @@ contextBridge.exposeInMainWorld('ellipsa', {
   moveWindow: (x, y) => ipcRenderer.send('move-window', { x, y }),
   getWindowPos: () => ipcRenderer.invoke('get-window-pos'),
   
-  // Window management
-  // Chat methods
-  // Chat window controls
-  toggleChat: () => ipcRenderer.send('toggle-chat'),
-  closeChat: () => ipcRenderer.send('close-chat'),
-  minimizeChat: () => ipcRenderer.send('minimize-chat'),
-  
-  // Chat messaging
-  sendMessage: (message) => ipcRenderer.send('send-message', message),
-  onMessage: (callback) => {
-    const listener = (_, message) => callback(message);
-    ipcRenderer.on('message-received', listener);
-    return () => ipcRenderer.off('message-received', listener);
-  },
-  
-  // App control
-  quitApp: () => ipcRenderer.send('quit-app'),
-  
   // Cleanup function
   cleanup: () => {
     audioLevelListener.removeAllListeners();
