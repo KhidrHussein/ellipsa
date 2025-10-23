@@ -3,6 +3,9 @@
   "compilerOptions": {
     "outDir": "dist",
     "rootDir": "src",
+    "declaration": true,
+    "declarationMap": true,
+    "sourceMap": true,
     "typeRoots": [
       "./node_modules/@types",
       "../../types"

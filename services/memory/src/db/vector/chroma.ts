@@ -81,22 +81,34 @@ export async function getOrCreateCollection(
   const ef = embeddingFunction || getEmbeddingFunction();
   
   try {
-    // Check if collection exists
-    const collections = await client.listCollections();
-    const existing = collections.find(c => c.name === name);
-    
-    if (existing) {
+    // Try to get the existing collection first
+    try {
+      const collection = await client.getCollection({ name, embeddingFunction: ef });
       console.log(`Using existing collection: ${name}`);
+      return collection;
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      // If collection doesn't exist, create it
+      if (errorMessage.includes('not found') || errorMessage.includes('does not exist')) {
+        console.log(`Creating new collection: ${name}`);
+        return await client.createCollection({
+          name,
+          metadata,
+          embeddingFunction: ef,
+        });
+      }
+      // If it's a different error, rethrow it
+      throw error;
+    }
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    const isChromaError = error instanceof Error && 'name' in error && error.name === 'ChromaUniqueError';
+    
+    // If we get a 'resource already exists' error, try to get the collection again
+    if (errorMessage.includes('already exists') || isChromaError) {
+      console.log(`Collection ${name} already exists, retrieving it`);
       return await client.getCollection({ name, embeddingFunction: ef });
     }
-    
-    console.log(`Creating new collection: ${name}`);
-    return await client.createCollection({
-      name,
-      metadata,
-      embeddingFunction: ef,
-    });
-  } catch (error) {
     console.error(`Error getting/creating collection ${name}:`, error);
     throw error;
   }

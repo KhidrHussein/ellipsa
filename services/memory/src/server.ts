@@ -9,11 +9,13 @@ import { RetrievalService } from './services/RetrievalService';
 import { EventModel } from './models/EventModel';
 import { EntityModel } from './models/EntityModel';
 import { TaskModel } from './models/TaskModel';
+import { WebSocketService } from './services/WebSocketService';
+import { EventProcessingService } from './services/EventProcessingService';
 import { initializeDatabases, closeConnections } from './db/init';
+import { logger } from './utils/logger';
 import { getChromaClient } from './db/vector/chroma';
 import { getDriver, getSession } from './db/graph/connection';
 import { getConnection, getKnexClient } from './db/relational/connection';
-import { logger } from './utils/logger';
 
 // Extend the Socket.IO types with our custom properties
 declare module 'socket.io' {
@@ -26,8 +28,8 @@ declare module 'socket.io' {
   }
 }
 
-// Configuration
-const PORT = process.env.PORT || 4001;
+// Default configuration
+const DEFAULT_PORT = 4001;
 const NODE_ENV = process.env.NODE_ENV || 'development';
 
 // Main application class
@@ -42,8 +44,13 @@ class MemoryServer {
   private entityModel!: EntityModel;
   private taskModel!: TaskModel;
   private retrievalService!: RetrievalService;
+  private webSocketService!: WebSocketService;
+  private eventProcessingService!: EventProcessingService;
 
-  constructor() {
+  private port: number;
+
+  constructor(port?: number) {
+    this.port = port || parseInt(process.env.PORT || '', 10) || DEFAULT_PORT;
     this.app = express();
     this.server = createServer(this.app);
     this.io = new SocketIOServer(this.server, {
@@ -63,7 +70,7 @@ class MemoryServer {
       this.initializeModels();
       
       // Initialize services
-      this.initializeServices();
+      await this.initializeServices();
       
       // Configure middleware
       this.configureMiddleware();
@@ -95,6 +102,7 @@ class MemoryServer {
       this.chromaCollection = chromaCollections.events; // Using events collection for now
       
       logger.info('All database connections established');
+      return { knex, neo4jSession: this.neo4jSession, chromaCollection: this.chromaCollection };
     } catch (error) {
       logger.error('Failed to initialize databases:', error);
       throw error;
@@ -102,146 +110,83 @@ class MemoryServer {
   }
 
   private initializeModels() {
-    this.eventModel = new EventModel(this.knex, this.neo4jSession, this.chromaCollection);
-    this.entityModel = new EntityModel(this.knex, this.neo4jSession, this.chromaCollection);
-    this.taskModel = new TaskModel(this.knex, this.neo4jSession);
+    // Initialize models with proper types
+    this.eventModel = new EventModel(
+      this.knex,
+      this.neo4jSession,
+      this.chromaCollection
+    );
+    
+    this.entityModel = new EntityModel(
+      this.knex,
+      this.neo4jSession,
+      this.chromaCollection
+    );
+    
+    this.taskModel = new TaskModel(
+      this.knex,
+      this.neo4jSession
+    );
   }
 
-  private initializeServices() {
+  private async initializeServices() {
+    // Initialize RetrievalService with required models
     this.retrievalService = new RetrievalService(
       this.eventModel,
       this.entityModel,
       this.taskModel
     );
-  }
-
-  private configureMiddleware() {
-    // CORS
-    this.app.use(cors({
-      origin: NODE_ENV === 'production' 
-        ? process.env.ALLOWED_ORIGINS?.split(',') || []
-        : '*',
-      methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-      allowedHeaders: ['Content-Type', 'Authorization', 'Accept-Version'],
-    }));
-
-    // JSON parsing
-    this.app.use(express.json({ limit: '10mb' }));
-    this.app.use(express.urlencoded({ extended: true }));
-
-    // Logging
-    this.app.use((req, res, next) => {
-      logger.info(`${req.method} ${req.path}`);
-      next();
-    });
-  }
-
-  private configureRoutes() {
-    // Health check (not versioned)
-    this.app.get('/health', (req, res) => {
-      res.json({ 
-        status: 'ok', 
-        service: 'memory',
-        version: process.env.npm_package_version || '0.1.0',
-        timestamp: new Date().toISOString() 
-      });
-    });
-
-    // Create versioned API router
-    const apiRouter = createApiRouter(
-      this.eventModel, 
-      this.entityModel, 
-      this.taskModel, 
-      this.retrievalService
-    );
     
-    // Mount the versioned API under /api
-    this.app.use('/api', apiRouter);
-
-    // 404 handler for non-API routes
-    this.app.use((req, res) => {
-      res.status(404).json({ 
-        error: 'Not Found',
-        message: 'The requested resource was not found',
-        path: req.path,
-        method: req.method
-      });
-    });
-
-    // Global error handler
-    this.app.use((err: any, req: any, res: any, next: any) => {
-      logger.error('Unhandled error:', err);
+    // Create a mock prompt service that matches the expected interface
+    const promptService = {
+      async generate(prompt: string, options?: any): Promise<string> {
+        return `Response to: ${prompt}`;
+      },
       
-      // Default error status and message
-      const status = err.status || 500;
-      const message = err.message || 'Internal Server Error';
-      
-      // Prepare error response
-      const errorResponse: any = {
-        success: false,
-        error: {
-          code: err.code || 'INTERNAL_SERVER_ERROR',
-          message: message,
-        },
-        meta: {
-          version: (req as any).apiVersion || '1.0',
-          timestamp: new Date().toISOString()
-        }
-      };
-      
-      // Add stack trace in development
-      if (NODE_ENV === 'development') {
-        errorResponse.error.stack = err.stack;
+      async extractStructuredData(content: string): Promise<{
+        summary: string;
+        entities: any[];
+        action_items: any[];
+      }> {
+        return {
+          summary: content.substring(0, 100),
+          entities: [],
+          action_items: []
+        };
       }
-      
-      res.status(status).json(errorResponse);
+    };
+  
+    // Initialize Event Processing Service
+    this.eventProcessingService = new EventProcessingService({
+      promptService: promptService as any,
+      eventModel: this.eventModel,
+      entityModel: this.entityModel,
+      taskModel: this.taskModel,
+      neo4jSession: this.neo4jSession,
     });
+  
+    // Initialize WebSocket Service after HTTP server is started
+    this.webSocketService = new WebSocketService(this.server, this.eventProcessingService);
   }
 
-  private configureWebSocket() {
-    this.io.on('connection', (socket: any) => {
-      logger.info(`New WebSocket connection: ${socket.id}`);
-
-      socket.on('subscribe', (data: { channel: string }) => {
-        if (data?.channel) {
-          socket.join(data.channel);
-          logger.info(`Client ${socket.id} subscribed to ${data.channel}`);
-        }
-      });
-
-      socket.on('unsubscribe', (data: { channel: string }) => {
-        if (data?.channel) {
-          socket.leave(data.channel);
-          logger.info(`Client ${socket.id} unsubscribed from ${data.channel}`);
-        }
-      });
-
-      socket.on('disconnect', () => {
-        logger.info(`Client disconnected: ${socket.id}`);
-      });
-
-      // Handle errors
-      socket.on('error', (error: Error) => {
-        logger.error(`WebSocket error from ${socket.id}:`, error);
-      });
-    });
-  }
-
-  private async start() {
-    return new Promise<void>((resolve) => {
-      this.server.listen(PORT, () => {
-        logger.info(`Memory Service listening on port ${PORT}`);
-        resolve();
-      });
-    });
-  }
-
-  async close() {
+  public async close(): Promise<void> {
     try {
+      // Close WebSocket connections
+      if (this.webSocketService) {
+        try {
+          await this.webSocketService.close();
+        } catch (error) {
+          logger.error('Error closing WebSocket service:', error);
+        }
+      }
+
+      // Close database connections
+      await closeConnections();
+
       // Close HTTP server
       if (this.server) {
-        await new Promise<void>((resolve, reject) => {
-          this.server.close((err) => {
+        return new Promise((resolve, reject) => {
+          this.server?.close((err) => {
             if (err) {
               logger.error('Error closing HTTP server:', err);
               reject(err);
@@ -252,22 +197,49 @@ class MemoryServer {
           });
         });
       }
-
-      // Close WebSocket server
-      if (this.io) {
-        this.io.close(() => {
-          logger.info('WebSocket server closed');
-        });
-      }
-
-      // Close all database connections
-      await closeConnections();
-      logger.info('All database connections closed');
     } catch (error) {
       logger.error('Error during server shutdown:', error);
       throw error;
     }
   }
+
+  private configureMiddleware() {
+    this.app.use(cors());
+    this.app.use(express.json());
+    this.app.use(express.urlencoded({ extended: true }));
+  }
+
+  private configureRoutes() {
+    // Health check endpoint
+    this.app.get('/health', (req, res) => {
+      res.json({ status: 'ok', timestamp: new Date().toISOString() });
+    });
+  }
+
+  private configureWebSocket() {
+    // WebSocket configuration is handled by WebSocketService
+    logger.info('WebSocket server configured');
+  }
+
+  private async start() {
+    return new Promise<void>((resolve, reject) => {
+      this.server.on('error', (error: NodeJS.ErrnoException) => {
+        if (error.code === 'EADDRINUSE') {
+          logger.error(`Port ${this.port} is already in use`);
+          reject(new Error(`Port ${this.port} is already in use`));
+        } else {
+          logger.error('Failed to start server:', error);
+          reject(error);
+        }
+      });
+
+      this.server.listen(this.port, () => {
+        logger.info(`Memory Service listening on port ${this.port}`);
+        resolve();
+      });
+    });
+  }
+
 }
 
 // Start the server if this file is run directly

@@ -6,18 +6,23 @@ import { startAudioCapture, stopAudioCapture } from './audio/capture';
 import { screenCapture } from './capture/screenCapture';
 import { initializeServices, memoryClient, processorClient } from './services/api';
 import { screenCaptureHandlers } from './ipc/screenCaptureHandlers';
+import { EventService } from './services/EventService';
+import { setupLLMHandlers } from './services/llmHandlers';
+import { initializeLLMService } from './services/LLMService';
 
 // For resolving paths in the app
 const appRoot = path.join(__dirname, '..');
 
+// Application state
 let mainWindow: BrowserWindow | null = null;
 let chatWindow: BrowserWindow | null = null;
-let isCapturing = false; // Track if we're currently capturing
 let tray: Tray | null = null;
 let observeMode = false;
 let debugMode = false;
-// isCapturing is now managed by screenCaptureHandlers
 let windowPosition = { x: 0, y: 0 };
+
+// Services
+let eventService: EventService | null = null;
 
 // Helper function to get the path to the assets directory
 const getAssetsPath = (...paths: string[]): string => {
@@ -323,10 +328,10 @@ async function toggleObserve(): Promise<void> {
         // Test immediate capture
         console.log('[Main] Testing immediate capture...');
         try {
-          const testCapture = await screenCapture.captureActiveWindow();
-          console.log('[Main] Test capture result:', testCapture ? 'success' : 'failed');
-          if (testCapture) {
-            console.log('[Main] Screenshot saved to:', testCapture.filePath);
+          const result = await screenCapture.captureActiveWindow();
+          console.log('[Main] Test capture result:', result ? 'success' : 'failed');
+          if (result) {
+            console.log('[Main] Screenshot saved to:', result.filePath);
           }
         } catch (error) {
           console.error('[Main] Test capture failed:', error);
@@ -336,7 +341,6 @@ async function toggleObserve(): Promise<void> {
       }
       
       observeMode = true;
-      isCapturing = true;
       mainWindow?.webContents.send('observe-status', { 
         observing: true,
         error: null 
@@ -550,108 +554,51 @@ ipcMain.handle('get-icon-data', async () => {
 
 // This method will be called when Electron has finished
 // initialization and is ready to create browser windows.
-app.whenReady().then(async () => {
-  // Initialize services
-  const servicesReady = await initializeServices();
-  if (!servicesReady) {
-    dialog.showErrorBox(
-      'Service Connection Error',
-      'Failed to connect to one or more required services. Please ensure all services are running and try again.'
-    );
-    app.quit();
-    return;
-  }
-  createWindow();
-  createTray();
-
-  app.on('activate', () => {
-    if (BrowserWindow.getAllWindows().length === 0) {
-      createWindow();
-    }
-  });
-
-  // Handle main window loaded event
-  ipcMain.on('main-window-loaded', () => {
-    if (mainWindow) {
-      // Load the actual app content
-      mainWindow.loadFile(path.join(process.cwd(), 'index.html'));
-    }
-  });
-});
-
-// Quit when all windows are closed, except on macOS. There, it's common
-// for applications and their menu bar to stay active until the user quits
-// explicitly with Cmd + Q.
-app.on('window-all-closed', () => {
-  if (process.platform !== 'darwin') {
-    app.quit();
-  }
-});
-
-// Handle IPC calls from the renderer process
-ipcMain.handle('toggle-observation', async () => {
-  await toggleObserve();
-  return { observing: observeMode };
-});
-
-ipcMain.handle('toggle-debug', () => {
-  toggleDebugMode();
-  return { debug: debugMode };
-});
-
-// Handle screen capture request
-ipcMain.handle('start-screen-capture', async () => {
+async function initializeApp() {
   try {
-    if (mainWindow) {
-      const sources = await desktopCapturer.getSources({ types: ['window', 'screen'] });
-      // Implementation for screen capture
-      return { success: true, sources };
-    }
-    return { success: false, error: 'Main window not available' };
-  } catch (error) {
-    console.error('Screen capture error:', error);
-    return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
-  }
-});
-ipcMain.handle('capture-screen', async () => {
-  if (!mainWindow) return null;
-  
-  try {
-    const { desktopCapturer } = require('electron');
-    const sources = await desktopCapturer.getSources({ types: ['screen'], thumbnailSize: { width: 800, height: 600 } });
-    
-    if (sources && sources.length > 0) {
-      return sources[0].thumbnail.toDataURL();
-    }
-    return null;
-  } catch (error) {
-    console.error('Failed to capture screen:', error);
-    return null;
-  }
-});
+    // Initialize LLM service
+    initializeLLMService(true); // true for main process
 
-// Handle app commands (for Windows)
-app.on('browser-window-created', (_, window) => {
-  // Handle media keys
-  window.webContents.on('before-input-event', (event, input) => {
-    if (input.type === 'keyDown' && input.control && input.key.toLowerCase() === 'd') {
-      toggleDebugMode();
-    }
-  });
-});
+    // Setup LLM handlers
+    setupLLMHandlers();
 
-// Handle the app before it quits
-app.on('before-quit', (e) => {
-  if (observeMode) {
-    e.preventDefault();
-    // Stop any ongoing captures
-    if (isCapturing) {
-      screenCapture.stopCapture().catch(console.error);
-      isCapturing = false;
-    }
-    stopAudioCapture(mainWindow);
+    // Initialize Event Service
+    const eventService = new EventService({
+      wsUrl: 'ws://localhost:4001', // Memory service WebSocket URL
+      onEventProcessed: (event) => {
+        console.log('Event processed:', event);
+        // Forward to renderer if needed
+        mainWindow?.webContents.send('event:processed', event);
+      },
+      onError: (error) => {
+        console.error('Event service error:', error);
+      }
+    });
+
+    // Start observing when app is ready
+    eventService.startObserving();
+
+    // Create the main window
+    createWindow();
+  } catch (error) {
+    console.error('Failed to initialize application:', error);
+    // Try to show error dialog
+    dialog.showErrorBox('Initialization Error', 'Failed to initialize the application. Please check the logs for more details.');
     app.quit();
   }
+}
+
+// Start the app
+app.whenReady().then(initializeApp).catch(console.error);
+
+// Handle app shutdown
+app.on('will-quit', () => {
+  // Clean up services
+  if (eventService) {
+    // The WebSocketClient used by EventService will handle cleanup
+    eventService = null;
+  }
+  stopAudioCapture(mainWindow);
 });
 
 // Handle any uncaught exceptions

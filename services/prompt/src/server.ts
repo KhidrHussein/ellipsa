@@ -33,7 +33,9 @@ const CompletionSchema = z.object({
   }).optional()
 });
 
-const app = express();
+import { Express } from 'express';
+
+const app: Express = express();
 app.use(express.json());
 
 // Request logging middleware
@@ -158,3 +160,7 @@ process.on('SIGTERM', () => {
     process.exit(0);
   });
 });
+
+// Export the Express app and server
+export { app };
+export default server;

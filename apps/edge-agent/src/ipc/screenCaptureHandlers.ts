@@ -77,7 +77,7 @@ export class ScreenCaptureHandlers {
     // Get current capture status
     ipcMain.handle('get-capture-status', () => ({
       isCapturing: this.isCapturing,
-      lastCapture: this.screenCapture.getCurrentContext()
+      lastCapture: this.screenCapture.applicationContext
     }));
   }
 

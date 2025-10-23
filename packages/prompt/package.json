@@ -1,0 +1,38 @@
+{
+  "name": "@ellipsa/prompt",
+  "version": "0.1.0",
+  "description": "Prompt service for Ellipsa AI",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "test": "jest",
+    "lint": "eslint src --ext .ts",
+    "format": "prettier --write \"src/**/*.ts\""
+  },
+  "dependencies": {
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@types/jest": "^29.5.8",
+    "@types/node": "^20.0.0",
+    "@typescript-eslint/eslint-plugin": "^6.0.0",
+    "@typescript-eslint/parser": "^6.0.0",
+    "eslint": "^8.0.0",
+    "eslint-config-prettier": "^9.0.0",
+    "eslint-plugin-prettier": "^5.0.0",
+    "jest": "^29.7.0",
+    "prettier": "^3.0.0",
+    "ts-jest": "^29.1.2",
+    "typescript": "^5.5.4"
+  },
+  "keywords": [
+    "ellipsa",
+    "prompt",
+    "ai",
+    "nlp"
+  ],
+  "author": "Ellipsa Team",
+  "license": "MIT"
+}

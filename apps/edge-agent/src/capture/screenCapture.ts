@@ -4,6 +4,8 @@ import { join } from 'path';
 import { createWorker, Worker } from 'tesseract.js';
 import sharp from 'sharp';
 import { v4 as uuidv4 } from 'uuid';
+import { EventService } from '../services/EventService';
+import { LLMService } from '../services/LLMService';
 
 // Remove global declaration as it's not needed
 
@@ -43,16 +45,93 @@ export class ScreenCapture {
   private captureInterval: NodeJS.Timeout | null = null;
   private readonly capturePath: string;
   private isCapturing: boolean = false;
-  private applicationContext: ApplicationContext | null = null;
+  private _applicationContext: ApplicationContext | null = null;
+  
+  public get applicationContext(): ApplicationContext | null {
+    return this._applicationContext;
+  }
+  
   private worker: any = null; // Using any due to Tesseract.js type issues
   private readonly OCR_ENGINE = 'eng';
   private readonly MIN_CAPTURE_INTERVAL = 1000; // 1 second
   private lastCaptureTime: number = 0;
+  private eventService: EventService;
+  private llmService: typeof LLMService;
+  private onScreenshot?: (result: CaptureResult) => void;
 
   constructor() {
     this.capturePath = join(app.getPath('userData'), 'screenshots');
     console.log('Screenshots will be saved to:', this.capturePath);
+    
+    // Initialize services
+    this.eventService = new EventService({
+      wsUrl: 'ws://localhost:4001',
+      onEventProcessed: (event) => {
+        console.log('Screen capture event processed:', event);
+      },
+      onError: (error) => {
+        console.error('Screen capture event error:', error);
+      }
+    });
+    
+    this.llmService = LLMService;
     this.initializeOCR();
+  }
+
+  /**
+   * Extract text from a base64-encoded image using Tesseract.js
+   * @param base64Image Base64-encoded image data
+   * @returns Extracted text content
+   */
+  private async extractText(base64Image: string): Promise<string> {
+    if (!this.worker) {
+      console.warn('Tesseract worker not initialized');
+      return '';
+    }
+
+    try {
+      console.log('Starting OCR processing...');
+      
+      // Convert base64 to buffer
+      const imageBuffer = Buffer.from(base64Image, 'base64');
+      
+      // Use Tesseract to recognize text
+      const { data: { text } } = await this.worker.recognize(imageBuffer);
+      
+      console.log('OCR completed successfully');
+      return text.trim();
+    } catch (error) {
+      console.error('Error during OCR processing:', error);
+      return '';
+    }
+  }
+
+  /**
+   * Update the application context with the latest window and text information
+   * @param metadata Window metadata
+   * @param textContent Extracted text content
+   */
+  private updateApplicationContext(
+    metadata: {
+      windowTitle: string;
+      appName: string;
+      url?: string;
+      windowId: number | null;
+    },
+    textContent: string
+  ): void {
+    this._applicationContext = {
+      windowTitle: metadata.windowTitle,
+      appName: metadata.appName,
+      url: metadata.url,
+      windowId: metadata.windowId,
+      lastActive: new Date()
+    };
+    
+    console.log('Updated application context:', {
+      ...this._applicationContext,
+      textPreview: textContent.substring(0, 100) + (textContent.length > 100 ? '...' : '')
+    });
   }
 
   private async initializeOCR() {
@@ -140,6 +219,11 @@ export class ScreenCapture {
     return true;
   }
 
+  /**
+   * Get available desktop sources (windows/screens) for screen capture
+   * @param options Options for source capture
+   * @returns Array of desktop capturer sources
+   */
   private async getSources(options: Electron.SourcesOptions): Promise<Electron.DesktopCapturerSource[]> {
     try {
       console.log('[ScreenCapture] Getting desktop sources with options:', {
@@ -156,7 +240,7 @@ export class ScreenCapture {
       };
 
       const sources = await desktopCapturer.getSources({
-        types: defaultOptions.types as ('screen' | 'window')[],
+        types: (defaultOptions.types || ['window']) as ('screen' | 'window')[],
         thumbnailSize: defaultOptions.thumbnailSize,
         fetchWindowIcons: defaultOptions.fetchWindowIcons
       });
@@ -170,9 +254,9 @@ export class ScreenCapture {
           appIcon: sources[0].appIcon ? 'available' : 'not available',
           thumbnail: sources[0].thumbnail ? 'available' : 'not available'
         });
-        // Note: The 'types' property is not available in the TypeScript definition
-        // but may be available at runtime. We'll log what we can.
-        console.log('[ScreenCapture] Source details:', sources.map((source, i) => ({
+        
+        // Log all sources for debugging
+        console.log('[ScreenCapture] All sources:', sources.map((source, i) => ({
           index: i,
           id: source.id,
           name: source.name,
@@ -189,6 +273,25 @@ export class ScreenCapture {
     }
   }
 
+  /**
+   * Stop the screen capture process
+   * @returns boolean indicating if the capture was successfully stopped
+   */
+  public stopCapture(): boolean {
+    if (this.captureInterval) {
+      clearInterval(this.captureInterval);
+      this.captureInterval = null;
+      this.isCapturing = false;
+      console.log('[ScreenCapture] Screen capture stopped');
+      return true;
+    }
+    return false;
+  }
+
+  /**
+   * Capture the currently active window or screen
+   * @returns Capture result with metadata and extracted text, or null if capture failed
+   */
   public async captureActiveWindow(): Promise<CaptureResult | null> {
     console.log('[ScreenCapture] Attempting to capture screen...');
     
@@ -286,64 +389,72 @@ export class ScreenCapture {
       console.log(`[ScreenCapture] Saving screenshot to: ${filePath}`);
       await writeFile(filePath, source.thumbnail.toPNG());
       
-      // Extract text using OCR
-      let textContent = '';
-      if (this.worker) {
-        try {
-          console.log('[ScreenCapture] Running OCR on screenshot...');
-          const { data } = await this.worker.recognize(filePath);
-          textContent = data.text;
-          console.log('[ScreenCapture] OCR completed successfully');
-        } catch (error) {
-          console.error('Error during OCR:', error);
-        }
-      }
+      // Convert the thumbnail to base64 for text extraction
+      const imageData = source.thumbnail.toPNG().toString('base64');
       
-      const result: CaptureResult = {
-        id: uuidv4(),
-        filePath,
-        windowTitle: targetWindow ? targetWindow.getTitle() : 'Full Screen',
-        appName: targetWindow ? targetWindow.getTitle().split(' - ').pop() || 'Unknown App' : 'Screen',
-        textContent,
-        metadata: {
-          timestamp: new Date().toISOString(),
-          windowId: targetWindow?.id || 0,
-          displayId: 'primary',
-          bounds: captureBounds,
-          dpiScale: primaryDisplay.scaleFactor
-        },
-        processedAt: new Date().toISOString()
+      // Extract text from the screenshot
+      const textContent = await this.extractText(imageData);
+      
+      // Prepare metadata for the capture
+      const captureMetadata = {
+        windowTitle: source.name || 'Unknown',
+        appName: source.name.split(' - ').pop() || 'Unknown',
+        windowId: targetWindow?.id || null,
+        displayId: primaryDisplay.id.toString(),
+        bounds: captureBounds,
+        dpiScale: primaryDisplay.scaleFactor,
+        url: ''
       };
       
-      console.log(`[ScreenCapture] Successfully captured ${targetWindow ? 'window' : 'screen'}`);
-      return result;
-    } catch (error) {
-      console.error('Error capturing active window:', error);
-      return null;
-    }
-  }
-
-  public getCurrentContext(): ApplicationContext | null {
-    return this.applicationContext;
-  }
-
-  public async stopCapture(): Promise<void> {
-    if (this.captureInterval) {
-      clearInterval(this.captureInterval);
-      this.captureInterval = null;
-    }
-    
-    this.isCapturing = false;
-    
-    // Clean up OCR worker
-    if (this.worker) {
+      // Update the application context
+      this.updateApplicationContext(captureMetadata, textContent);
+      
       try {
-        // @ts-ignore - Tesseract.js types are incomplete
-        await this.worker.terminate();
-        this.worker = null;
+        // Process with LLM
+        const processed = await this.llmService.processScreenContent(textContent, {
+          windowTitle: captureMetadata.windowTitle,
+          appName: captureMetadata.appName,
+          timestamp: new Date().toISOString()
+        });
+        
+        // Create the event data
+        const eventData: CaptureResult = {
+          id: uuidv4(),
+          filePath,
+          windowTitle: captureMetadata.windowTitle,
+          appName: captureMetadata.appName,
+          url: captureMetadata.url,
+          textContent,
+          metadata: {
+            timestamp: new Date().toISOString(),
+            windowId: captureMetadata.windowId,
+            displayId: captureMetadata.displayId,
+            bounds: captureMetadata.bounds,
+            dpiScale: captureMetadata.dpiScale
+          },
+          ...processed
+        };
+        
+        // Send to event service
+        await this.eventService.captureEvent({
+          type: 'screen_capture',
+          source: 'screen',
+          data: eventData
+        });
+        
+        // Emit the screenshot event for any local listeners
+        if (this.onScreenshot) {
+          this.onScreenshot(eventData);
+        }
+        
+        return eventData;
       } catch (error) {
-        console.error('Error terminating Tesseract.js worker:', error);
+        console.error('Error processing screenshot with LLM:', error);
+        return null;
       }
+    } catch (error) {
+      console.error('Error processing screenshot:', error);
+      return null;
     }
   }
 }

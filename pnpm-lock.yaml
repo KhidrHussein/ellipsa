@@ -11,15 +11,30 @@ importers:
       '@types/electron':
         specifier: ^1.6.12
         version: 1.6.12
+      '@types/jest':
+        specifier: ^29.5.8
+        version: 29.5.14
       '@types/node':
         specifier: ^20.0.0
         version: 20.19.19
+      '@types/ws':
+        specifier: ^8.5.10
+        version: 8.18.1
       concurrently:
         specifier: ^9.0.0
         version: 9.2.1
+      jest:
+        specifier: ^29.7.0
+        version: 29.7.0(@types/node@20.19.19)(ts-node@10.9.2(@types/node@20.19.19)(typescript@5.9.3))
+      prettier:
+        specifier: ^3.1.1
+        version: 3.6.2
       rimraf:
         specifier: ^5.0.5
         version: 5.0.10
+      ts-jest:
+        specifier: ^29.1.2
+        version: 29.4.4(@babel/core@7.28.4)(@jest/transform@29.7.0)(@jest/types@29.6.3)(babel-jest@29.7.0(@babel/core@7.28.4))(jest-util@29.7.0)(jest@29.7.0(@types/node@20.19.19)(ts-node@10.9.2(@types/node@20.19.19)(typescript@5.9.3)))(typescript@5.9.3)
       ts-node:
         specifier: ^10.9.2
         version: 10.9.2(@types/node@20.19.19)(typescript@5.9.3)
@@ -29,12 +44,18 @@ importers:
       typescript:
         specifier: ^5.5.4
         version: 5.9.3
+      ws:
+        specifier: ^8.17.0
+        version: 8.17.1
       zod:
         specifier: ^3.23.8
         version: 3.25.76
 
   apps/edge-agent:
     dependencies:
+      '@ellipsa/prompt':
+        specifier: workspace:^0.1.0
+        version: link:../../packages/prompt
       electron:
         specifier: ^31.3.0
         version: 31.7.7
@@ -94,60 +115,45 @@ importers:
         specifier: ^3.23.8
         version: 3.25.76
 
-  apps/edge-agent-backup:
+  packages/prompt:
     dependencies:
-      electron:
-        specifier: ^31.3.0
-        version: 31.7.7
-    devDependencies:
-      '@types/dom-mediacapture-record':
-        specifier: ^1.0.22
-        version: 1.0.22
-      '@types/dom-webcodecs':
-        specifier: ^0.1.16
-        version: 0.1.16
-      '@types/electron':
-        specifier: ^1.6.12
-        version: 1.6.12
-      '@types/fs-extra':
-        specifier: ^11.0.4
-        version: 11.0.4
-      '@types/node':
-        specifier: ^24.6.2
-        version: 24.7.0
-      '@types/uuid':
-        specifier: ^8.3.4
-        version: 8.3.4
-      '@types/w3c-web-usb':
-        specifier: ^1.0.13
-        version: 1.0.13
-      '@types/webrtc':
-        specifier: ^0.0.46
-        version: 0.0.46
-      axios:
-        specifier: ^1.12.2
-        version: 1.12.2
-      concurrently:
-        specifier: ^8.2.1
-        version: 8.2.2
-      fs-extra:
-        specifier: ^11.3.2
-        version: 11.3.2
-      ts-node:
-        specifier: ^10.9.2
-        version: 10.9.2(@types/node@24.7.0)(typescript@5.9.3)
-      typescript:
-        specifier: ^5.9.2
-        version: 5.9.3
-      uuid:
-        specifier: 8.3.2
-        version: 8.3.2
-      wait-on:
-        specifier: ^7.1.0
-        version: 7.2.0
       zod:
         specifier: ^3.23.8
         version: 3.25.76
+    devDependencies:
+      '@types/jest':
+        specifier: ^29.5.8
+        version: 29.5.14
+      '@types/node':
+        specifier: ^20.0.0
+        version: 20.19.19
+      '@typescript-eslint/eslint-plugin':
+        specifier: ^6.0.0
+        version: 6.21.0(@typescript-eslint/parser@6.21.0(eslint@8.57.1)(typescript@5.9.3))(eslint@8.57.1)(typescript@5.9.3)
+      '@typescript-eslint/parser':
+        specifier: ^6.0.0
+        version: 6.21.0(eslint@8.57.1)(typescript@5.9.3)
+      eslint:
+        specifier: ^8.0.0
+        version: 8.57.1
+      eslint-config-prettier:
+        specifier: ^9.0.0
+        version: 9.1.2(eslint@8.57.1)
+      eslint-plugin-prettier:
+        specifier: ^5.0.0
+        version: 5.5.4(eslint-config-prettier@9.1.2(eslint@8.57.1))(eslint@8.57.1)(prettier@3.6.2)
+      jest:
+        specifier: ^29.7.0
+        version: 29.7.0(@types/node@20.19.19)(ts-node@10.9.2(@types/node@20.19.19)(typescript@5.9.3))
+      prettier:
+        specifier: ^3.0.0
+        version: 3.6.2
+      ts-jest:
+        specifier: ^29.1.2
+        version: 29.4.4(@babel/core@7.28.4)(@jest/transform@29.7.0)(@jest/types@29.6.3)(babel-jest@29.7.0(@babel/core@7.28.4))(jest-util@29.7.0)(jest@29.7.0(@types/node@20.19.19)(ts-node@10.9.2(@types/node@20.19.19)(typescript@5.9.3)))(typescript@5.9.3)
+      typescript:
+        specifier: ^5.5.4
+        version: 5.9.3
 
   packages/shared:
     dependencies:
@@ -218,7 +224,7 @@ importers:
         version: 9.6.0
       chromadb:
         specifier: ^1.8.0
-        version: 1.10.5(encoding@0.1.13)(openai@4.104.0(encoding@0.1.13)(zod@3.25.76))
+        version: 1.10.5(encoding@0.1.13)(openai@4.104.0(encoding@0.1.13)(ws@8.17.1)(zod@3.25.76))
       cors:
         specifier: ^2.8.5
         version: 2.8.5
@@ -233,7 +239,7 @@ importers:
         version: 5.28.2
       openai:
         specifier: ^4.0.0
-        version: 4.104.0(encoding@0.1.13)(zod@3.25.76)
+        version: 4.104.0(encoding@0.1.13)(ws@8.17.1)(zod@3.25.76)
       pg:
         specifier: ^8.16.3
         version: 8.16.3
@@ -289,6 +295,9 @@ importers:
       '@types/winston':
         specifier: ^2.4.4
         version: 2.4.4
+      '@types/ws':
+        specifier: ^8.18.1
+        version: 8.18.1
       cross-env:
         specifier: ^10.1.0
         version: 10.1.0
@@ -322,6 +331,9 @@ importers:
       typescript:
         specifier: ^5.5.4
         version: 5.9.3
+      ws:
+        specifier: ^8.17.0
+        version: 8.17.1
 
   services/processor:
     dependencies:
@@ -348,7 +360,7 @@ importers:
         version: 1.10.1
       openai:
         specifier: ^6.5.0
-        version: 6.5.0(zod@3.25.76)
+        version: 6.5.0(ws@8.17.1)(zod@3.25.76)
       pino:
         specifier: ^8.19.0
         version: 8.21.0
@@ -433,7 +445,7 @@ importers:
         version: 4.21.2
       openai:
         specifier: ^6.0.0
-        version: 6.2.0(zod@3.25.76)
+        version: 6.2.0(ws@8.17.1)(zod@3.25.76)
       zod:
         specifier: ^3.23.8
         version: 3.25.76
@@ -1314,6 +1326,9 @@ packages:
   '@types/winston@2.4.4':
     resolution: {integrity: sha512-BVGCztsypW8EYwJ+Hq+QNYiT/MUyCif0ouBH+flrY66O5W+KIXAMML6E/0fJpm7VjIzgangahl5S03bJJQGrZw==}
     deprecated: This is a stub types definition. winston provides its own type definitions, so you do not need this installed.
+
+  '@types/ws@8.18.1':
+    resolution: {integrity: sha512-ThVF6DCVhA8kUGy+aazFQ4kXQ7E1Ty7A3ypFOe0IcJV8O/M511G99AW24irKrW56Wt44yG9+ij8FaqoBGkuBXg==}
 
   '@types/yargs-parser@21.0.3':
     resolution: {integrity: sha512-I4q9QU9MQv4oEOz4tAHJtNz1cwuLxn2F3xcc2iV5WdqLPpUnj30aUuxt1mAxYTG+oe8CZMV/+6rU4S4gRDzqtQ==}
@@ -5421,6 +5436,10 @@ snapshots:
     dependencies:
       winston: 3.18.3
 
+  '@types/ws@8.18.1':
+    dependencies:
+      '@types/node': 20.19.19
+
   '@types/yargs-parser@21.0.3': {}
 
   '@types/yargs@17.0.33':
@@ -5956,12 +5975,12 @@ snapshots:
 
   chownr@2.0.0: {}
 
-  chromadb@1.10.5(encoding@0.1.13)(openai@4.104.0(encoding@0.1.13)(zod@3.25.76)):
+  chromadb@1.10.5(encoding@0.1.13)(openai@4.104.0(encoding@0.1.13)(ws@8.17.1)(zod@3.25.76)):
     dependencies:
       cliui: 8.0.1
       isomorphic-fetch: 3.0.0(encoding@0.1.13)
     optionalDependencies:
-      openai: 4.104.0(encoding@0.1.13)(zod@3.25.76)
+      openai: 4.104.0(encoding@0.1.13)(ws@8.17.1)(zod@3.25.76)
     transitivePeerDependencies:
       - encoding
 
@@ -7962,7 +7981,7 @@ snapshots:
     dependencies:
       mimic-fn: 2.1.0
 
-  openai@4.104.0(encoding@0.1.13)(zod@3.25.76):
+  openai@4.104.0(encoding@0.1.13)(ws@8.17.1)(zod@3.25.76):
     dependencies:
       '@types/node': 18.19.129
       '@types/node-fetch': 2.6.13
@@ -7972,16 +7991,19 @@ snapshots:
       formdata-node: 4.4.1
       node-fetch: 2.7.0(encoding@0.1.13)
     optionalDependencies:
+      ws: 8.17.1
       zod: 3.25.76
     transitivePeerDependencies:
       - encoding
 
-  openai@6.2.0(zod@3.25.76):
+  openai@6.2.0(ws@8.17.1)(zod@3.25.76):
     optionalDependencies:
+      ws: 8.17.1
       zod: 3.25.76
 
-  openai@6.5.0(zod@3.25.76):
+  openai@6.5.0(ws@8.17.1)(zod@3.25.76):
     optionalDependencies:
+      ws: 8.17.1
       zod: 3.25.76
 
   opencollective-postinstall@2.0.3: {}

@@ -11,6 +11,7 @@
     "dev:watch": "concurrently \"npm run watch\" \"wait-on dist/main.js && npm start\""
   },
   "dependencies": {
+    "@ellipsa/prompt": "workspace:^0.1.0",
     "electron": "^31.3.0",
     "sharp": "^0.34.4",
     "tesseract.js": "^6.0.1"

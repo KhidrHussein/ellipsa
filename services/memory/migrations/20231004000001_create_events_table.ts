@@ -44,10 +44,10 @@ export async function up(knex: Knex): Promise<void> {
     table.string('source').nullable();
     table.string('source_id').nullable();
     
-    // Metadata
+    // Metadata and embeddings
     if (isPg) {
       table.jsonb('metadata').defaultTo('{}');
-      // table.jsonb('embedding').nullable(); // Vector search disabled temporarily
+      table.jsonb('embedding').nullable(); // Store vector embeddings for semantic search
     } else {
       // SQLite uses text for JSON
       table.text('metadata', 'text').defaultTo('{}');

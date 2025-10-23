@@ -11,6 +11,9 @@ services:
       - "5432:5432"
     volumes:
       - db_data:/var/lib/postgresql/data
+    networks:
+      - ellipsa-network
+
   pgadmin:
     image: dpage/pgadmin4:latest
     container_name: ellipsa-pgadmin
@@ -21,5 +24,64 @@ services:
       - "5050:80"
     depends_on:
       - db
+    networks:
+      - ellipsa-network
+
+  neo4j:
+    image: neo4j:5.13-community
+    container_name: ellipsa-neo4j
+    environment:
+      - NEO4J_AUTH=neo4j/ellipsa123
+      - NEO4J_dbms_memory_pagecache_size=512M
+      - NEO4J_dbms_memory_heap_initial__size=1G
+      - NEO4J_dbms_memory_heap_max__size=2G
+    ports:
+      - "7474:7474"  # Browser UI
+      - "7687:7687"  # Bolt protocol
+    volumes:
+      - neo4j_data:/data
+      - neo4j_logs:/logs
+    networks:
+      - ellipsa-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "http://localhost:7474"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ChromaDB Service - UPDATED VERSION
+  chromadb:
+    image: chromadb/chroma:0.5.23  # Updated from 0.4.22 to latest stable
+    container_name: ellipsa-chromadb
+    environment:
+      - CHROMA_SERVER_HOST=0.0.0.0
+      - CHROMA_SERVER_HTTP_PORT=8000
+      - CHROMA_SERVER_CORS_ALLOW_ORIGINS=["*"]  # Must be JSON array format
+      - ANONYMIZED_TELEMETRY=False
+      - IS_PERSISTENT=TRUE
+      - PERSIST_DIRECTORY=/chroma/chroma
+    ports:
+      - "8000:8000"
+    volumes:
+      - chroma_data:/chroma/chroma
+    networks:
+      - ellipsa-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/v1/heartbeat"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+networks:
+  ellipsa-network:
+    driver: bridge
+
 volumes:
   db_data:
+  neo4j_data:
+  neo4j_logs:
+  chroma_data:
+    name: ellipsa-chroma-data

@@ -1,8 +1,9 @@
 {
-  "name": "@ellipsa/prompt",
+  "name": "@ellipsa/prompt-service",
   "version": "0.1.0",
   "type": "commonjs",
   "main": "dist/server.js",
+  "types": "dist/server.d.ts",
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "dev": "tsx watch src/server.ts"

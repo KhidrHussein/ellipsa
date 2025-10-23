@@ -1,9 +1,9 @@
 import { getConnection } from './relational/connection.js';
 import { getDriver, closeDriver } from './graph/connection.js';
-import { getChromaClient, getOrCreateCollection } from './vector/chroma.js';
-import config from '../config.js';
-import { logger } from '../utils/logger.js';
-import { Transaction } from 'neo4j-driver';
+import { getChromaClient, getOrCreateCollection } from './vector/chroma';
+import config from '../config';
+import { logger } from '../utils/logger';
+import type { Driver, Session, Transaction } from 'neo4j-driver';
 
 /**
  * Initialize all database connections and verify connectivity
@@ -27,7 +27,7 @@ export async function initializeDatabases(): Promise<{
     await knex.migrate.latest();
     
     // 2. Initialize Neo4j graph database
-    const neo4jDriver = getDriver();
+    const neo4jDriver = await getDriver();
     
     // Verify Neo4j connection and constraints
     await verifyNeo4jConstraints(neo4jDriver);
@@ -66,38 +66,55 @@ export async function initializeDatabases(): Promise<{
 /**
  * Verify and create necessary Neo4j constraints
  */
-async function verifyNeo4jConstraints(driver: any): Promise<void> {
+async function verifyNeo4jConstraints(driver: Driver): Promise<void> {
   const session = driver.session();
   
   try {
     // Create constraints for uniqueness
-    await session.writeTransaction((tx: Transaction) =>
-      tx.run(`
-        CREATE CONSTRAINT entity_id IF NOT EXISTS 
-        FOR (e:Entity) REQUIRE e.id IS UNIQUE
-      `)
-    );
-    
-    await session.writeTransaction((tx: Transaction) =>
-      tx.run(`
-        CREATE CONSTRAINT event_id IF NOT EXISTS 
-        FOR (e:Event) REQUIRE e.id IS UNIQUE
-      `)
-    );
-    
-    await session.writeTransaction((tx: Transaction) =>
-      tx.run(`
-        CREATE CONSTRAINT task_id IF NOT EXISTS 
-        FOR (t:Task) REQUIRE t.id IS UNIQUE
-      `)
-    );
+    const constraints = [
+      {
+        name: 'entity_id',
+        label: 'Entity',
+        property: 'id'
+      },
+      {
+        name: 'event_id',
+        label: 'Event',
+        property: 'id'
+      },
+      {
+        name: 'task_id',
+        label: 'Task',
+        property: 'id'
+      }
+    ];
+
+    for (const constraint of constraints) {
+      try {
+        await session.writeTransaction((tx: Transaction) =>
+          tx.run(`
+            CREATE CONSTRAINT ${constraint.name} IF NOT EXISTS 
+            FOR (n:${constraint.label}) REQUIRE n.${constraint.property} IS UNIQUE
+          `)
+        );
+        logger.debug(`Created constraint ${constraint.name} on :${constraint.label}(${constraint.property})`);
+      } catch (error) {
+        logger.warn(`Failed to create constraint ${constraint.name}:`, error);
+        throw error;
+      }
+    }
     
     logger.info('Neo4j constraints verified/created');
   } catch (error) {
-    logger.error('Error setting up Neo4j constraints:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    logger.error('Error setting up Neo4j constraints:', errorMessage);
     throw error;
   } finally {
-    await session.close();
+    try {
+      await session.close();
+    } catch (closeError) {
+      logger.warn('Error closing Neo4j session:', closeError);
+    }
   }
 }
 
