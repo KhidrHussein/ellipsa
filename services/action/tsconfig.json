@@ -5,8 +5,16 @@
     "rootDir": "src",
     "typeRoots": [
       "./node_modules/@types",
-      "../../types"
-    ]
+      "../../types",
+      "./src/types"
+    ],
+    "types": ["node"],
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext"
   },
-  "include": ["src", "../../types"]
+  "include": ["src", "../../types"],
+  "ts-node": {
+    "esm": true,
+    "experimentalSpecifierResolution": "node"
+  }
 }

@@ -1,166 +1,273 @@
-import express, { Request, Response } from "express";
-import { z } from "zod";
-import { chromium, Browser, Page } from "playwright";
+import express, { Request, Response } from 'express';
+import { config } from 'dotenv';
+import { existsSync } from 'fs';
+import path from 'path';
+import { GmailEmailService } from './email/services/GmailEmailService';
+import { EmailProcessingService } from './email/services/EmailProcessingService';
+import { IEmailMemoryService } from './email/services/IEmailMemoryService';
+import { EmailMemoryService } from './email/services/EmailMemoryService';
+import { PromptService } from '@ellipsa/prompt';
+import { createEmailRouter } from './email/routes';
+import { createEmailAutomation } from './email/EmailAutomationService';
+import { EmailMetrics } from './email/monitoring/EmailMetrics';
+import { oauthService } from './email/services/OAuthService';
+import { EmailMessage, EmailSummary, DraftResponse } from './email/types';
 
-const ExecuteSchema = z.object({
-  agent_id: z.string().optional(),
-  plan: z
-    .array(
-      z.discriminatedUnion("op", [
-        z.object({ op: z.literal("open_url"), args: z.object({ url: z.string().url() }) }),
-        z.object({ op: z.literal("type_text"), args: z.object({ selector: z.string(), text: z.string() }) }),
-        z.object({ op: z.literal("click"), args: z.object({ selector: z.string() }) }),
-        z.object({ op: z.literal("wait"), args: z.object({ ms: z.number().min(100).max(10000) }) }),
-        z.object({ op: z.literal("screenshot"), args: z.object({ path: z.string().optional() }) })
-      ])
-    )
-    .min(1),
-  provenance: z.any().optional()
-});
+// Load environment variables
+const envPaths = [
+  path.resolve(__dirname, '../.env'),
+  path.resolve(__dirname, '../../.env')
+];
 
-type ExecutionResult = {
-  action_id: string;
-  status: "completed" | "failed";
-  steps: Array<{
-    op: string;
-    status: "success" | "failed";
-    error?: string;
-    screenshot?: string; // base64 for dry-run verification
-  }>;
-};
-
-function getAllowlist(): string[] {
-  const raw = process.env.ACTION_ALLOWLIST ?? "example.com,mail.google.com,accounts.google.com";
-  return raw
-    .split(",")
-    .map((s) => s.trim().toLowerCase())
-    .filter(Boolean);
+let envLoaded = false;
+for (const envPath of envPaths) {
+  if (existsSync(envPath)) {
+    console.log('Loading environment from:', envPath);
+    config({ path: envPath, override: true });
+    envLoaded = true;
+    break;
+  }
 }
 
-async function executePlan(plan: z.infer<typeof ExecuteSchema>["plan"]): Promise<ExecutionResult["steps"]> {
-  const steps: ExecutionResult["steps"] = [];
-  let browser: Browser | null = null;
-  let page: Page | null = null;
+if (!envLoaded) {
+  console.error('No .env file found in any of these locations:', envPaths);
+  process.exit(1);
+}
 
-  try {
-    browser = await chromium.launch({
-      headless: true,
-      args: ["--no-sandbox", "--disable-setuid-sandbox"]
-    });
-    const context = await browser.newContext({
-      viewport: { width: 1280, height: 720 }
-    });
-    page = await context.newPage();
+// Verify required environment variables
+const requiredVars = ['GOOGLE_CLIENT_ID', 'GOOGLE_CLIENT_SECRET'];
+const missingVars = requiredVars.filter(varName => !process.env[varName]);
 
-    for (const step of plan) {
-      try {
-        switch (step.op) {
-          case "open_url":
-            await page.goto(step.args.url, { waitUntil: "domcontentloaded", timeout: 30000 });
-            steps.push({ op: step.op, status: "success" });
-            break;
+if (missingVars.length > 0) {
+  console.error('Missing required environment variables:', missingVars.join(', '));
+  process.exit(1);
+}
 
-          case "type_text":
-            await page.fill(step.args.selector, step.args.text);
-            steps.push({ op: step.op, status: "success" });
-            break;
+// Extended EmailMessage interface for internal use
+interface ExtendedEmailMessage extends EmailMessage {
+  status?: string;
+  metadata?: {
+    status?: string;
+    lastUpdated?: string;
+    [key: string]: any;
+  };
+}
 
-          case "click":
-            await page.click(step.args.selector);
-            steps.push({ op: step.op, status: "success" });
-            break;
+// Memory service client that implements IEmailMemoryService
+class MemoryServiceClient implements IEmailMemoryService {
+  public readonly entities: Map<string, any> = new Map();
+  public readonly events: Map<string, any> = new Map();
+  public readonly emails: Map<string, ExtendedEmailMessage> = new Map();
+  public readonly drafts: Map<string, any> = new Map();
 
-          case "wait":
-            await page.waitForTimeout(step.args.ms);
-            steps.push({ op: step.op, status: "success" });
-            break;
+  async storeEmail(email: EmailMessage): Promise<void> {
+    this.emails.set(email.id, email as ExtendedEmailMessage);
+  }
 
-          case "screenshot":
-            const buffer = await page.screenshot({ fullPage: false });
-            const base64 = buffer.toString("base64");
-            steps.push({
-              op: step.op,
-              status: "success",
-              screenshot: `data:image/png;base64,${base64}`
-            });
-            break;
-        }
-      } catch (error: any) {
-        steps.push({
-          op: step.op,
-          status: "failed",
-          error: error.message || "Unknown error"
-        });
-      }
+  async storeEmailSummary(emailId: string, summary: string): Promise<void> {
+    const email = this.emails.get(emailId);
+    if (email) {
+      email.metadata = email.metadata || {};
+      email.metadata.summary = summary;
+      this.emails.set(emailId, email);
     }
-  } catch (error: any) {
-    // If browser setup fails, mark all steps as failed
-    for (const step of plan) {
-      steps.push({
-        op: step.op,
-        status: "failed",
-        error: `Browser error: ${error.message}`
+  }
+
+  async getEmail(id: string): Promise<EmailMessage | null> {
+    return this.emails.get(id) || null;
+  }
+
+  async searchEmails(query: string): Promise<EmailSummary[]> {
+    return Array.from(this.emails.values())
+      .filter(email => 
+        email.subject?.toLowerCase().includes(query.toLowerCase()) || 
+        email.text?.toLowerCase().includes(query.toLowerCase()) ||
+        email.html?.toLowerCase().includes(query.toLowerCase())
+      )
+      .map(email => ({
+        id: email.id,
+        threadId: email.threadId || '',
+        subject: email.subject || '',
+        from: email.from,
+        to: email.to || [],
+        date: email.date || new Date(),
+        summary: email.text?.substring(0, 100) || '',
+        isRead: email.isRead || false,
+        actionRequired: false,
+        priority: 'medium',
+        categories: [],
+        snippet: email.text?.substring(0, 150) || ''
+      }));
+  }
+
+  async createDraft(draft: any): Promise<DraftResponse> {
+    const id = `draft-${Date.now()}`;
+    const draftWithId = { ...draft, id };
+    this.drafts.set(id, draftWithId);
+    return draftWithId;
+  }
+
+  async getConversationHistory(threadId: string): Promise<EmailMessage[]> {
+    return Array.from(this.emails.values())
+      .filter(email => email.threadId === threadId)
+      .sort((a, b) => (a.date?.getTime() || 0) - (b.date?.getTime() || 0));
+  }
+
+  async updateEmailStatus(emailId: string, status: string): Promise<void> {
+    const email = this.emails.get(emailId);
+    if (email) {
+      email.status = status;
+      email.metadata = email.metadata || {};
+      email.metadata.status = status;
+      email.metadata.lastUpdated = new Date().toISOString();
+      this.emails.set(emailId, email);
+    }
+  }
+}
+
+interface Services {
+  emailService: GmailEmailService;
+  processingService: EmailProcessingService;
+  memoryService: IEmailMemoryService;
+  emailAutomationService: any;
+  metrics: EmailMetrics;
+}
+
+let services: Services | null = null;
+
+async function initializeServices(app: express.Express): Promise<Services> {
+  const metrics = new EmailMetrics();
+  const promptService = new PromptService({
+    apiKey: process.env.OPENAI_API_KEY || '',
+    defaultModel: 'gpt-4',
+  });
+  const memoryService: IEmailMemoryService = new MemoryServiceClient();
+  const processingService = new EmailProcessingService(promptService, memoryService);
+  
+  // Create Gmail service without initializing it yet
+  const emailService = GmailEmailService.create(processingService, memoryService);
+  
+  // Create the services object
+  const services: Services = {
+    emailService,
+    processingService,
+    memoryService,
+    emailAutomationService: null as any, // Will be set up after OAuth
+    metrics,
+  };
+  
+  // Set up routes
+  const emailRouter = createEmailRouter(services.emailService, services.processingService);
+  app.use('/api/emails', emailRouter);
+  
+  // OAuth callback route
+  app.get('/oauth2callback', async (req, res) => {
+    const code = req.query.code as string;
+    
+    if (!code) {
+      return res.status(400).send('Authorization code is required');
+    }
+    
+    try {
+      const oauth2Client = oauthService.getClient();
+      
+      // Exchange the authorization code for tokens
+      const { tokens } = await oauth2Client.getToken(code);
+      
+      // Store the tokens
+      oauth2Client.setCredentials(tokens);
+      
+      // Now that we have tokens, initialize the Gmail service
+      await emailService.connect();
+      
+      // Initialize email automation service after successful authentication
+      const emailAutomationService = await createEmailAutomation({
+        emailService,
+        promptService,
+        memoryService: memoryService as any, // Cast to any to avoid type issues
+        metrics,
+        checkInterval: 5 * 60 * 1000, // 5 minutes
+        maxEmailsPerCheck: 10,
       });
+      
+      // Start the email automation service
+      emailAutomationService.start();
+      
+      // Update the services object with the automation service
+      services.emailAutomationService = emailAutomationService;
+      
+      console.log('Successfully authenticated with Gmail and started email automation');
+      return res.send('Successfully authenticated! You can close this window and return to the application.');
+    } catch (error) {
+      console.error('Error during OAuth callback:', error);
+      return res.status(500).send('Authentication failed. Please try again.');
     }
-  } finally {
-    if (page) await page.close();
-    if (browser) await browser.close();
-  }
+  });
+  
+  // Add a simple health check endpoint
+  app.get('/health', (req, res) => {
+    const oauth2Client = oauthService.getClient();
+    const status = {
+      status: 'ok',
+      timestamp: new Date().toISOString(),
+      gmailConnected: oauth2Client.credentials.access_token !== undefined
+    };
+    res.json(status);
+  });
+  
+  // Add a route to get the OAuth URL
+  app.get('/auth/url', async (req, res) => {
+    try {
+      const authUrl = await oauthService.getAuthUrl();
+      res.json({ authUrl });
+    } catch (error) {
+      console.error('Error generating auth URL:', error);
+      res.status(500).json({ error: 'Failed to generate authentication URL' });
+    }
+  });
 
-  return steps;
+  // Handle unhandled promise rejections
+  process.on('unhandledRejection', (reason, promise) => {
+    console.error('Unhandled Rejection at:', promise, 'reason:', reason);
+  });
+
+  // Handle uncaught exceptions
+  process.on('uncaughtException', (error) => {
+    console.error('Uncaught Exception:', error);
+    process.exit(1);
+  });
+
+  return services;
 }
 
-const app = express();
-app.use(express.json());
-
-// Health check endpoint
-app.get('/health', (req: Request, res: Response) => {
-  res.status(200).json({
-    status: 'ok',
-    service: 'action',
-    version: process.env.npm_package_version || '0.1.0',
-    timestamp: new Date().toISOString()
-  });
-});
-
-app.post("/action/v1/execute", async (req: Request, res: Response) => {
-  const parsed = ExecuteSchema.safeParse(req.body);
-  if (!parsed.success) {
-    return res.status(400).json({ error: parsed.error.flatten() });
+// Start the server
+async function startServer() {
+  const app = express();
+  
+  // Parse JSON bodies
+  app.use(express.json());
+  
+  try {
+    const services = await initializeServices(app);
+    
+    // Start listening
+    const PORT = process.env.PORT || 3000;
+    app.listen(PORT, () => {
+      console.log(`Server is running on port ${PORT}`);
+      console.log(`OAuth URL: http://localhost:${PORT}/auth/url`);
+    });
+    
+    return services;
+  } catch (error) {
+    console.error('Failed to initialize services:', error);
+    process.exit(1);
   }
+}
 
-  const plan = parsed.data.plan;
-  const allowlist = new Set(getAllowlist());
-
-  // Validate each step against allowlist constraints
-  for (const step of plan) {
-    if (step.op === "open_url") {
-      try {
-        const u = new URL(step.args.url);
-        const host = u.hostname.toLowerCase();
-        if (!allowlist.has(host)) {
-          return res.status(403).json({
-            error: "domain_not_allowlisted",
-            host,
-            allowlist: Array.from(allowlist)
-          });
-        }
-      } catch (e: any) {
-        return res.status(400).json({ error: "invalid_url", detail: e?.message });
-      }
-    }
-  }
-
-  // Execute the plan
-  const steps = await executePlan(plan);
-  const status = steps.every(s => s.status === "success") ? "completed" : "failed";
-
-  return res.status(200).json({
-    action_id: `act_${Date.now()}`,
-    status,
-    steps
+// Only start the server if this file is run directly
+if (require.main === module) {
+  startServer().catch(error => {
+    console.error('Failed to start server:', error);
+    process.exit(1);
   });
-});
-
-const PORT = process.env.PORT || 4004;
-app.listen(PORT, () => console.log(`[action] listening on ${PORT}`));
+}
