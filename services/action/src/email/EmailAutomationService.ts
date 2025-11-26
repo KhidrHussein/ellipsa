@@ -97,9 +97,19 @@ export class EmailAutomationService {
           // Process and summarize the email
           const summary = await this.processingService.processEmail(email);
           
-          // If action is required, draft a response
+          // Display email summary
+          console.log('\n' + '='.repeat(80));
+          console.log(`📧 Email Summary - ${email.subject}`);
+          console.log('='.repeat(80));
+          console.log(`📩 From: ${email.from.name} <${email.from.address}>`);
+          console.log(`📅 Date: ${email.date.toLocaleString()}`);
+          console.log(`🏷️  Priority: ${summary.priority.toUpperCase()}`);
+          console.log(`🏷️  Categories: ${summary.categories.join(', ') || 'None'}`);
+          console.log('\n📝 Summary:');
+          console.log(summary.summary);
+          
           if (summary.actionRequired) {
-            console.log(`Action required for email: ${email.subject}`);
+            console.log('\n🚨 ACTION REQUIRED: This email requires your attention!');
             
             const conversationHistory = await this.processingService["memoryService"].getConversationHistory(email.threadId);
             
@@ -108,19 +118,29 @@ export class EmailAutomationService {
               additionalContext: 'Please draft a helpful response.'
             });
             
-            console.log(`Drafted response for: ${email.subject}`);
+            console.log('\n📝 Drafted response:');
+            console.log('-' .repeat(40));
+            console.log(draft.body);
+            console.log('-' .repeat(40));
             
             if (this.config.autoRespond) {
               await this.emailService.sendEmail(draft);
-              console.log(`Sent response for: ${email.subject}`);
+              console.log('\n✅ Response sent successfully!');
+            } else {
+              console.log('\n💡 Auto-response is disabled. Enable with AUTO_RESPOND=true');
             }
+          } else {
+            console.log('\nℹ️  No action required - marked as read.');
           }
           
           // Mark as read after processing
           await this.emailService.markAsRead?.(email.id);
           
           processedCount++;
-          this.metrics.recordProcessingTime(Date.now() - processStartTime);
+          const processTime = Date.now() - processStartTime;
+          this.metrics.recordProcessingTime(processTime);
+          console.log(`\n⏱️  Processed in ${processTime}ms`);
+          console.log('='.repeat(80) + '\n');
           
         } catch (error) {
           errorCount++;

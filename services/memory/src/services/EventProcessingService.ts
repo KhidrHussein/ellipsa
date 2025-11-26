@@ -1,5 +1,4 @@
-// Local implementation of PromptService and ExtractionResult
-interface ExtractionResult {
+export interface ExtractionResult {
   summary: string;
   confidence?: number;
   sentiment?: string;
@@ -15,32 +14,23 @@ interface ExtractionResult {
     priority: 'low' | 'medium' | 'high';
     due_date?: string;
   }>;
+  suggestions?: string[];
 }
 
-class PromptService {
-  constructor(private options: { apiKey: string; defaultModel: string }) {}
-  
-  async extractStructuredData(content: string): Promise<ExtractionResult> {
-    // Implement basic extraction logic
-    return {
-      summary: content.substring(0, 100),
-      entities: [],
-      action_items: []
-    };
-  }
-  
-  async generate(prompt: string, options?: any): Promise<string> {
-    return `Response to: ${prompt}`;
-  }
+export interface IPromptService {
+  extractStructuredData(content: string): Promise<ExtractionResult>;
+  generate(prompt: string, options?: any): Promise<string>;
 }
+
 import { EventModel } from '../models/EventModel';
 import { EntityModel } from '../models/EntityModel';
 import { TaskModel } from '../models/TaskModel';
 import { Session } from 'neo4j-driver';
 import { v4 as uuidv4 } from 'uuid';
+import { TranscriptionService } from './TranscriptionService';
 
 interface EventProcessingServiceOptions {
-  promptService: PromptService;
+  promptService: IPromptService;
   eventModel: EventModel;
   entityModel: EntityModel;
   taskModel: TaskModel;
@@ -48,20 +38,22 @@ interface EventProcessingServiceOptions {
 }
 
 export class EventProcessingService {
-  private promptService: PromptService;
+  private promptService: IPromptService;
   private eventModel: EventModel;
   private entityModel: EntityModel;
   private taskModel: TaskModel;
   private neo4jSession: Session;
+  private transcriptionService?: TranscriptionService;
   private processingQueue: Array<() => Promise<void>> = [];
   private isProcessing = false;
 
-  constructor(options: EventProcessingServiceOptions) {
+  constructor(options: EventProcessingServiceOptions & { transcriptionService?: TranscriptionService }) {
     this.promptService = options.promptService;
     this.eventModel = options.eventModel;
     this.entityModel = options.entityModel;
     this.taskModel = options.taskModel;
     this.neo4jSession = options.neo4jSession;
+    this.transcriptionService = options.transcriptionService;
   }
 
   /**
@@ -72,28 +64,75 @@ export class EventProcessingService {
     return new Promise((resolve, reject) => {
       this.processingQueue.push(async () => {
         try {
-          // 1. Extract structured data
-          const extraction = await this.promptService.extractStructuredData(content);
-          
+          let extraction: ExtractionResult;
+
+          // Check if this is an audio event
+          if (metadata.source === 'audio') {
+            if (this.transcriptionService) {
+              try {
+                // Transcribe the audio
+                const transcript = await this.transcriptionService.transcribe(content);
+
+                // Use the transcript as content for LLM extraction
+                // We update the content variable so it's used in createEvent too if needed, 
+                // but better to keep original content (base64) in data if we want to save it?
+                // Actually, EventModel expects 'description' which we usually put summary in.
+                // Let's extract structured data from the transcript.
+                const truncatedTranscript = transcript.length > 30000
+                  ? transcript.substring(0, 30000) + '... [truncated]'
+                  : transcript;
+
+                extraction = await this.promptService.extractStructuredData(truncatedTranscript);
+
+                // Add transcript to metadata or description
+                extraction.summary = `[Audio Transcript] ${transcript}\n\n${extraction.summary}`;
+              } catch (error) {
+                console.error('Transcription failed:', error);
+                extraction = {
+                  summary: 'Audio captured (transcription failed)',
+                  entities: [],
+                  action_items: [],
+                  suggestions: []
+                };
+              }
+            } else {
+              // Fallback if no transcription service available
+              extraction = {
+                summary: 'Audio captured (transcription not available)',
+                entities: [],
+                action_items: [],
+                suggestions: []
+              };
+            }
+          } else {
+            // 1. Extract structured data using LLM
+            // Truncate content to avoid context length limits (approx 8k tokens)
+            const truncatedContent = content.length > 30000
+              ? content.substring(0, 30000) + '... [truncated]'
+              : content;
+
+            extraction = await this.promptService.extractStructuredData(truncatedContent);
+          }
+
           // 2. Create event
           const event = await this.createEvent(extraction, metadata);
-          
+
           // 3. Process entities and relationships
           await this.processEntities(extraction.entities, event.id);
-          
+
           // 4. Process action items
           await this.processActionItems(extraction.action_items, event.id);
-          
+
           // 5. Update graph relationships
           await this.updateGraphRelationships(event.id, extraction);
-          
-          resolve(event);
+
+          resolve({ event, extraction });
         } catch (error) {
           console.error('Error processing event:', error);
           reject(error);
         }
       });
-      
+
       // Start processing if not already running
       this.processQueue();
     });
@@ -117,7 +156,7 @@ export class EventProcessingService {
 
   private async processEntities(entities: any[], eventId: string) {
     if (!entities) return;
-    
+
     for (const entity of entities) {
       try {
         // Create entity in the database
@@ -129,21 +168,23 @@ export class EventProcessingService {
             context: entity.context,
           },
         });
-        
+
         // Create relationship in Neo4j
         if (this.neo4jSession) {
           try {
-            await this.neo4jSession.run(
-              `MATCH (e:Event {id: $eventId})
-               MERGE (ent:Entity {name: $name, type: $type})
-               MERGE (e)-[r:MENTIONS]->(ent)
-               SET r.context = $context`,
-              { 
-                eventId, 
-                name: entity.value, 
-                type: entity.type,
-                context: entity.context || ''
-              }
+            await this.neo4jSession.writeTransaction(tx =>
+              tx.run(
+                `MATCH (e:Event {id: $eventId})
+                 MERGE (ent:Entity {name: $name, type: $type})
+                 MERGE (e)-[r:MENTIONS]->(ent)
+                 SET r.context = $context`,
+                {
+                  eventId,
+                  name: entity.value,
+                  type: entity.type,
+                  context: entity.context || ''
+                }
+              )
             );
           } catch (error) {
             console.error('Error creating Neo4j relationship:', error);
@@ -151,6 +192,13 @@ export class EventProcessingService {
         }
       } catch (error) {
         console.error('Error processing entity:', error);
+        const err = error as any;
+        if (err.issues) {
+          console.error('Validation issues:', JSON.stringify(err.issues, null, 2));
+        } else if (err.originalError && err.originalError.issues) {
+          console.error('Validation issues (nested):', JSON.stringify(err.originalError.issues, null, 2));
+        }
+        console.error('Failed entity data:', JSON.stringify(entity, null, 2));
       }
     }
   }
@@ -172,15 +220,17 @@ export class EventProcessingService {
   private async updateGraphRelationships(eventId: string, extraction: ExtractionResult) {
     // Create relationships between entities mentioned in the same event
     const entities = extraction.entities.map(e => e.value);
-    
+
     for (let i = 0; i < entities.length; i++) {
       for (let j = i + 1; j < entities.length; j++) {
-        await this.neo4jSession.run(
-          `MATCH (e1:Entity {name: $name1}), (e2:Entity {name: $name2})
-           MERGE (e1)-[r:RELATED_TO]-(e2)
-           ON CREATE SET r.weight = 1, r.last_updated = datetime()
-           ON MATCH SET r.weight = r.weight + 1, r.last_updated = datetime()`,
-          { name1: entities[i], name2: entities[j] }
+        await this.neo4jSession.writeTransaction(tx =>
+          tx.run(
+            `MATCH (e1:Entity {name: $name1}), (e2:Entity {name: $name2})
+             MERGE (e1)-[r:RELATED_TO]-(e2)
+             ON CREATE SET r.weight = 1, r.last_updated = datetime()
+             ON MATCH SET r.weight = r.weight + 1, r.last_updated = datetime()`,
+            { name1: entities[i], name2: entities[j] }
+          )
         );
       }
     }

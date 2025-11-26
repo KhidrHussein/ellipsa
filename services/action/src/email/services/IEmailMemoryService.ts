@@ -1,4 +1,4 @@
-import { EmailMessage, EmailSummary, DraftResponse } from '../types';
+import type { EmailMessage, EmailSummary, DraftResponse } from '../types/email.types.js';
 
 export interface IEmailMemoryService {
   // Core email operations
@@ -7,7 +7,7 @@ export interface IEmailMemoryService {
   searchEmails(query: string): Promise<EmailSummary[]>;
   
   // Email management
-  storeEmailSummary(emailId: string, summary: string): Promise<void>;
+  storeEmailSummary(summary: EmailSummary): Promise<void>;
   updateEmailStatus(emailId: string, status: string): Promise<void>;
   getConversationHistory(threadId: string): Promise<EmailMessage[]>;
   

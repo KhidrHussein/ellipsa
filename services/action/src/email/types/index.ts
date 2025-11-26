@@ -48,6 +48,7 @@ export interface DraftResponse {
   to: EmailAddress[];
   from?: EmailAddress;
   subject: string;
+  emailId?: string;
   body?: string;
   text?: string;
   html?: string;

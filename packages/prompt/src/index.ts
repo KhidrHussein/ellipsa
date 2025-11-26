@@ -37,6 +37,23 @@ export class PromptService implements IPromptService {
     const firstLine = content.split('\n')[0];
     return firstLine || 'No content to summarize';
   }
+
+  /**
+   * Generates text based on the provided prompt and options
+   * @param options The options for text generation
+   * @returns A promise that resolves to the generated text
+   */
+  async generateText(options: {
+    prompt: string;
+    maxTokens?: number;
+    temperature?: number;
+  }): Promise<string> {
+    const { prompt, maxTokens = 1000, temperature = 0.7 } = options;
+    
+    // In a real implementation, this would call an LLM API
+    // For now, we'll return a simple response
+    return `This is a generated response to: ${prompt.substring(0, 100)}...`;
+  }
 }
 
 export * from './interfaces';

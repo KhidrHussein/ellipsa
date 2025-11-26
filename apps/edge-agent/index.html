@@ -1,13 +1,15 @@
 <!doctype html>
 <html>
+
 <head>
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <meta charset="utf-8" />
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' file: data:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; script-src 'self' 'unsafe-inline' 'unsafe-eval'; media-src 'self' blob: data:;">
+  <meta http-equiv="Content-Security-Policy"
+    content="default-src 'self'; connect-src 'self' ws://localhost:4001; img-src 'self' file: data:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; script-src 'self' 'unsafe-inline' 'unsafe-eval'; media-src 'self' blob: data:;">
   <title>ellipsa</title>
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap');
-    
+
     :root {
       --bg-color: #2b2b2b;
       --active-color: #c62828;
@@ -16,40 +18,41 @@
       --shadow: 0 6px 18px rgba(0, 0, 0, 0.25);
       --transition-speed: 0.2s;
     }
-    
+
     * {
       box-sizing: border-box;
       margin: 0;
       padding: 0;
     }
-    
-    html, body { 
-      margin: 0; 
-      padding: 0; 
-      background: transparent; 
+
+    html,
+    body {
+      margin: 0;
+      padding: 0;
+      background: transparent;
       width: 100%;
       height: 100%;
       overflow: hidden;
       font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
     }
-    
+
     #root {
-      position: relative; 
+      position: relative;
       width: 100%;
       height: 100%;
       display: flex;
       justify-content: center;
       align-items: center;
     }
-    
+
     .btn {
       position: fixed;
-      width: 64px; 
-      height: 64px; 
+      width: 64px;
+      height: 64px;
       border-radius: 50%;
-      display: grid; 
-      place-items: center; 
-      cursor: grab; 
+      display: grid;
+      place-items: center;
+      cursor: grab;
       user-select: none;
       box-shadow: var(--shadow);
       border: 1px solid var(--border-color);
@@ -58,39 +61,40 @@
       touch-action: none;
       z-index: 1000;
       -webkit-app-region: no-drag;
-      transform: translate3d(0, 0, 0); /* Hardware acceleration */
+      transform: translate3d(0, 0, 0);
+      /* Hardware acceleration */
     }
-    
+
     .btn:active {
       cursor: grabbing;
     }
-    
+
     .btn:hover {
       transform: scale(1.05);
     }
-    
+
     .btn:active {
       transform: scale(0.95);
     }
-    
-    .btn.observing { 
-      background: var(--active-color); 
+
+    .btn.observing {
+      background: var(--active-color);
       animation: pulse 1.5s infinite;
     }
-    
-    .icon { 
-      width: 36px; 
-      height: 36px; 
-      object-fit: contain; 
-      pointer-events: none; 
+
+    .icon {
+      width: 36px;
+      height: 36px;
+      object-fit: contain;
+      pointer-events: none;
       filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.2));
       transition: transform 0.2s ease;
     }
-    
+
     .btn.observing .icon {
       transform: scale(0.9);
     }
-    
+
     .audio-level {
       position: absolute;
       bottom: 2px;
@@ -105,7 +109,7 @@
       transition: all 0.1s ease;
       pointer-events: none;
     }
-    
+
     /* Ripple effect */
     .ripple {
       position: absolute;
@@ -119,14 +123,14 @@
       top: 0;
       left: 0;
     }
-    
+
     @keyframes ripple {
       to {
         transform: scale(4);
         opacity: 0;
       }
     }
-    
+
     /* Status toast */
     .status-toast {
       position: fixed;
@@ -147,13 +151,13 @@
       box-shadow: var(--shadow);
       z-index: 1000;
     }
-    
+
     .status-toast.show {
       opacity: 1;
       visibility: visible;
       transform: translateX(-50%) translateY(0);
     }
-    
+
     /* Context menu */
     .context-menu {
       position: fixed;
@@ -172,14 +176,14 @@
       backdrop-filter: blur(10px);
       -webkit-backdrop-filter: blur(10px);
     }
-    
+
     .context-menu.visible {
       opacity: 1;
       visibility: visible;
       transform: translateY(0);
       transition: opacity 0.2s ease, transform 0.2s ease, visibility 0s;
     }
-    
+
     .context-menu-item {
       display: flex;
       align-items: center;
@@ -188,416 +192,74 @@
       user-select: none;
       transition: background 0.2s ease;
     }
-    
+
     .context-menu-item:hover {
       background: rgba(255, 255, 255, 0.1);
     }
-    
+
     .menu-icon {
       margin-right: 12px;
       width: 20px;
       text-align: center;
     }
-    
+
     .menu-text {
       flex: 1;
     }
-    
+
     .context-menu-divider {
       height: 1px;
       background: var(--border-color);
       margin: 8px 0;
     }
-    
-    @keyframes pulse { 
-      0% { box-shadow: 0 0 0 0 rgba(198, 40, 40, 0.6); } 
-      70% { box-shadow: 0 0 0 12px rgba(198, 40, 40, 0); } 
-      100% { box-shadow: 0 0 0 0 rgba(198, 40, 40, 0); } 
+
+    @keyframes pulse {
+      0% {
+        box-shadow: 0 0 0 0 rgba(198, 40, 40, 0.6);
+      }
+
+      70% {
+        box-shadow: 0 0 0 12px rgba(198, 40, 40, 0);
+      }
+
+      100% {
+        box-shadow: 0 0 0 0 rgba(198, 40, 40, 0);
+      }
     }
   </style>
 </head>
+
 <body>
   <div id="root">
-    <div id="floating-btn" class="btn">
-      <img id="icon" class="icon" alt="ellipsa" />
-      <div class="audio-level"></div>
-      <div class="ripple"></div>
-    </div>
-    
-    <div id="status-toast" class="status-toast"></div>
-  </div>
-  
-  <div id="context-menu" class="context-menu">
-    <div class="context-menu-item" id="toggle-observe">
-      <span class="menu-icon">🎙️</span>
-      <span class="menu-text">Start Observing</span>
-    </div>
-    <div class="context-menu-item" id="open-chat">
-      <span class="menu-icon">💬</span>
-      <span class="menu-text">Open Chat</span>
-    </div>
-    <div class="context-menu-divider"></div>
-    <div class="context-menu-item" id="quit-app">
-      <span class="menu-icon">🚪</span>
-      <span class="menu-text">Quit</span>
-    </div>
+    <!-- FloatingAssistant will inject its UI here -->
   </div>
 
   <script>
     // Wait for the window to load
     document.addEventListener('DOMContentLoaded', () => {
-      const btn = document.getElementById('floating-btn');
-      const iconEl = document.getElementById('icon');
-      const audioLevelEl = document.querySelector('.audio-level');
-      const statusToast = document.getElementById('status-toast');
-      const contextMenu = document.getElementById('context-menu');
-      
-      let observeMode = false;
-      let audioLevelInterval = null;
-      let isDragging = false;
-      let startX, startY, winStartX, winStartY;
-
-      // Initialize the app
-      window.ellipsa.getObserveStatus().then(({ observing, error }) => {
-        if (error) {
-          showStatus(`Error: ${error}`, 3000, true);
-          return;
-        }
-        updateObserveStatus({ observing });
-      });
-      
       // Theme change listener
       window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', updateTheme);
-      
-      // Track if context menu is open
-      let isContextMenuOpen = false;
-      let clickTimer = null;
-      
-      // Single click handler
-      btn.addEventListener('mousedown', (e) => {
-        // Left click only
-        if (e.button !== 0) return;
-        
-        // Clear any existing timer
-        if (clickTimer) {
-          clearTimeout(clickTimer);
-          clickTimer = null;
-        }
-        
-        // Set a timer to detect single click after a delay
-        clickTimer = window.setTimeout(() => {
-          // Single click - show ripple effect
-          createRipple(e);
-          clickTimer = null;
-        }, 200); // 200ms delay to detect double click
-      });
-      
-      // Double click handler - toggle observe mode
-      btn.addEventListener('dblclick', (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        
-        // Clear the single click timer
-        if (clickTimer) {
-          clearTimeout(clickTimer);
-          clickTimer = null;
-        }
-        
-        toggleObserve();
-      });
-      
-      // Right click for context menu
-      btn.addEventListener('contextmenu', (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        
-        // Clear any pending single click
-        if (clickTimer) {
-          clearTimeout(clickTimer);
-          clickTimer = null;
-        }
-        
-        showContextMenu(e);
-        isContextMenuOpen = true;
-        
-        // Close menu when clicking outside
-        const closeMenu = (clickEvent) => {
-          if (isContextMenuOpen && !contextMenu.contains(clickEvent.target) && clickEvent.target !== btn) {
-            hideContextMenu();
-            document.removeEventListener('click', closeMenu);
-            isContextMenuOpen = false;
-          }
-        };
-        
-        // Add one-time click listener to close menu when clicking outside
-        setTimeout(() => {
-          document.addEventListener('click', closeMenu, { once: true });
-        }, 0);
-      });
-      
-      // Close menu when window loses focus
-      window.addEventListener('blur', () => {
-        if (isContextMenuOpen) {
-          hideContextMenu();
-          isContextMenuOpen = false;
-        }
-      });
-      
-      // Prevent context menu from closing when clicking inside it
-      contextMenu.addEventListener('mousedown', (e) => {
-        e.stopPropagation();
-      });
-      
-      // Context menu actions
-      document.getElementById('toggle-observe').addEventListener('click', () => {
-        toggleObserve();
-        hideContextMenu();
-      });
-      
-      document.getElementById('open-chat').addEventListener('click', () => {
-        window.ellipsa.toggleChat();
-        hideContextMenu();
-      });
-      
-      document.getElementById('quit-app').addEventListener('click', () => {
-        window.ellipsa.quitApp();
-      });
-      
-      // Handle observe mode changes
-      window.ellipsa.onObserveStatus(({ observing, error }) => {
-        if (error) {
-          showStatus(`Error: ${error}`, 3000, true);
-          return;
-        }
-        updateObserveStatus({ observing });
-      });
-      
-      // Handle audio level updates
-      window.ellipsa.onAudioLevel(({ level }) => {
-        updateAudioLevel(level * 100);
-      });
-      
-      // Drag handling
-      const handlePointerMove = (e) => {
-        if (!isDragging) return;
-        
-        const dx = e.screenX - startX;
-        const dy = e.screenY - startY;
-        const newX = winStartX + dx;
-        const newY = winStartY + dy;
-        
-        // Update window position directly without transform
-        window.ellipsa.moveWindow(newX, newY);
-        
-        // Update our position tracking
-        winStartX = newX;
-        winStartY = newY;
-        startX = e.screenX;
-        startY = e.screenY;
-        
-        e.preventDefault();
-        e.stopPropagation();
-      };
-      
-      const handlePointerUp = () => {
-        if (!isDragging) return;
-        
-        isDragging = false;
-        document.body.style.cursor = '';
-        document.body.style.userSelect = '';
-        
-        // Remove event listeners
-        document.removeEventListener('pointermove', handlePointerMove);
-        document.removeEventListener('pointerup', handlePointerUp);
-      };
-      
-      btn.addEventListener('pointerdown', async (e) => {
-        if (e.button !== 0) return; // Only left click
-        
-        isDragging = true;
-        startX = e.screenX;
-        startY = e.screenY;
-        
-        const pos = await window.ellipsa.getWindowPos();
-        winStartX = pos.x;
-        winStartY = pos.y;
-        
-        // Set cursor styles
-        document.body.style.cursor = 'grabbing';
-        document.body.style.userSelect = 'none';
-        
-        // Add global event listeners
-        document.addEventListener('pointermove', handlePointerMove);
-        document.addEventListener('pointerup', handlePointerUp, { once: true });
-        
-        e.preventDefault();
-        e.stopPropagation();
-      });
-      
+
       // Load icon
       loadIcon();
-      
+
       // Helper functions
       function updateTheme() {
         const isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
         document.documentElement.setAttribute('data-theme', isDark ? 'dark' : 'light');
         loadIcon();
       }
-      
+
       async function loadIcon() {
-        try {
-          console.log('Attempting to load icon...');
-          const data = await window.ellipsa.getIconData();
-          console.log('Icon data received:', data);
-          if (data && data.base64) {
-            iconEl.src = `data:${data.mime};base64,${data.base64}`;
-            console.log('Icon set via base64');
-            return;
-          }
-        } catch (e) {
-          console.error('Error loading icon data:', e);
-        }
-        
-        try {
-          const p = await window.ellipsa.getIconPath();
-          console.log('Icon path received:', p);
-          if (p && typeof p === 'string') {
-            const u = 'file:///' + p.replace(/\\/g, '/');
-            iconEl.src = encodeURI(u);
-            console.log('Icon set via path:', u);
-            return;
-          }
-        } catch (e) {
-          console.error('Error loading icon path:', e);
-        }
-        
-        try {
-          const rel = new URL('../../assets/icon-white.png', window.location.href).href;
-          iconEl.src = encodeURI(rel);
-          console.log('Icon set via relative URL:', rel);
-        } catch (e) {
-          console.error('Error loading icon via relative URL:', e);
-        }
-      }
-      
-      function toggleObserve() {
-        window.ellipsa.toggleObserve();
-      }
-      
-      function updateObserveStatus({ observing }) {
-        observeMode = observing;
-        
-        if (observing) {
-          btn.classList.add('observing');
-          startAudioLevelSimulation();
-          showStatus('Observing...');
-        } else {
-          btn.classList.remove('observing');
-          stopAudioLevelSimulation();
-          updateAudioLevel(0);
-          showStatus('Observation stopped');
-        }
-        
-        // Update context menu text
-        const observeText = document.querySelector('#toggle-observe .menu-text');
-        if (observeText) {
-          observeText.textContent = observing ? 'Stop Observing' : 'Start Observing';
-        }
-      }
-      
-      function showContextMenu(e) {
-        e.preventDefault();
-        
-        // Get context menu dimensions
-        contextMenu.style.visibility = 'hidden';
-        contextMenu.style.display = 'block';
-        const menuRect = contextMenu.getBoundingClientRect();
-        const viewportWidth = window.innerWidth;
-        const viewportHeight = window.innerHeight;
-        
-        // Calculate position, ensuring it stays within viewport
-        let x = e.clientX;
-        let y = e.clientY;
-        
-        // Adjust position if menu would go off-screen
-        if (x + menuRect.width > viewportWidth) {
-          x = viewportWidth - menuRect.width - 10;
-        }
-        
-        if (y + menuRect.height > viewportHeight) {
-          y = viewportHeight - menuRect.height - 10;
-        }
-        
-        // Ensure minimum distance from edges
-        x = Math.max(10, x);
-        y = Math.max(10, y);
-        
-        // Position the context menu
-        contextMenu.style.left = `${x}px`;
-        contextMenu.style.top = `${y}px`;
-        contextMenu.style.visibility = 'visible';
-        contextMenu.classList.add('visible');
-        
-        // Bring to front
-        contextMenu.style.zIndex = '9999';
-      }
-      
-      function hideContextMenu() {
-        contextMenu.classList.remove('visible');
-        isContextMenuOpen = false;
-      }
-      
-      function createRipple(event) {
-        const ripple = document.createElement('span');
-        ripple.className = 'ripple';
-        const rect = btn.getBoundingClientRect();
-        const size = Math.max(rect.width, rect.height);
-        
-        ripple.style.width = ripple.style.height = `${size}px`;
-        ripple.style.left = `${event.clientX - rect.left - size/2}px`;
-        ripple.style.top = `${event.clientY - rect.top - size/2}px`;
-        
-        btn.appendChild(ripple);
-        
-        setTimeout(() => {
-          ripple.remove();
-        }, 600);
-      }
-      
-      function showStatus(message, duration = 2000, isError = false) {
-        statusToast.textContent = message;
-        statusToast.style.color = isError ? '#ff6b6b' : 'var(--text-color)';
-        statusToast.classList.add('show');
-        
-        setTimeout(() => {
-          statusToast.classList.remove('show');
-        }, duration);
-      }
-      
-      // Simulate audio level for now - will be replaced with real audio data
-      function startAudioLevelSimulation() {
-        if (audioLevelInterval) return;
-        audioLevelInterval = setInterval(() => {
-          updateAudioLevel(Math.random() * 80 + 20); // Random level between 20 and 100
-        }, 100);
-      }
-
-      function stopAudioLevelSimulation() {
-        if (audioLevelInterval) {
-          clearInterval(audioLevelInterval);
-          audioLevelInterval = null;
-        }
-        updateAudioLevel(0);
-      }
-
-      function updateAudioLevel(level) {
-        if (audioLevelEl) {
-          const scale = level / 100;
-          audioLevelEl.style.transform = `translateX(-50%) scaleX(${scale})`;
-          audioLevelEl.style.opacity = level > 10 ? '1' : '0';
-        }
+        // Icon loading logic preserved if needed by FloatingAssistant, 
+        // though FloatingAssistant seems to have its own icon logic.
+        // Keeping it minimal for now to avoid errors if other parts depend on it.
       }
     });
   </script>
+
+  <!-- Load the renderer bundle -->
+  <script src="dist/renderer.js"></script>
 </body>
+
 </html>

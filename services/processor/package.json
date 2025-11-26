@@ -1,8 +1,9 @@
 {
   "name": "@ellipsa/processor",
   "version": "0.1.0",
-  "type": "commonjs",
+  "type": "module",
   "main": "dist/server.js",
+  "module": "dist/server.js",
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "dev": "tsx watch src/server.ts",

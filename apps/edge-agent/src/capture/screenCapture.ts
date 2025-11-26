@@ -46,11 +46,11 @@ export class ScreenCapture {
   private readonly capturePath: string;
   private isCapturing: boolean = false;
   private _applicationContext: ApplicationContext | null = null;
-  
+
   public get applicationContext(): ApplicationContext | null {
     return this._applicationContext;
   }
-  
+
   private worker: any = null; // Using any due to Tesseract.js type issues
   private readonly OCR_ENGINE = 'eng';
   private readonly MIN_CAPTURE_INTERVAL = 1000; // 1 second
@@ -62,7 +62,7 @@ export class ScreenCapture {
   constructor() {
     this.capturePath = join(app.getPath('userData'), 'screenshots');
     console.log('Screenshots will be saved to:', this.capturePath);
-    
+
     // Initialize services
     this.eventService = new EventService({
       wsUrl: 'ws://localhost:4001',
@@ -73,7 +73,7 @@ export class ScreenCapture {
         console.error('Screen capture event error:', error);
       }
     });
-    
+
     this.llmService = LLMService;
     this.initializeOCR();
   }
@@ -90,15 +90,15 @@ export class ScreenCapture {
     }
 
     try {
-      console.log('Starting OCR processing...');
-      
+      // console.log('Starting OCR processing...');
+
       // Convert base64 to buffer
       const imageBuffer = Buffer.from(base64Image, 'base64');
-      
+
       // Use Tesseract to recognize text
       const { data: { text } } = await this.worker.recognize(imageBuffer);
-      
-      console.log('OCR completed successfully');
+
+      // console.log('OCR completed successfully');
       return text.trim();
     } catch (error) {
       console.error('Error during OCR processing:', error);
@@ -127,40 +127,40 @@ export class ScreenCapture {
       windowId: metadata.windowId,
       lastActive: new Date()
     };
-    
-    console.log('Updated application context:', {
-      ...this._applicationContext,
-      textPreview: textContent.substring(0, 100) + (textContent.length > 100 ? '...' : '')
-    });
+
+    // console.log('Updated application context:', {
+    //   ...this._applicationContext,
+    //   textPreview: textContent.substring(0, 50) + '...'
+    // });
   }
 
   private async initializeOCR() {
     try {
       console.log('Initializing Tesseract.js...');
-      
+
       // Import Tesseract.js with proper typing
       const { createWorker, PSM } = await import('tesseract.js');
-      
+
       // Create worker with English language
       this.worker = await createWorker('eng');
-      
+
       // Set up logging
       // @ts-ignore - Tesseract.js worker has a logger property in runtime
       if (this.worker.logger) {
         // @ts-ignore
         this.worker.logger = (m: { status: string }) => console.log(`Tesseract: ${m.status}`);
       }
-      
+
       // Set error handler
       // @ts-ignore - Tesseract.js worker has an errorHandler property in runtime
       this.worker.errorHandler = (err: Error) => console.error('Tesseract error:', err);
-      
+
       // Set page segmentation mode
       console.log('Setting OCR parameters...');
       await this.worker.setParameters({
         tessedit_pageseg_mode: PSM.AUTO,
       });
-      
+
       console.log('Tesseract.js worker initialized successfully');
       return true;
     } catch (error) {
@@ -176,26 +176,26 @@ export class ScreenCapture {
    */
   public async startCapture(interval: number = 5000, mainWindow?: BrowserWindow): Promise<boolean> {
     console.log(`[ScreenCapture] Starting screen capture with interval: ${interval}ms`);
-    
+
     if (this.isCapturing) {
       console.warn('[ScreenCapture] Screen capture is already running');
       return false;
     }
-    
+
     if (!mainWindow) {
       console.error('[ScreenCapture] No mainWindow provided, cannot start capture');
       return false;
     }
-    
+
     console.log('[ScreenCapture] Initializing first capture...');
     this.isCapturing = true;
-    
+
     // Clear any existing interval
     if (this.captureInterval) {
       clearInterval(this.captureInterval);
       this.captureInterval = null;
     }
-    
+
     // Do an immediate capture first
     try {
       const result = await this.captureActiveWindow();
@@ -231,7 +231,7 @@ export class ScreenCapture {
         // Don't log the actual thumbnail size as it's not relevant and makes logs noisy
         thumbnailSize: options.thumbnailSize ? 'specified' : 'not specified'
       });
-      
+
       // Set default options
       const defaultOptions = {
         types: ['window'],
@@ -244,7 +244,7 @@ export class ScreenCapture {
         thumbnailSize: defaultOptions.thumbnailSize,
         fetchWindowIcons: defaultOptions.fetchWindowIcons
       });
-      
+
       console.log(`[ScreenCapture] Desktop capturer returned ${sources.length} sources`);
       if (sources.length > 0) {
         console.log('[ScreenCapture] First source details:', {
@@ -254,7 +254,7 @@ export class ScreenCapture {
           appIcon: sources[0].appIcon ? 'available' : 'not available',
           thumbnail: sources[0].thumbnail ? 'available' : 'not available'
         });
-        
+
         // Log all sources for debugging
         console.log('[ScreenCapture] All sources:', sources.map((source, i) => ({
           index: i,
@@ -265,7 +265,7 @@ export class ScreenCapture {
           hasAppIcon: 'appIcon' in source ? !!source.appIcon : 'n/a'
         })));
       }
-      
+
       return sources;
     } catch (error) {
       console.error('[ScreenCapture] Error getting desktop sources:', error);
@@ -293,8 +293,8 @@ export class ScreenCapture {
    * @returns Capture result with metadata and extracted text, or null if capture failed
    */
   public async captureActiveWindow(): Promise<CaptureResult | null> {
-    console.log('[ScreenCapture] Attempting to capture screen...');
-    
+    // console.log('[ScreenCapture] Attempting to capture screen...');
+
     // Ensure OCR is initialized
     if (!this.worker) {
       console.warn('[ScreenCapture] OCR worker not initialized, retrying...');
@@ -304,7 +304,7 @@ export class ScreenCapture {
         return null;
       }
     }
-    
+
     // Ensure directory exists
     try {
       await mkdir(this.capturePath, { recursive: true });
@@ -313,47 +313,46 @@ export class ScreenCapture {
       console.error(`[ScreenCapture] Failed to create screenshot directory:`, error);
       return null;
     }
-    
+
     try {
       // Get all screens
       const { screen } = require('electron');
       const displays = screen.getAllDisplays();
-      
+
       if (displays.length === 0) {
         console.error('[ScreenCapture] No displays found');
         return null;
       }
-      
+
       // Use the primary display by default
       const primaryDisplay = screen.getPrimaryDisplay();
       const { width, height, x, y } = primaryDisplay.bounds;
-      
+
       console.log(`[ScreenCapture] Primary display: ${width}x${height} at (${x},${y})`);
-      
+
       // Get all windows that we might want to capture
       const windows = BrowserWindow.getAllWindows();
       console.log(`[ScreenCapture] Found ${windows.length} windows`);
-      
+
       // Find the active window (not our own window)
       const activeWindow = BrowserWindow.getFocusedWindow();
       let targetWindow = activeWindow;
-      
+
       // If the active window is our app's window, try to find another window
       if (activeWindow && activeWindow.id === BrowserWindow.getFocusedWindow()?.id) {
         targetWindow = windows.find(w => w.id !== activeWindow.id) || null;
       }
-      
+
       // If we found a target window, capture that, otherwise capture the whole screen
-      let captureBounds = targetWindow 
-        ? targetWindow.getBounds() 
+      let captureBounds = targetWindow
+        ? targetWindow.getBounds()
         : { x, y, width, height };
-      
-      console.log(`[ScreenCapture] Capturing: ${
-        targetWindow 
-          ? `window "${targetWindow.getTitle()}" (${captureBounds.width}x${captureBounds.height})`
-          : `full screen (${captureBounds.width}x${captureBounds.height})`
-      }`);
-      
+
+      console.log(`[ScreenCapture] Capturing: ${targetWindow
+        ? `window "${targetWindow.getTitle()}" (${captureBounds.width}x${captureBounds.height})`
+        : `full screen (${captureBounds.width}x${captureBounds.height})`
+        }`);
+
       // Capture the screen or window
       const sources = await desktopCapturer.getSources({
         types: targetWindow ? ['window'] : ['screen'],
@@ -363,38 +362,38 @@ export class ScreenCapture {
         },
         fetchWindowIcons: true
       });
-      
+
       // Find the source that matches our target
       let source = sources[0]; // Default to first source
-      
+
       if (targetWindow) {
         // Try to find the specific window
         const sourceId = targetWindow.getNativeWindowHandle()?.readUInt32LE(0);
-        source = sources.find(s => 
-          s.id === `window:${sourceId}` || 
+        source = sources.find(s =>
+          s.id === `window:${sourceId}` ||
           s.name === targetWindow.getTitle()
         ) || source;
       }
-      
+
       if (!source || !source.thumbnail) {
         console.error('[ScreenCapture] Could not capture screen or window');
         return null;
       }
-      
+
       // Save the image
       const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
       const filename = `capture_${timestamp}.png`;
       const filePath = join(this.capturePath, filename);
-      
-      console.log(`[ScreenCapture] Saving screenshot to: ${filePath}`);
+
+      // console.log(`[ScreenCapture] Saving screenshot to: ${filePath}`);
       await writeFile(filePath, source.thumbnail.toPNG());
-      
+
       // Convert the thumbnail to base64 for text extraction
       const imageData = source.thumbnail.toPNG().toString('base64');
-      
+
       // Extract text from the screenshot
       const textContent = await this.extractText(imageData);
-      
+
       // Prepare metadata for the capture
       const captureMetadata = {
         windowTitle: source.name || 'Unknown',
@@ -405,19 +404,39 @@ export class ScreenCapture {
         dpiScale: primaryDisplay.scaleFactor,
         url: ''
       };
-      
+
       // Update the application context
       this.updateApplicationContext(captureMetadata, textContent);
-      
+
       try {
-        // Process with LLM
+        // Send to event service for processing by the backend
+        // This triggers the real AI processing in the Memory Service
+        await this.eventService.captureEvent({
+          type: 'process_event',
+          source: 'screen',
+          data: {
+            content: textContent,
+            metadata: {
+              timestamp: new Date().toISOString(),
+              windowId: captureMetadata.windowId,
+              displayId: captureMetadata.displayId,
+              bounds: captureMetadata.bounds,
+              dpiScale: captureMetadata.dpiScale,
+              windowTitle: captureMetadata.windowTitle,
+              appName: captureMetadata.appName
+            }
+          }
+        });
+
+        // Also process locally with LLMService for immediate feedback if needed
+        // But the real heavy lifting is now done by the backend
         const processed = await this.llmService.processScreenContent(textContent, {
           windowTitle: captureMetadata.windowTitle,
           appName: captureMetadata.appName,
           timestamp: new Date().toISOString()
         });
-        
-        // Create the event data
+
+        // Create the event data for local consumers
         const eventData: CaptureResult = {
           id: uuidv4(),
           filePath,
@@ -434,19 +453,12 @@ export class ScreenCapture {
           },
           ...processed
         };
-        
-        // Send to event service
-        await this.eventService.captureEvent({
-          type: 'screen_capture',
-          source: 'screen',
-          data: eventData
-        });
-        
+
         // Emit the screenshot event for any local listeners
         if (this.onScreenshot) {
           this.onScreenshot(eventData);
         }
-        
+
         return eventData;
       } catch (error) {
         console.error('Error processing screenshot with LLM:', error);

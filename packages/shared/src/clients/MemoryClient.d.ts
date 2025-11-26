@@ -47,3 +47,4 @@ export declare class MemoryClient extends ServiceClient {
     }>;
     getEvent(id: string): Promise<Event>;
 }
+//# sourceMappingURL=MemoryClient.d.ts.map

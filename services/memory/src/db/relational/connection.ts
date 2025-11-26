@@ -12,7 +12,7 @@ export function getConnection(cfg: DatabaseConfig = config.database): Knex {
   if (!connection) {
     try {
       const isPg = cfg.client === 'pg';
-      
+
       connection = knex({
         client: cfg.client,
         connection: cfg.connection,
@@ -21,16 +21,16 @@ export function getConnection(cfg: DatabaseConfig = config.database): Knex {
           max: 10
         },
         useNullAsDefault: true,
-        debug: process.env.NODE_ENV === 'development',
+        debug: false, // process.env.NODE_ENV === 'development',
       });
 
       // Test the connection with a database-specific query
       const testQuery = isPg ? 'SELECT 1' : 'SELECT 1 as test';
-      
+
       connection.raw(testQuery)
         .then(() => {
           logger.info(`Successfully connected to ${isPg ? 'PostgreSQL' : 'SQLite'} database`);
-          
+
           // For PostgreSQL, enable UUID extension if it doesn't exist
           if (isPg) {
             return connection!.raw('CREATE EXTENSION IF NOT EXISTS "uuid-ossp"')

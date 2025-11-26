@@ -12,6 +12,9 @@ export type {
 // Export utilities
 export { logger } from './utils/logger.js';
 
+// Export notification interfaces
+export type { INotification, INotificationService } from './notification/INotificationService.js';
+
 // Existing schema exports
 export const EntitySchema = z.object({
   id: z.string(),
@@ -28,10 +31,14 @@ export type Entity = z.infer<typeof EntitySchema>;
 
 export const TaskSchema = z.object({
   id: z.string(),
-  description: z.string(),
+  title: z.string(),
+  description: z.string().optional(),
   status: z.enum(['pending', 'in_progress', 'completed', 'failed']).default('pending'),
   priority: z.enum(['low', 'medium', 'high']).default('medium'),
-  metadata: z.record(z.any()).optional()
+  due_date: z.string().optional(),
+  created_at: z.string().optional(),
+  updated_at: z.string().optional(),
+  metadata: z.record(z.any()).default({})
 });
 export type Task = z.infer<typeof TaskSchema>;
 

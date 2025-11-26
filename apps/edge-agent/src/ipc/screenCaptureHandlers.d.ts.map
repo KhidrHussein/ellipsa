@@ -1,0 +1,1 @@
+{"version":3,"file":"screenCaptureHandlers.d.ts","sourceRoot":"","sources":["screenCaptureHandlers.ts"],"names":[],"mappings":"AAAA,OAAO,EAAW,aAAa,EAAE,MAAM,UAAU,CAAC;AAGlD,qBAAa,qBAAqB;IAChC,OAAO,CAAC,aAAa,CAAgB;IACrC,OAAO,CAAC,UAAU,CAA8B;IAChD,OAAO,CAAC,WAAW,CAAkB;;IAO9B,aAAa,CAAC,MAAM,EAAE,aAAa;IAI1C,OAAO,CAAC,aAAa;IAkEd,OAAO,IAAI,IAAI;CAcvB;AAGD,eAAO,MAAM,qBAAqB,uBAA8B,CAAC"}

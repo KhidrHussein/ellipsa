@@ -1,5 +1,4 @@
 {
-  "extends": "../../tsconfig.base.json",
   "compilerOptions": {
     "target": "ES2020",
     "module": "commonjs",
@@ -7,20 +6,59 @@
     "esModuleInterop": true,
     "outDir": "./dist",
     "rootDir": "./src",
-    "strict": true,
+    "strict": false,
+    "noImplicitAny": false,
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
     "resolveJsonModule": true,
     "baseUrl": ".",
     "paths": {
-      "@ellipsa/shared/*": ["../../packages/shared/src/*"]
+      "@ellipsa/shared/*": [
+        "../../packages/shared/src/*"
+      ],
+      "@ellipsa/action/*": [
+        "../../packages/action/src/*"
+      ],
+      "@ellipsa/prompt/*": [
+        "../../packages/prompt/src/*"
+      ],
+      "@/*": [
+        "./src/*"
+      ]
     },
-    "types": ["node", "electron"],
-    "noEmitOnError": true,
-    "removeComments": true,
-    "preserveConstEnums": false,
-    "incremental": true
+    "preserveSymlinks": true,
+    "typeRoots": [
+      "./node_modules/@types",
+      "./src/@types"
+    ],
+    "types": [
+      "node"
+    ],
+    "noEmitOnError": false,
+    "removeComments": false,
+    "incremental": true,
+    "composite": true,
+    "declaration": true,
+    "declarationMap": true,
+    "sourceMap": true,
+    "allowJs": true,
+    "checkJs": false
   },
-  "include": ["src/**/*.ts"],
-  "exclude": ["node_modules", "dist", "**/*.test.ts"]
+  "include": [
+    "src/**/*.ts",
+    "src/**/*.tsx",
+    "src/**/*.js"
+  ],
+  "references": [
+    {
+      "path": "../../packages/shared"
+    }
+  ],
+  "exclude": [
+    "node_modules",
+    "**/*.spec.ts",
+    "dist",
+    "src/renderer",
+    "src/preload"
+  ]
 }

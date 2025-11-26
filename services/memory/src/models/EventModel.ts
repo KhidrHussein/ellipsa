@@ -33,7 +33,7 @@ export const EventInputSchema = z.object({
   type: EventType,
   title: z.string(),
   start_time: z.union([z.string(), z.date()]),
-  
+
   // Optional fields with defaults
   description: z.string().optional(),
   end_time: z.union([z.string(), z.date()]).optional(),
@@ -51,7 +51,7 @@ const BaseEventSchema = z.object({
   type: EventType,
   title: z.string(),
   start_time: z.union([z.string(), z.date()]),
-  
+
   // Optional fields with defaults
   description: z.string().optional(),
   end_time: z.union([z.string(), z.date()]).optional(),
@@ -103,21 +103,23 @@ export class EventModel extends BaseModel<BaseEvent, EventInput, EventUpdate> {
     // Generate embedding for the event title and description
     const textToEmbed = `${data.title} ${data.description || ''}`.trim();
     const embedding = await this.generateEmbedding(textToEmbed);
-    
+
     // Create the event with the generated embedding
+    // We must stringify the embedding array to ensure Knex treats it as JSON
+    // and not as a Postgres Array (which uses curly braces {})
     const eventData = {
       ...data,
-      embedding,
+      embedding: JSON.stringify(embedding) as any,
     };
-    
+
     // Insert into the database
     const [result] = await this.db(this.tableName)
       .insert(eventData)
       .returning('*');
-      
+
     return this.toEvent(result);
   }
-  
+
   /**
    * Find all events with optional filtering
    */
@@ -127,16 +129,16 @@ export class EventModel extends BaseModel<BaseEvent, EventInput, EventUpdate> {
     trx?: Knex.Transaction
   ): Promise<PaginatedResult<Event>> {
     let query = trx ? trx(this.tableName) : this.db(this.tableName);
-    
+
     // Apply time filters
     if (filters.startTime) {
       query = query.where('start_time', '>=', filters.startTime);
     }
-    
+
     if (filters.endTime) {
       query = query.where('start_time', '<=', filters.endTime);
     }
-    
+
     // Apply other filters
     Object.entries(filters).forEach(([key, value]) => {
       if (key !== 'startTime' && key !== 'endTime' && value !== undefined) {
@@ -165,7 +167,7 @@ export class EventModel extends BaseModel<BaseEvent, EventInput, EventUpdate> {
     }
 
     const results = await query;
-    
+
     return {
       data: results.map(result => this.toEvent(result)),
       pagination: {
@@ -178,7 +180,7 @@ export class EventModel extends BaseModel<BaseEvent, EventInput, EventUpdate> {
       },
     };
   }
-  
+
   /**
    * Find an event by ID
    */
@@ -186,7 +188,7 @@ export class EventModel extends BaseModel<BaseEvent, EventInput, EventUpdate> {
     const result = await this.db(this.tableName).where({ id }).first();
     return result ? this.toEvent(result) : null;
   }
-  
+
   /**
    * Update an event and its vector/graph representations
    */
@@ -203,9 +205,10 @@ export class EventModel extends BaseModel<BaseEvent, EventInput, EventUpdate> {
       const title = data.title || existing.title;
       const description = data.description || existing.description || '';
       const textToEmbed = `${title} ${description}`.trim();
-      updatedData.embedding = await this.generateEmbedding(textToEmbed);
+      const embedding = await this.generateEmbedding(textToEmbed);
+      updatedData.embedding = JSON.stringify(embedding) as any;
     }
-    
+
     // Call the parent's update method
     const result = await super.update(id, updatedData);
     return result ? this.toEvent(result) : null;
@@ -218,11 +221,11 @@ export class EventModel extends BaseModel<BaseEvent, EventInput, EventUpdate> {
     try {
       // Delete from the database
       const count = await this.db(this.tableName).where({ id }).del();
-      
+
       // If you need to delete from vector/graph store, add that logic here
       // Example:
       // await this.collection.delete(id);
-      
+
       return count > 0;
     } catch (error) {
       console.error('Error deleting event:', error);
@@ -237,7 +240,7 @@ export class EventModel extends BaseModel<BaseEvent, EventInput, EventUpdate> {
     if (typeof data !== 'object' || data === null) {
       throw new Error('Invalid data type for Event');
     }
-    
+
     const eventData = data as Record<string, any>;
     return {
       id: eventData.id,
@@ -255,7 +258,7 @@ export class EventModel extends BaseModel<BaseEvent, EventInput, EventUpdate> {
       embedding: eventData.embedding,
     };
   }
-  
+
   /**
    * Convert a database record to an Event object
    */
@@ -263,7 +266,7 @@ export class EventModel extends BaseModel<BaseEvent, EventInput, EventUpdate> {
     if (typeof data !== 'object' || data === null) {
       throw new Error('Invalid data type for Event');
     }
-    
+
     const eventData = data as Record<string, any>;
     return this.toEntity({
       ...eventData,
@@ -287,7 +290,8 @@ export class EventModel extends BaseModel<BaseEvent, EventInput, EventUpdate> {
     try {
       const embeddingFunction = await getEmbeddingFunction();
       const result = await embeddingFunction.generate([text]);
-      return result[0];
+      // Ensure the result is a plain array, not a TypedArray
+      return Array.from(result[0]);
     } catch (error) {
       console.error('Error generating embedding:', error);
       return [];

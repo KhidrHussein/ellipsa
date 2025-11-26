@@ -1,0 +1,23 @@
+{
+  "extends": "../../tsconfig.json",
+  "compilerOptions": {
+    "outDir": "../../dist/email",
+    "rootDir": ".",
+    "baseUrl": ".",
+    "composite": true,
+    "paths": {
+      "@ellipsa/shared/*": ["../../../packages/shared/src/*"],
+      "@ellipsa/action/*": ["../*"],
+      "@ellipsa/action-email/*": ["./*"]
+    },
+    "typeRoots": [
+      "../../node_modules/@types",
+      "../../types",
+      "../types"
+    ],
+    "checkJs": false,
+    "noImplicitAny": false
+  },
+  "include": [".", "../../types"],
+  "exclude": ["node_modules", "dist"]
+}

@@ -16,6 +16,9 @@ import { logger } from './utils/logger';
 import { getChromaClient } from './db/vector/chroma';
 import { getDriver, getSession } from './db/graph/connection';
 import { getConnection, getKnexClient } from './db/relational/connection';
+import { PromptServiceClient } from './services/PromptServiceClient';
+import { TranscriptionService } from './services/TranscriptionService';
+import config from './config';
 
 // Extend the Socket.IO types with our custom properties
 declare module 'socket.io' {
@@ -65,25 +68,25 @@ class MemoryServer {
     try {
       // Initialize database connections
       await this.initializeDatabases();
-      
+
       // Initialize models
       this.initializeModels();
-      
+
       // Initialize services
       await this.initializeServices();
-      
+
       // Configure middleware
       this.configureMiddleware();
-      
+
       // Configure routes
       this.configureRoutes();
-      
+
       // Configure WebSocket
       this.configureWebSocket();
-      
+
       // Start the server
       await this.start();
-      
+
       logger.info('Memory Service initialized successfully');
     } catch (error) {
       logger.error('Failed to initialize Memory Service:', error);
@@ -95,12 +98,12 @@ class MemoryServer {
     try {
       // Initialize all databases
       const { knex, neo4jDriver, chromaCollections } = await initializeDatabases();
-      
+
       // Store connections
       this.knex = knex;
       this.neo4jSession = getSession();
       this.chromaCollection = chromaCollections.events; // Using events collection for now
-      
+
       logger.info('All database connections established');
       return { knex, neo4jSession: this.neo4jSession, chromaCollection: this.chromaCollection };
     } catch (error) {
@@ -116,13 +119,13 @@ class MemoryServer {
       this.neo4jSession,
       this.chromaCollection
     );
-    
+
     this.entityModel = new EntityModel(
       this.knex,
       this.neo4jSession,
       this.chromaCollection
     );
-    
+
     this.taskModel = new TaskModel(
       this.knex,
       this.neo4jSession
@@ -136,26 +139,14 @@ class MemoryServer {
       this.entityModel,
       this.taskModel
     );
-    
-    // Create a mock prompt service that matches the expected interface
-    const promptService = {
-      async generate(prompt: string, options?: any): Promise<string> {
-        return `Response to: ${prompt}`;
-      },
-      
-      async extractStructuredData(content: string): Promise<{
-        summary: string;
-        entities: any[];
-        action_items: any[];
-      }> {
-        return {
-          summary: content.substring(0, 100),
-          entities: [],
-          action_items: []
-        };
-      }
-    };
-  
+
+    // Initialize PromptServiceClient
+    const promptServiceUrl = process.env.PROMPT_SERVICE_URL || 'http://localhost:4003';
+    const promptService = new PromptServiceClient(promptServiceUrl);
+
+    // Initialize TranscriptionService
+    const transcriptionService = new TranscriptionService(config.openaiApiKey || '');
+
     // Initialize Event Processing Service
     this.eventProcessingService = new EventProcessingService({
       promptService: promptService as any,
@@ -163,8 +154,9 @@ class MemoryServer {
       entityModel: this.entityModel,
       taskModel: this.taskModel,
       neo4jSession: this.neo4jSession,
+      transcriptionService: transcriptionService,
     });
-  
+
     // Initialize WebSocket Service after HTTP server is started
     this.webSocketService = new WebSocketService(this.server, this.eventProcessingService);
   }
@@ -245,7 +237,7 @@ class MemoryServer {
 // Start the server if this file is run directly
 if (require.main === module) {
   const server = new MemoryServer();
-  
+
   const startServer = async () => {
     try {
       await server.initialize();

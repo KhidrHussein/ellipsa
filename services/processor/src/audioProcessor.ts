@@ -1,9 +1,29 @@
-import { OpenAI } from 'openai';
-import type { Ingest as IngestType } from './server';
 import * as dotenv from 'dotenv';
+import * as path from 'path';
+import { fileURLToPath } from 'url';
+import { dirname } from 'path';
 
-// Load environment variables
-dotenv.config();
+// For ESM compatibility
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+
+// Load environment variables from the root .env file
+const envPath = path.resolve(process.cwd(), '../../.env');
+console.log(`[audioProcessor] Current working directory: ${process.cwd()}`);
+console.log(`[audioProcessor] Loading environment variables from: ${envPath}`);
+
+try {
+  dotenv.config({ path: envPath, override: true });
+  console.log('[audioProcessor] Environment variables loaded successfully');
+} catch (error) {
+  console.error('[audioProcessor] Error loading .env file:', error);
+}
+
+// Debug: Log if OPENAI_API_KEY is loaded
+console.log('[audioProcessor] OPENAI_API_KEY loaded:', process.env.OPENAI_API_KEY ? 'Yes' : 'No');
+
+import { OpenAI } from 'openai';
+import type { Ingest as IngestType } from './server.js';
 
 interface AudioProcessingResult {
   text: string;

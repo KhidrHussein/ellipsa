@@ -1,4 +1,72 @@
-import { EmailMessage, EmailSummary, DraftResponse } from './index';
+/// <reference types="node" />
+
+export interface EmailAddress {
+  name?: string;
+  address: string;
+}
+
+export interface EmailAttachment {
+  filename: string;
+  mimeType: string;
+  size: number;
+  content: Uint8Array;
+  contentId?: string;
+}
+
+export interface EmailMessage {
+  id: string;
+  threadId: string;
+  subject: string;
+  from: EmailAddress;
+  to: EmailAddress[];
+  cc?: EmailAddress[];
+  bcc?: EmailAddress[];
+  date: Date;
+  text?: string;
+  html?: string;
+  attachments?: EmailAttachment[];
+  labels?: string[];
+  isRead: boolean;
+  inReplyTo?: string;
+  references?: string[];
+  metadata?: Record<string, unknown>;
+  // Extended fields
+  headers?: Record<string, string>;
+  hasAttachments?: boolean;
+  snippet?: string;
+}
+
+export interface EmailSummary {
+  id: string;
+  threadId: string;
+  subject: string;
+  from: EmailAddress;
+  date: Date;
+  summary: string;
+  actionRequired: boolean;
+  priority: 'high' | 'medium' | 'low';
+  categories: string[];
+  metadata?: Record<string, unknown>;
+}
+
+export interface DraftResponse {
+  threadId?: string;
+  to: EmailAddress[];
+  from?: EmailAddress;
+  subject: string;
+  emailId?: string;
+  body?: string;
+  text?: string;
+  html?: string;
+  cc?: EmailAddress[];
+  bcc?: EmailAddress[];
+  inReplyTo?: string;
+  references?: string[];
+  attachments?: EmailAttachment[];
+  isDraft?: boolean;
+  createdAt?: Date;
+  updatedAt?: Date;
+}
 
 export interface EmailSweepOptions {
   // Existing options
@@ -8,7 +76,7 @@ export interface EmailSweepOptions {
   includeRead?: boolean;
   minImportance?: 'high' | 'medium' | 'low';
   
-  // New options for enhanced filtering
+  // Additional options specific to this interface
   unreadOnly?: boolean;
   label?: string;
   sender?: string;
@@ -39,5 +107,3 @@ export interface IEmailService {
     }
   ): Promise<DraftResponse>;
 }
-
-export * from './index';

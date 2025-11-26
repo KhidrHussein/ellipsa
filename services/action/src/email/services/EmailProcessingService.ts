@@ -1,6 +1,38 @@
-import { PromptService } from '@ellipsa/prompt';
-import { EmailMessage, EmailSummary, DraftResponse } from '../types';
-import { IEmailMemoryService } from './IEmailMemoryService';
+// Import types from the email.types.ts to ensure consistency
+import type { 
+  EmailMessage, 
+  EmailSummary, 
+  DraftResponse,
+  EmailAttachment as EmailAttachmentType 
+} from '../types/email.types.js';
+
+// Import local modules
+import type { IEmailMemoryService } from './IEmailMemoryService.js';
+
+// Re-export types for consistency
+export type { EmailMessage, EmailSummary, DraftResponse, EmailAttachmentType };
+import { notificationBridge } from './NotificationBridge.js';
+
+// Import from shared packages (temporary workaround)
+// TODO: Fix workspace linking for @ellipsa/shared and @ellipsa/prompt
+import type { IPromptService, StructuredData } from '@ellipsa/prompt';
+
+interface PromptService extends IPromptService {
+  // Extend with any additional methods not in IPromptService
+  extractEntities?: (content: string) => Promise<Array<{type: string, value: string}>>;
+  healthCheck?: () => Promise<boolean>;
+  getRequestCount?: () => number;
+}
+
+type DraftResponseData = any; // Temporary workaround
+
+declare const console: {
+  log: (...args: any[]) => void;
+  error: (...args: any[]) => void;
+  warn: (...args: any[]) => void;
+  info: (...args: any[]) => void;
+  debug: (...args: any[]) => void;
+};
 
 export class EmailProcessingService {
   constructor(
@@ -15,10 +47,27 @@ export class EmailProcessingService {
 
       // 2. Extract structured data
       const content = email.text || email.html || '';
+      const schema = {
+        type: 'object',
+        properties: {
+          // Define your schema here based on what data you want to extract
+          // For example:
+          // sender: { type: 'string' },
+          // date: { type: 'string', format: 'date-time' },
+          // ...
+        }
+      };
       const [extractedData, summaryText] = await Promise.all([
         this.promptService.extractStructuredData(content),
         this.promptService.summarizeContent(content)
       ]);
+      
+      // Ensure we have the expected structure in extractedData
+      const structuredData: {
+        summary: string;
+        entities: Array<{ type: string; value: string }>;
+        // Add other expected properties here
+      } = extractedData as any;
 
       // 3. Create email summary
       const summary: EmailSummary = {
@@ -54,17 +103,26 @@ export class EmailProcessingService {
       additionalContext?: string;
     } = {}
   ): Promise<DraftResponse> {
+    // Ensure we have valid email data
+    if (!email || !email.id) {
+      throw new Error('Invalid email data provided');
+    }
     try {
       // 1. Get conversation history if not provided
-      let conversationHistory = context.conversationHistory;
-      if (!conversationHistory?.length) {
-        conversationHistory = await this.memoryService.getConversationHistory(email.threadId);
+      let conversationHistory = context.conversationHistory || [];
+      if (!conversationHistory.length && email.threadId) {
+        const history = await this.memoryService.getConversationHistory(email.threadId);
+        if (history) {
+          conversationHistory = history;
+        }
       }
 
       // 2. Generate response using prompt service
       const prompt = this.createResponsePrompt(email, conversationHistory, context.additionalContext);
+      // Create a formatted prompt with parameters
+      const formattedPrompt = `Prompt: ${prompt}\n\nMax Tokens: 1000\nTemperature: 0.7`;
       const response = await this.promptService.generateText({
-        prompt,
+        prompt: formattedPrompt,
         maxTokens: 1000,
         temperature: 0.7
       });
@@ -76,10 +134,22 @@ export class EmailProcessingService {
         subject: email.subject.startsWith('Re:') ? email.subject : `Re: ${email.subject}`,
         body: response,
         inReplyTo: email.id,
-        references: [email.id, ...(email.references || [])]
+        references: [email.id, ...(email.references || [])],
+        emailId: email.id  // Add emailId to reference the original email
       };
 
-      // 4. Update email status
+      // 4. Send draft notification
+      await notificationBridge.notifyDraftReady({
+        threadId: draft.threadId || '',
+        to: draft.to.map(addr => addr.address),
+        subject: draft.subject,
+        body: draft.body || '',
+        inReplyTo: draft.inReplyTo,
+        references: draft.references,
+        emailId: email.id
+      });
+
+      // 5. Update email status
       await this.memoryService.updateEmailStatus(email.id, 'drafted');
       return draft;
     } catch (error) {

@@ -52,6 +52,10 @@ export const EntityType = z.enum([
   'concept',
   'task',
   'action_item',
+  'file',
+  'service',
+  'project',
+  'technology',
   'other',
 ]);
 
@@ -112,21 +116,37 @@ export class EntityModel extends BaseModel<BaseEntity, EntityInput, EntityUpdate
     if (duplicates.length > 0) {
       console.warn('Potential duplicate entities found:', duplicates);
     }
-    
+
     const textToEmbed = `${data.name} ${data.description || ''}`.trim();
     const embedding = await this.generateEmbedding(textToEmbed);
-    
+
     const entityData: EntityInput = {
       ...data,
       metadata: data.metadata || {},
       last_seen_at: new Date().toISOString(),
     };
-    
+
     const createFn = async (tx: Knex.Transaction): Promise<BaseEntity> => {
-      const entity = await super.create({
+      // Validate data first (embedding should be an array here)
+      const validatedData = this.validate({
         ...entityData,
         embedding,
-      }, tx);
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+        deleted_at: null,
+      });
+
+      // Stringify embedding for DB insertion
+      const dbData = {
+        ...validatedData,
+        embedding: JSON.stringify(embedding) as any,
+      };
+
+      const [result] = await tx(this.tableName)
+        .insert(dbData)
+        .returning('*');
+
+      const entity = this.toEntity(result);
 
       if (!entity?.id) {
         throw new Error('Failed to create entity: missing ID');
@@ -177,12 +197,17 @@ export class EntityModel extends BaseModel<BaseEntity, EntityInput, EntityUpdate
    */
   private async generateEmbedding(text: string): Promise<number[]> {
     if (!text) return [];
-    
+
     try {
       const result = await this.embeddingFunction.generate([text]);
+      if (!result || !result.embeddings || !result.embeddings[0]) {
+        console.warn('Embedding service returned no result for text:', text.substring(0, 50));
+        return new Array(1536).fill(0); // Return zero vector as fallback
+      }
       return result.embeddings[0] as number[];
     } catch (error) {
-      throw new DatabaseError('Failed to generate embedding', error as Error);
+      console.error('Failed to generate embedding:', error);
+      return new Array(1536).fill(0); // Return zero vector on error to allow processing to continue
     }
   }
 
@@ -195,10 +220,10 @@ export class EntityModel extends BaseModel<BaseEntity, EntityInput, EntityUpdate
     threshold: number = this.SIMILARITY_THRESHOLD
   ): Promise<BaseEntity[]> {
     if (!name) return [];
-    
+
     try {
       const embedding = await this.generateEmbedding(name);
-      
+
       const queryOptions: any = {
         queryEmbeddings: [embedding],
         nResults: 5,
@@ -210,7 +235,7 @@ export class EntityModel extends BaseModel<BaseEntity, EntityInput, EntityUpdate
       }
 
       const results = await this.collection.query(queryOptions);
-      
+
       if (!results.matches || !results.matches[0]) return [];
 
       return results.matches[0]
@@ -247,7 +272,7 @@ export class EntityModel extends BaseModel<BaseEntity, EntityInput, EntityUpdate
 
     const relationshipId = uuidv4();
     const now = new Date().toISOString();
-    
+
     const createFn = async (tx: Knex.Transaction): Promise<EntityRelationship> => {
       const [relationship] = await tx('entity_relationships')
         .insert({
@@ -302,16 +327,16 @@ export class EntityModel extends BaseModel<BaseEntity, EntityInput, EntityUpdate
     options: { type?: RelationshipType; direction?: 'incoming' | 'outgoing' | 'both' } = {}
   ): Promise<EntityRelationship[]> {
     if (!entityId) return [];
-    
+
     const { type, direction = 'both' } = options;
-    
+
     let directionClause = '';
     if (direction === 'incoming') directionClause = '<-';
     else if (direction === 'outgoing') directionClause = '->';
     else directionClause = '-';
-    
+
     const typeFilter = type ? `:${type}` : '';
-    
+
     try {
       const result = await this.neo4jSession.readTransaction((tx: Transaction) =>
         tx.run(
@@ -326,18 +351,18 @@ export class EntityModel extends BaseModel<BaseEntity, EntityInput, EntityUpdate
       return result.records.map((record: any) => {
         const rel = record.get('r');
         const props = rel?.properties || {};
-        
+
         let parsedMetadata = {};
         if (props.metadata) {
           try {
-            parsedMetadata = typeof props.metadata === 'string' 
+            parsedMetadata = typeof props.metadata === 'string'
               ? JSON.parse(props.metadata)
               : props.metadata;
           } catch (e) {
             console.warn('Failed to parse relationship metadata:', e);
           }
         }
-        
+
         return {
           id: String(props.id || ''),
           sourceId: String(record.get('sourceId') || ''),
@@ -380,7 +405,7 @@ export class EntityModel extends BaseModel<BaseEntity, EntityInput, EntityUpdate
     options: EntityDedupeOptions = {}
   ): Promise<BaseEntity> {
     const trx = await this.db.transaction();
-    
+
     try {
       const primary = await this.findById(primaryId, trx);
       if (!primary) {
@@ -416,7 +441,7 @@ export class EntityModel extends BaseModel<BaseEntity, EntityInput, EntityUpdate
         if (!dup || !dup.id) continue;
 
         const relationships = await this.getRelationships(dup.id);
-        
+
         for (const rel of relationships) {
           try {
             const isSource = rel.sourceId === dup.id;
@@ -427,7 +452,7 @@ export class EntityModel extends BaseModel<BaseEntity, EntityInput, EntityUpdate
             const exists = await this.getRelationships(primaryId, {
               type: rel.type,
               direction: isSource ? 'outgoing' : 'incoming'
-            }).then(rels => rels.some(r => 
+            }).then(rels => rels.some(r =>
               (isSource ? r.targetId : r.sourceId) === otherId
             ));
 
@@ -462,15 +487,15 @@ export class EntityModel extends BaseModel<BaseEntity, EntityInput, EntityUpdate
    */
   private calculateTextSimilarity(a: string, b: string): number {
     if (!a || !b) return 0;
-    
+
     const str1 = a.toLowerCase();
     const str2 = b.toLowerCase();
-    
+
     if (str1 === str2) return 1.0;
     if (str1.startsWith(str2) || str2.startsWith(str1)) return 0.9;
     if (str1.endsWith(str2) || str2.endsWith(str1)) return 0.8;
     if (str1.includes(str2) || str2.includes(str1)) return 0.7;
-    
+
     const distance = this.levenshteinDistance(str1, str2);
     const maxLength = Math.max(str1.length, str2.length);
     return 1 - (distance / maxLength);
@@ -481,9 +506,9 @@ export class EntityModel extends BaseModel<BaseEntity, EntityInput, EntityUpdate
    */
   private levenshteinDistance(a: string, b: string): number {
     if (!a || !b) return Math.max(a?.length || 0, b?.length || 0);
-    
+
     const matrix: number[][] = [];
-    
+
     for (let i = 0; i <= b.length; i++) {
       matrix[i] = [i];
     }
@@ -533,7 +558,7 @@ export class EntityModel extends BaseModel<BaseEntity, EntityInput, EntityUpdate
     try {
       if (query.length < this.FUZZY_SEARCH_MIN_LENGTH) {
         const exactMatches = await this.db(this.tableName)
-          .where(function() {
+          .where(function () {
             this.where('name', 'like', `%${query}%`);
             if (type) this.andWhere('type', type);
           })
@@ -547,7 +572,7 @@ export class EntityModel extends BaseModel<BaseEntity, EntityInput, EntityUpdate
       }
 
       const embedding = await this.generateEmbedding(query);
-      
+
       const queryOptions: any = {
         queryEmbeddings: [embedding],
         nResults: limit * 2,
@@ -559,19 +584,19 @@ export class EntityModel extends BaseModel<BaseEntity, EntityInput, EntityUpdate
       }
 
       const results = await this.collection.query(queryOptions);
-      
+
       if (!results.matches || !results.matches[0]) return [];
-      
+
       const scoredResults = results.matches[0]
         .map((match: any) => {
           const entity = {
             id: match.id,
             ...match.metadata,
-            metadata: typeof match.metadata.metadata === 'string' 
-              ? JSON.parse(match.metadata.metadata) 
+            metadata: typeof match.metadata.metadata === 'string'
+              ? JSON.parse(match.metadata.metadata)
               : match.metadata.metadata || {}
           };
-          
+
           const fieldValues = fields
             .map(field => {
               const value = entity[field];
@@ -579,10 +604,10 @@ export class EntityModel extends BaseModel<BaseEntity, EntityInput, EntityUpdate
             })
             .filter(Boolean)
             .join(' ');
-            
+
           const textScore = this.calculateTextSimilarity(query, fieldValues);
           const combinedScore = (match.score * 0.7) + (textScore * 0.3);
-          
+
           return {
             entity: this.toEntity(entity),
             score: combinedScore
@@ -610,39 +635,39 @@ export class EntityModel extends BaseModel<BaseEntity, EntityInput, EntityUpdate
     } = {}
   ): Promise<BaseEntity[]> {
     if (!entityId) return [];
-    
+
     const { types, limit = 10 } = options;
-    
+
     try {
-      const typeClause = types && types.length > 0 
-        ? `:${types.join('|')}` 
+      const typeClause = types && types.length > 0
+        ? `:${types.join('|')}`
         : '';
-        
+
       const cypher = `
         MATCH (e:Entity {id: $entityId})-[r${typeClause}]-(related:Entity)
         RETURN DISTINCT related
         ${limit ? 'LIMIT $limit' : ''}
       `;
-      
+
       const result = await this.neo4jSession.readTransaction((tx: Transaction) =>
         tx.run(cypher, { entityId, limit })
       );
-      
+
       return result.records.map(record => {
         const node = record.get('related');
         const props = node.properties as Record<string, any>;
-        
+
         let metadata: Record<string, unknown> = {};
         if (props.metadata) {
           try {
-            metadata = typeof props.metadata === 'string' 
+            metadata = typeof props.metadata === 'string'
               ? JSON.parse(props.metadata)
               : props.metadata;
           } catch (e) {
             console.warn('Failed to parse metadata:', e);
           }
         }
-        
+
         return this.toEntity({
           ...props,
           id: String(props.id || ''),
@@ -699,11 +724,11 @@ export class EntityModel extends BaseModel<BaseEntity, EntityInput, EntityUpdate
         limit: pageSize,
         minScore: minSimilarity
       };
-      
+
       if (options.type) {
         fuzzySearchOpts.type = options.type;
       }
-      
+
       const fuzzyResults = await this.fuzzySearch(query, fuzzySearchOpts);
 
       let relatedEntities: BaseEntity[] = [];
@@ -721,7 +746,7 @@ export class EntityModel extends BaseModel<BaseEntity, EntityInput, EntityUpdate
         ...fuzzyResults.map(r => r.entity),
         ...relatedEntities
       ];
-      
+
       const uniqueResults = Array.from(
         new Map(allResults.filter(item => item.id).map(item => [item.id, item])).values()
       );

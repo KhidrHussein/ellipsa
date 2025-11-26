@@ -64,11 +64,11 @@ export class WebSocketService {
     this.wss.on('connection', (ws: ExtendedWebSocket) => {
       ws.id = Math.random().toString(36).substring(2, 15);
       ws.isAlive = true;
-      
+
       logger.info(`New WebSocket connection: ${ws.id}`);
       this.clients.add(ws);
 
-// Add event listeners with proper type assertions
+      // Add event listeners with proper type assertions
       (ws as WS).on('pong', () => {
         ws.isAlive = true;
       });
@@ -88,8 +88,11 @@ export class WebSocketService {
       // Handle incoming messages
       (ws as WS).on('message', async (data: RawData) => {
         try {
+          // logger.info('Raw WebSocket data received:', data.toString());
           const message = JSON.parse(data.toString()) as WebSocketMessage;
-          logger.info('Received message:', message);
+          if (message.type !== 'ping') {
+            logger.info(`Received message type: ${message.type}`);
+          }
 
           switch (message.type) {
             case 'process_event':
@@ -156,19 +159,45 @@ export class WebSocketService {
         }
       };
 
-      const result = await this.eventProcessingService.processEvent(JSON.stringify(eventData));
+      const result = await this.eventProcessingService.processEvent(content, eventData.metadata);
+
+      // The result now contains { event, extraction }
+      // We want to send the summary back to the user
+      const summary = (result as any).extraction?.summary || 'Event processed successfully';
 
       // Send the result back to the client
       if (ws.readyState === 1) {
         const response = {
-          type: 'event_processed',
-          data: result,
+          type: 'assistant_message', // Change to assistant_message so it shows up in chat
+          content: summary,
           id: eventId,
-          timestamp: new Date().toISOString()
+          timestamp: new Date().toISOString(),
+          metadata: {
+            eventId: (result as any).event?.id,
+            entities: (result as any).extraction?.entities,
+            action_items: (result as any).extraction?.action_items
+          }
         };
-        
+
         ws.send(JSON.stringify(response));
-        
+
+        // Send suggestions as separate messages
+        const suggestions = (result as any).extraction?.suggestions || [];
+        if (Array.isArray(suggestions)) {
+          suggestions.forEach((suggestion: string) => {
+            const suggestionMsg = {
+              type: 'suggestion',
+              content: suggestion,
+              id: Math.random().toString(36).substring(2, 15),
+              timestamp: new Date().toISOString(),
+              metadata: {
+                eventId: (result as any).event?.id
+              }
+            };
+            ws.send(JSON.stringify(suggestionMsg));
+          });
+        }
+
         // Broadcast to other clients
         this.broadcast(
           {
@@ -193,7 +222,7 @@ export class WebSocketService {
       clearInterval(this.heartbeatInterval);
       this.heartbeatInterval = undefined;
     }
-    
+
     // Close all WebSocket connections
     for (const client of this.clients) {
       try {
@@ -205,14 +234,14 @@ export class WebSocketService {
       }
     }
     this.clients.clear();
-    
+
     // Close the WebSocket server
     return new Promise((resolve, reject) => {
       if (!this.wss) {
         resolve();
         return;
       }
-      
+
       this.wss.close((error) => {
         if (error) {
           logger.error('Error closing WebSocket server:', error);
@@ -224,4 +253,4 @@ export class WebSocketService {
       });
     });
   }
-  }
+}

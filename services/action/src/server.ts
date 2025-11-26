@@ -2,16 +2,22 @@ import express, { Request, Response } from 'express';
 import { config } from 'dotenv';
 import { existsSync } from 'fs';
 import path from 'path';
-import { GmailEmailService } from './email/services/GmailEmailService';
-import { EmailProcessingService } from './email/services/EmailProcessingService';
-import { IEmailMemoryService } from './email/services/IEmailMemoryService';
-import { EmailMemoryService } from './email/services/EmailMemoryService';
+import { fileURLToPath } from 'url';
+import { GmailEmailService } from './email/services/GmailEmailService.js';
+import { EmailProcessingService } from './email/services/EmailProcessingService.js';
+import { IEmailMemoryService } from './email/services/IEmailMemoryService.js';
+import { EmailMemoryService } from './email/services/EmailMemoryService.js';
 import { PromptService } from '@ellipsa/prompt';
-import { createEmailRouter } from './email/routes';
-import { createEmailAutomation } from './email/EmailAutomationService';
-import { EmailMetrics } from './email/monitoring/EmailMetrics';
-import { oauthService } from './email/services/OAuthService';
-import { EmailMessage, EmailSummary, DraftResponse } from './email/types';
+import { createEmailRouter } from './email/routes.js';
+import { createEmailAutomation } from './email/EmailAutomationService.js';
+import { EmailMetrics } from './email/monitoring/EmailMetrics.js';
+import { oauthService } from './email/services/OAuthService.js';
+import type { EmailMessage, EmailSummary, DraftResponse, EmailAddress, EmailAttachment } from './email/types/email.types.js';
+import { Buffer } from 'buffer';
+
+// Get directory name in ES modules
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 // Load environment variables
 const envPaths = [
@@ -58,44 +64,68 @@ class MemoryServiceClient implements IEmailMemoryService {
   public readonly entities: Map<string, any> = new Map();
   public readonly events: Map<string, any> = new Map();
   public readonly emails: Map<string, ExtendedEmailMessage> = new Map();
-  public readonly drafts: Map<string, any> = new Map();
+  public readonly drafts: Map<string, DraftResponse> = new Map();
 
   async storeEmail(email: EmailMessage): Promise<void> {
-    this.emails.set(email.id, email as ExtendedEmailMessage);
+    // Convert attachments content to Uint8Array if it's a Buffer
+    const processedEmail = {
+      ...email,
+      metadata: {},
+      attachments: email.attachments?.map(attachment => ({
+        ...attachment,
+        content: attachment.content instanceof Buffer 
+          ? new Uint8Array(attachment.content.buffer)
+          : attachment.content
+      }))
+    } as ExtendedEmailMessage;
+    this.emails.set(email.id, processedEmail);
   }
 
-  async storeEmailSummary(emailId: string, summary: string): Promise<void> {
-    const email = this.emails.get(emailId);
+  async storeEmailSummary(summary: EmailSummary): Promise<void> {
+    const email = this.emails.get(summary.id);
     if (email) {
       email.metadata = email.metadata || {};
-      email.metadata.summary = summary;
-      this.emails.set(emailId, email);
+      email.metadata.summary = summary.summary;
+      this.emails.set(summary.id, email);
     }
   }
 
   async getEmail(id: string): Promise<EmailMessage | null> {
-    return this.emails.get(id) || null;
+    const email = this.emails.get(id);
+    if (!email) return null;
+    
+    // Ensure attachments content is Uint8Array
+    return {
+      ...email,
+      attachments: email.attachments?.map(attachment => ({
+        ...attachment,
+        content: attachment.content instanceof Uint8Array 
+          ? Buffer.from(attachment.content.buffer)
+          : attachment.content
+      }))
+    };
   }
 
   async searchEmails(query: string): Promise<EmailSummary[]> {
+    const queryLower = query.toLowerCase();
     return Array.from(this.emails.values())
       .filter(email => 
-        email.subject?.toLowerCase().includes(query.toLowerCase()) || 
-        email.text?.toLowerCase().includes(query.toLowerCase()) ||
-        email.html?.toLowerCase().includes(query.toLowerCase())
+        email.subject?.toLowerCase().includes(queryLower) || 
+        email.text?.toLowerCase().includes(queryLower) ||
+        email.html?.toLowerCase().includes(queryLower)
       )
       .map(email => ({
         id: email.id,
-        threadId: email.threadId || '',
-        subject: email.subject || '',
+        threadId: email.threadId,
+        subject: email.subject,
         from: email.from,
-        to: email.to || [],
-        date: email.date || new Date(),
+        date: email.date,
         summary: email.text?.substring(0, 100) || '',
-        isRead: email.isRead || false,
         actionRequired: false,
         priority: 'medium',
         categories: [],
+        metadata: email.metadata,
+        isRead: email.isRead || false,
         snippet: email.text?.substring(0, 150) || ''
       }));
   }
@@ -122,6 +152,14 @@ class MemoryServiceClient implements IEmailMemoryService {
       email.metadata.lastUpdated = new Date().toISOString();
       this.emails.set(emailId, email);
     }
+  }
+
+  private convertAttachments(attachments?: EmailAttachment[]): Array<EmailAttachment & { content: Buffer }> | undefined {
+    if (!attachments) return undefined;
+    return attachments.map(attachment => ({
+      ...attachment,
+      content: Buffer.from(attachment.content.buffer)
+    }));
   }
 }
 
@@ -265,7 +303,8 @@ async function startServer() {
 }
 
 // Only start the server if this file is run directly
-if (require.main === module) {
+const isMain = import.meta.url === `file://${process.argv[1]}`;
+if (isMain) {
   startServer().catch(error => {
     console.error('Failed to start server:', error);
     process.exit(1);

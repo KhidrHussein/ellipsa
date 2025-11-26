@@ -27,7 +27,7 @@ const CompletionSchema = z.object({
   })),
   model: z.string().optional().default("gpt-3.5-turbo"),
   temperature: z.number().min(0).max(2).optional().default(0.7),
-  max_tokens: z.number().min(1).max(4000).optional(),
+  max_tokens: z.number().min(1).max(16000).optional(),
   response_format: z.object({
     type: z.literal("json_object")
   }).optional()
@@ -36,7 +36,8 @@ const CompletionSchema = z.object({
 import { Express } from 'express';
 
 const app: Express = express();
-app.use(express.json());
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
 // Request logging middleware
 app.use((req, res, next) => {
@@ -71,9 +72,9 @@ app.post("/prompt/v1/complete", async (req, res) => {
     }
 
     const { messages, model, temperature, max_tokens, response_format } = parsed.data;
-    
+
     console.log(`[${new Date().toISOString()}] Starting completion with model: ${model}`);
-    
+
     const startTime = Date.now();
     const completion = await openai.chat.completions.create({
       model,
@@ -82,12 +83,12 @@ app.post("/prompt/v1/complete", async (req, res) => {
       max_tokens,
       response_format,
     });
-    
+
     const endTime = Date.now();
     const duration = endTime - startTime;
-    
+
     console.log(`[${new Date().toISOString()}] Completion finished in ${duration}ms`);
-    
+
     // Add usage and timing information
     const response = {
       ...completion,
@@ -97,11 +98,11 @@ app.post("/prompt/v1/complete", async (req, res) => {
         duration_ms: duration
       }
     };
-    
+
     res.json(response);
   } catch (error: any) {
     console.error(`[${new Date().toISOString()}] Completion error:`, error);
-    
+
     const statusCode = error.status || 500;
     const errorResponse = {
       error: "completion_failed",
@@ -110,7 +111,7 @@ app.post("/prompt/v1/complete", async (req, res) => {
       ...(error.code && { code: error.code }),
       ...(error.type && { type: error.type })
     };
-    
+
     res.status(statusCode).json(errorResponse);
   }
 });
@@ -120,7 +121,7 @@ app.get("/prompt/v1/health", async (req, res) => {
   try {
     // Verify OpenAI API key is working
     await openai.models.list();
-    
+
     res.json({
       status: "healthy",
       timestamp: new Date().toISOString(),

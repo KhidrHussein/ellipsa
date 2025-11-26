@@ -1,9 +1,19 @@
-import winston from 'winston';
+import winston, { Logform } from 'winston';
 
 const { combine, timestamp, printf, colorize, align } = winston.format;
 
-const logFormat = printf(({ level, message, timestamp, ...meta }) => {
-  const metaString = Object.keys(meta).length ? `\n${JSON.stringify(meta, null, 2)}` : '';
+interface LogEntry extends Logform.TransformableInfo {
+  level: string;
+  message: string;
+  timestamp?: string;
+  [key: string]: any;
+}
+
+const logFormat = printf((info: LogEntry) => {
+  const { level, message, timestamp, ...meta } = info;
+  const metaString = Object.keys(meta).filter(key => key !== 'splat' && key !== 'level' && key !== 'message' && key !== 'timestamp').length > 0 
+    ? `\n${JSON.stringify(meta, null, 2)}` 
+    : '';
   return `${timestamp} [${level}]: ${message}${metaString}`;
 });
 
@@ -13,7 +23,7 @@ export const logger = winston.createLogger({
     colorize({ all: true }),
     timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }),
     align(),
-    logFormat
+    logFormat as any // Type assertion to handle winston's internal types
   ),
   transports: [
     new winston.transports.Console(),
@@ -22,12 +32,12 @@ export const logger = winston.createLogger({
       level: 'error',
       maxsize: 5242880, // 5MB
       maxFiles: 5,
-    }),
+    } as winston.transports.FileTransportOptions),
     new winston.transports.File({ 
       filename: 'logs/combined.log',
       maxsize: 5242880, // 5MB
       maxFiles: 5,
-    }),
+    } as winston.transports.FileTransportOptions),
   ],
 });
 

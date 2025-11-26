@@ -82,7 +82,11 @@ export class EmailDigestService {
         if (this.requiresResponse(summary)) {
           try {
             const email = await this.emailService.getMessage(summary.id);
-            const draft = await this.emailService.draftResponse(email);
+            const draft = await this.emailService.draftResponse(email, {
+              // Add any relevant conversation history or additional context here
+              conversationHistory: [],
+              additionalContext: 'Generated as part of daily email digest'
+            });
             drafts.push({ summary, draft });
           } catch (error) {
             console.error(`Error creating draft for email ${summary.id}:`, error);
@@ -158,7 +162,7 @@ export class EmailDigestService {
           `**To**: ${draft.to.map(r => r.name || r.address).join(', ')}`,
           `**Draft**:`,
           '```',
-          draft.body,
+          draft.body || draft.text || draft.html || '(No content)',
           '```',
           ''
         );

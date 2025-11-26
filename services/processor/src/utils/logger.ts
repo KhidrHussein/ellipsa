@@ -1,4 +1,10 @@
 import winston from 'winston';
+import { fileURLToPath } from 'url';
+import { dirname, resolve } from 'path';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+const logsDir = resolve(__dirname, '../../logs');
 
 const { combine, timestamp, printf, colorize, align } = winston.format;
 
@@ -18,13 +24,13 @@ export const logger = winston.createLogger({
   transports: [
     new winston.transports.Console(),
     new winston.transports.File({ 
-      filename: 'logs/error.log', 
+      filename: resolve(logsDir, 'error.log'),
       level: 'error',
       maxsize: 5242880, // 5MB
       maxFiles: 5,
     }),
     new winston.transports.File({ 
-      filename: 'logs/combined.log',
+      filename: resolve(logsDir, 'combined.log'),
       maxsize: 5242880, // 5MB
       maxFiles: 5,
     }),

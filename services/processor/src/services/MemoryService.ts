@@ -1,5 +1,7 @@
 import axios from 'axios';
 
+export * from './types.js';
+
 export interface MemoryEvent {
   type: string;
   title?: string;

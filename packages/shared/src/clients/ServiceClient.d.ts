@@ -10,3 +10,4 @@ export declare class ServiceClient {
     private updateCircuitBreakerState;
     request<T = any>(config: AxiosRequestConfig): Promise<T>;
 }
+//# sourceMappingURL=ServiceClient.d.ts.map

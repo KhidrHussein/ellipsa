@@ -3,10 +3,20 @@
   "compilerOptions": {
     "outDir": "dist",
     "rootDir": "src",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "esModuleInterop": true,
+    "baseUrl": ".",
+    "target": "ES2020",
+    "moduleDetection": "force",
+    "paths": {
+      "@ellipsa/shared": ["../../node_modules/@ellipsa/shared/dist/index.js"]
+    },
     "typeRoots": [
       "./node_modules/@types",
       "../../types"
     ]
   },
-  "include": ["src", "src/types", "../../types"]
+  "include": ["src"],
+  "exclude": ["node_modules", "dist"]
 }

@@ -73,7 +73,7 @@ export class TaskModel extends BaseModel<Task, TaskInput, TaskUpdate> {
       priority: data.priority || 'medium',
       metadata: data.metadata || {},
     };
-    
+
     // Create in relational DB
     const task = await super.create(taskData, trx);
 
@@ -86,7 +86,7 @@ export class TaskModel extends BaseModel<Task, TaskInput, TaskUpdate> {
             title: $title,
             status: $status,
             priority: $priority,
-            dueDate: $dueDate ? datetime($dueDate) : null,
+            dueDate: datetime($dueDate),
             createdAt: datetime()
           })`,
           {
@@ -94,7 +94,7 @@ export class TaskModel extends BaseModel<Task, TaskInput, TaskUpdate> {
             title: task.title,
             status: task.status,
             priority: task.priority,
-            dueDate: task.due_date,
+            dueDate: task.due_date ? new Date(task.due_date).toISOString() : null,
           }
         )
       );
@@ -142,29 +142,29 @@ export class TaskModel extends BaseModel<Task, TaskInput, TaskUpdate> {
     trx?: Knex.Transaction
   ): Promise<PaginatedResult<Task>> {
     const { status } = options;
-    
+
     // If we have an assignee_id filter, use the graph DB for the query
     if (filters.assignee_id) {
       return this.findByAssignee(filters.assignee_id as string, options, trx);
     }
-    
+
     // Otherwise, use the standard SQL-based query with proper pagination
     const query = (trx || this.db)(this.tableName).where(filters);
-    
+
     // Apply pagination
     const page = options.page || 1;
     const pageSize = options.pageSize || 10;
     const queryOffset = (page - 1) * pageSize;
-    
+
     // Get total count for pagination
     const countResult = await (trx || this.db)(this.tableName)
       .where(filters)
       .count('* as count')
       .first();
-      
+
     const totalCount = countResult ? parseInt(countResult.count as string, 10) : 0;
     const totalPages = Math.ceil(totalCount / pageSize);
-    
+
     // Get paginated results
     const results = await query
       .clone()
@@ -172,7 +172,7 @@ export class TaskModel extends BaseModel<Task, TaskInput, TaskUpdate> {
       .orderBy('priority', 'desc')
       .offset(queryOffset)
       .limit(pageSize);
-    
+
     return {
       data: results.map(item => this.toEntity(item)),
       pagination: {
@@ -185,7 +185,7 @@ export class TaskModel extends BaseModel<Task, TaskInput, TaskUpdate> {
       },
     };
   }
-  
+
   /**
    * Find tasks by assignee using graph DB
    */
@@ -198,39 +198,39 @@ export class TaskModel extends BaseModel<Task, TaskInput, TaskUpdate> {
     const page = options.page || 1;
     const pageSize = options.pageSize || 10;
     const queryOffset = (page - 1) * pageSize;
-    
+
     try {
       // First, get the count of all tasks for this assignee
       let countCypher = `
         MATCH (u:Entity {id: $userId})-[:ASSIGNED_TO]->(t:Task)
         RETURN count(t) as count
       `;
-      
+
       const countParams: Record<string, unknown> = { userId };
       const countResult = await this.neo4jSession.readTransaction((tx: Transaction) =>
         tx.run(countCypher, countParams)
       );
-      
+
       const totalCount = countResult.records[0]?.get('count').toNumber() || 0;
       const totalPages = Math.ceil(totalCount / pageSize);
-      
+
       // Then get the paginated results
       let cypher = `
         MATCH (u:Entity {id: $userId})-[:ASSIGNED_TO]->(t:Task)
         WHERE 1=1
       `;
-      
-      const params: Record<string, unknown> = { 
+
+      const params: Record<string, unknown> = {
         userId,
         offset: queryOffset,
-        limit: pageSize 
+        limit: pageSize
       };
-      
+
       if (status && status.length > 0) {
         cypher += ' AND t.status IN $status';
         params.status = status;
       }
-      
+
       cypher += `
         RETURN t
         ORDER BY t.dueDate ASC, t.priority DESC
@@ -257,12 +257,12 @@ export class TaskModel extends BaseModel<Task, TaskInput, TaskUpdate> {
           },
         };
       }
-      
+
       const tasks = await (trx || this.db)('tasks')
         .whereIn('id', taskIds)
         .orderBy('due_date', 'asc')
         .orderBy('priority', 'desc');
-      
+
       return {
         data: tasks.map(task => this.toEntity(task)),
         pagination: {
@@ -296,33 +296,33 @@ export class TaskModel extends BaseModel<Task, TaskInput, TaskUpdate> {
    */
   async findByEntity(
     entityId: string,
-    options: { 
+    options: {
       status?: TaskStatus[];
-      limit?: number; 
+      limit?: number;
       offset?: number;
     } = {}
   ): Promise<Task[]> {
     const { status, limit = 10, offset = 0 } = options;
-    
+
     let cypher = `
       MATCH (e:Entity {id: $entityId})<-[:RELATED_TO]-(t:Task)
       WHERE 1=1
     `;
-    
+
     const params: Record<string, unknown> = { entityId };
-    
+
     if (status && status.length > 0) {
       cypher += ' AND t.status IN $status';
       params.status = status;
     }
-    
+
     cypher += `
       RETURN t
       ORDER BY t.dueDate ASC, t.priority DESC
       SKIP $offset
       LIMIT $limit
     `;
-    
+
     params.offset = offset;
     params.limit = limit;
 
@@ -334,12 +334,12 @@ export class TaskModel extends BaseModel<Task, TaskInput, TaskUpdate> {
       // Get full task details from the database
       const taskIds = result.records.map(record => record.get('t').properties.id);
       if (taskIds.length === 0) return [];
-      
+
       const tasks = await this.db('tasks')
         .whereIn('id', taskIds)
         .orderBy('due_date', 'asc')
         .orderBy('priority', 'desc');
-      
+
       return tasks.map(task => this.validate(task));
     } catch (error) {
       console.error('Error finding tasks by entity:', error);

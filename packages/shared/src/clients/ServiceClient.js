@@ -1,10 +1,6 @@
 import axios from 'axios';
 import { logger } from '../utils/logger.js';
 export class ServiceClient {
-    client;
-    serviceName;
-    retryAttempts;
-    circuitBreaker;
     constructor(serviceName, baseURL, timeout = 5000) {
         this.serviceName = serviceName;
         this.retryAttempts = 3;

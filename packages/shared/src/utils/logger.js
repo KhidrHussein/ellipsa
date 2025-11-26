@@ -1,12 +1,14 @@
 import winston from 'winston';
 const { combine, timestamp, printf, colorize, align } = winston.format;
-const logFormat = printf(({ level, message, timestamp, ...meta }) => {
-    const metaString = Object.keys(meta).length ? `\n${JSON.stringify(meta, null, 2)}` : '';
+const logFormat = printf((info) => {
+    const { level, message, timestamp, ...meta } = info;
+    const metaString = Object.keys(meta).length > 0 ? `\n${JSON.stringify(meta, null, 2)}` : '';
     return `${timestamp} [${level}]: ${message}${metaString}`;
 });
 export const logger = winston.createLogger({
     level: process.env.LOG_LEVEL || 'info',
-    format: combine(colorize({ all: true }), timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }), align(), logFormat),
+    format: combine(colorize({ all: true }), timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }), align(), logFormat // Type assertion to handle winston's internal types
+    ),
     transports: [
         new winston.transports.Console(),
         new winston.transports.File({

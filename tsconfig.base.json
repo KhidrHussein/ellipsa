@@ -9,7 +9,11 @@
     "skipLibCheck": true,
     "resolveJsonModule": true,
     "outDir": "dist",
-    "rootDir": "src"
+    "rootDir": "src",
+    "baseUrl": ".",
+    "paths": {
+      "@ellipsa/shared": ["packages/shared/src"]
+    }
   },
   "ts-node": {
     "esm": true,

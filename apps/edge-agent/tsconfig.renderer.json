@@ -1,0 +1,61 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "outDir": "./dist/renderer",
+    "rootDir": ".",
+    "composite": true,
+    "module": "ESNext",
+    "target": "ES2020",
+    "jsx": "react-jsx",
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "strict": false,
+    "noImplicitAny": false,
+    "noEmit": false,
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "lib": [
+      "dom",
+      "dom.iterable",
+      "esnext"
+    ],
+    "allowJs": true,
+    "checkJs": false,
+    "moduleResolution": "node",
+    "baseUrl": ".",
+    "paths": {
+      "@ellipsa/shared/*": [
+        "../../packages/shared/src/*"
+      ],
+      "@ellipsa/action/*": [
+        "../../packages/action/src/*"
+      ],
+      "@ellipsa/prompt/*": [
+        "../../packages/prompt/src/*"
+      ],
+      "@/*": [
+        "./src/*"
+      ]
+    },
+    "types": [
+      "node",
+      "electron"
+    ],
+    "typeRoots": [
+      "./node_modules/@types",
+      "./src/@types"
+    ]
+  },
+  "include": [
+    "src/renderer/**/*.ts",
+    "src/renderer/**/*.tsx",
+    "src/shims-*.d.ts",
+    "src/types/**/*.d.ts"
+  ],
+  "exclude": [
+    "node_modules",
+    "**/*.spec.ts",
+    "**/node_modules/**/*"
+  ]
+}

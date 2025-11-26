@@ -1,11 +1,39 @@
+// Load environment variables first
+import * as dotenv from 'dotenv';
+import * as path from 'path';
+
+// For CommonJS compatibility
+declare const __filename: string;
+declare const __dirname: string;
+
+// Load environment variables from the root .env file
+const envPath = path.resolve(process.cwd(), '../../.env');
+console.log(`[server] Current working directory: ${process.cwd()}`);
+console.log(`[server] Loading environment variables from: ${envPath}`);
+
+try {
+  dotenv.config({ path: envPath, override: true });
+  console.log('[server] Environment variables loaded successfully');
+} catch (error) {
+  console.error('[server] Error loading .env file:', error);
+}
+
+// Debug: Log if required environment variables are loaded
+console.log('[server] OPENAI_API_KEY loaded:', process.env.OPENAI_API_KEY ? 'Yes' : 'No');
+console.log('[server] PROMPT_SERVICE_URL:', process.env.PROMPT_SERVICE_URL || 'Not set');
+
 import express, { type Request, type Response, type NextFunction } from "express";
 import { z } from "zod";
 import axios, { type AxiosError } from "axios";
-import * as dotenv from "dotenv";
-import { EventSchema, TaskSchema, EntitySchema } from "@ellipsa/shared";
-import { processAudio } from "./audioProcessor";
-import { MemoryService } from "./services/MemoryService";
-import { logger } from "./utils/logger";
+// Import schemas from the shared package
+import { 
+  EventSchema, 
+  TaskSchema, 
+  EntitySchema 
+} from "@ellipsa/shared";
+import { processAudio } from "./audioProcessor.js";
+import { MemoryService } from "./services/MemoryService.js";
+import { logger } from "./utils/logger.js";
 
 // Define IngestSchema locally since it's not in the shared package
 export const IngestSchema = z.object({
@@ -296,8 +324,8 @@ const rateLimit = (windowMs = 60000, max = 100) => {
   };
 };
 
-// Apply rate limiting to ingest endpoint (100 requests per minute per IP)
-app.post("/processor/v1/ingest", rateLimit(), validateIngestRequest, async (req: Request, res: Response) => {
+// Apply rate limiting to ingest endpoint (500 requests per minute per IP)
+app.post("/processor/v1/ingest", rateLimit(60000, 500), validateIngestRequest, async (req: Request, res: Response) => {
   try {
     const ingest = (req as any).parsedIngest;
     
@@ -349,7 +377,7 @@ app.post("/processor/v1/ingest", rateLimit(), validateIngestRequest, async (req:
     const storedEvent = await memoryService.storeEvent({
       ...eventData,
       // Convert tasks to the correct format
-      tasks: eventData.tasks.map(t => ({
+      tasks: eventData.tasks.map((t: z.infer<typeof TaskSchema>) => ({
         ...t,
         // Ensure required fields are present
         text: t.text || '',

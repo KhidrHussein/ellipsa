@@ -3,18 +3,40 @@
   "compilerOptions": {
     "outDir": "dist",
     "rootDir": "src",
+    "baseUrl": ".",
+    "declaration": true,
+    "declarationMap": true,
+    "sourceMap": true,
+    "composite": true,
+    "paths": {
+      "@ellipsa/shared/*": ["../../packages/shared/src/*"],
+      "@ellipsa/action/*": ["./src/*"],
+      "@ellipsa/action-email/*": ["./src/email/*"]
+    },
     "typeRoots": [
       "./node_modules/@types",
-      "../../types",
-      "./src/types"
+      "../../node_modules/@types"
     ],
     "types": ["node"],
     "module": "NodeNext",
-    "moduleResolution": "NodeNext"
+    "moduleResolution": "NodeNext",
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+    "forceConsistentCasingInFileNames": true,
+    "skipLibCheck": true,
+    "resolveJsonModule": true,
+    "target": "ES2022",
+    "lib": ["ES2020", "DOM"],
+    "strict": true,
+    "noEmitOnError": false,
+    "allowJs": true,
+    "checkJs": false,
+    "noImplicitAny": false
   },
-  "include": ["src", "../../types"],
-  "ts-node": {
-    "esm": true,
-    "experimentalSpecifierResolution": "node"
-  }
+  "include": ["src/**/*.ts"],
+  "exclude": ["node_modules", "dist"],
+  "references": [
+    { "path": "../../packages/shared" },
+    { "path": "../../packages/prompt" }
+  ]
 }

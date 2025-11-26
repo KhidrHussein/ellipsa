@@ -1,4 +1,10 @@
-import { EmailMessage, EmailSummary, DraftResponse, EmailSweepOptions, EmailSweepResult } from '../types';
+import type { 
+  EmailMessage, 
+  EmailSummary, 
+  DraftResponse, 
+  EmailSweepOptions, 
+  EmailSweepResult 
+} from '../types/index.js';
 
 export interface IEmailService {
   /**
