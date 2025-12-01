@@ -1,33 +1,15 @@
-export interface ExtractionResult {
-  summary: string;
-  confidence?: number;
-  sentiment?: string;
-  topics?: string[];
-  entities: Array<{
-    type: string;
-    value: string;
-    label?: string;
-    context?: string;
-  }>;
-  action_items?: Array<{
-    text: string;
-    priority: 'low' | 'medium' | 'high';
-    due_date?: string;
-  }>;
-  suggestions?: string[];
-}
-
-export interface IPromptService {
-  extractStructuredData(content: string): Promise<ExtractionResult>;
-  generate(prompt: string, options?: any): Promise<string>;
-}
-
+import { ExtractionResult, IPromptService } from './interfaces/IPromptService';
 import { EventModel } from '../models/EventModel';
-import { EntityModel } from '../models/EntityModel';
+import { EntityModel, EntityType } from '../models/EntityModel';
 import { TaskModel } from '../models/TaskModel';
 import { Session } from 'neo4j-driver';
-import { v4 as uuidv4 } from 'uuid';
 import { TranscriptionService } from './TranscriptionService';
+
+// Define valid types to prevent validation errors
+const VALID_ENTITY_TYPES = [
+  'person', 'organization', 'location', 'date', 'event',
+  'product', 'tool', 'file', 'concept', 'service', 'other'
+];
 
 interface EventProcessingServiceOptions {
   promptService: IPromptService;
@@ -56,35 +38,21 @@ export class EventProcessingService {
     this.transcriptionService = options.transcriptionService;
   }
 
-  /**
-   * Process a new event with LLM extraction
-   */
   async processEvent(content: string, metadata: Record<string, any> = {}) {
-    // Add to processing queue
     return new Promise((resolve, reject) => {
       this.processingQueue.push(async () => {
         try {
           let extraction: ExtractionResult;
 
-          // Check if this is an audio event
           if (metadata.source === 'audio') {
             if (this.transcriptionService) {
               try {
-                // Transcribe the audio
                 const transcript = await this.transcriptionService.transcribe(content);
-
-                // Use the transcript as content for LLM extraction
-                // We update the content variable so it's used in createEvent too if needed, 
-                // but better to keep original content (base64) in data if we want to save it?
-                // Actually, EventModel expects 'description' which we usually put summary in.
-                // Let's extract structured data from the transcript.
                 const truncatedTranscript = transcript.length > 30000
                   ? transcript.substring(0, 30000) + '... [truncated]'
                   : transcript;
 
                 extraction = await this.promptService.extractStructuredData(truncatedTranscript);
-
-                // Add transcript to metadata or description
                 extraction.summary = `[Audio Transcript] ${transcript}\n\n${extraction.summary}`;
               } catch (error) {
                 console.error('Transcription failed:', error);
@@ -92,11 +60,12 @@ export class EventProcessingService {
                   summary: 'Audio captured (transcription failed)',
                   entities: [],
                   action_items: [],
-                  suggestions: []
+                  suggestions: [],
+                  confidence: 0,
+                  sentiment: 'neutral'
                 };
               }
             } else {
-              // Fallback if no transcription service available
               extraction = {
                 summary: 'Audio captured (transcription not available)',
                 entities: [],
@@ -105,8 +74,6 @@ export class EventProcessingService {
               };
             }
           } else {
-            // 1. Extract structured data using LLM
-            // Truncate content to avoid context length limits (approx 8k tokens)
             const truncatedContent = content.length > 30000
               ? content.substring(0, 30000) + '... [truncated]'
               : content;
@@ -114,17 +81,19 @@ export class EventProcessingService {
             extraction = await this.promptService.extractStructuredData(truncatedContent);
           }
 
-          // 2. Create event
           const event = await this.createEvent(extraction, metadata);
 
-          // 3. Process entities and relationships
-          await this.processEntities(extraction.entities, event.id);
+          if (extraction.entities?.length > 0) {
+            await this.processEntities(extraction.entities, event.id);
+          }
 
-          // 4. Process action items
-          await this.processActionItems(extraction.action_items, event.id);
+          if (extraction.action_items?.length && extraction.action_items.length > 0) {
+            await this.processActionItems(extraction.action_items, event.id);
+          }
 
-          // 5. Update graph relationships
-          await this.updateGraphRelationships(event.id, extraction);
+          if (extraction.entities?.length > 1) {
+            await this.updateGraphRelationships(event.id, extraction);
+          }
 
           resolve({ event, extraction });
         } catch (error) {
@@ -133,7 +102,6 @@ export class EventProcessingService {
         }
       });
 
-      // Start processing if not already running
       this.processQueue();
     });
   }
@@ -144,7 +112,7 @@ export class EventProcessingService {
       title: extraction.summary?.substring(0, 100) || 'Untitled Event',
       description: extraction.summary || '',
       start_time: new Date(),
-      participants: [], // Add required participants array with default empty array
+      participants: [],
       metadata: {
         ...metadata,
         confidence: extraction.confidence,
@@ -154,92 +122,105 @@ export class EventProcessingService {
     });
   }
 
+  private sanitizeEntityType(rawType: string): string {
+    const normalized = rawType.toLowerCase().trim();
+    if (VALID_ENTITY_TYPES.includes(normalized)) return normalized;
+    if (['text', 'string'].includes(normalized)) return 'concept';
+    if (['audio', 'sound'].includes(normalized)) return 'file';
+    return 'other';
+  }
+
   private async processEntities(entities: any[], eventId: string) {
     if (!entities) return;
 
     for (const entity of entities) {
       try {
-        // Create entity in the database
+        const safeType = this.sanitizeEntityType(entity.type);
+
+        // CRITICAL FIX: Ensure context is never undefined or empty.
+        // ChromaDB crashes if both embedding and document are missing.
+        let safeContext = entity.context;
+        if (!safeContext || typeof safeContext !== 'string' || safeContext.trim() === '') {
+          safeContext = `${entity.label || 'Entity'}: ${entity.value}`;
+        }
+
         await this.entityModel.create({
-          type: entity.type,
+          type: safeType as EntityType,
           name: entity.value,
           metadata: {
-            label: entity.label,
-            context: entity.context,
+            label: entity.label || 'Entity',
+            context: safeContext,
           },
         });
 
-        // Create relationship in Neo4j
         if (this.neo4jSession) {
-          try {
-            await this.neo4jSession.writeTransaction(tx =>
-              tx.run(
-                `MATCH (e:Event {id: $eventId})
+          // ... (Neo4j logic unchanged, omitting for brevity in this specific fix block)
+          await this.neo4jSession.writeTransaction(tx =>
+            tx.run(
+              `MATCH (e:Event {id: $eventId})
                  MERGE (ent:Entity {name: $name, type: $type})
                  MERGE (e)-[r:MENTIONS]->(ent)
                  SET r.context = $context`,
-                {
-                  eventId,
-                  name: entity.value,
-                  type: entity.type,
-                  context: entity.context || ''
-                }
-              )
-            );
-          } catch (error) {
-            console.error('Error creating Neo4j relationship:', error);
-          }
+              {
+                eventId,
+                name: entity.value,
+                type: safeType,
+                context: safeContext
+              }
+            )
+          );
         }
       } catch (error) {
-        console.error('Error processing entity:', error);
-        const err = error as any;
-        if (err.issues) {
-          console.error('Validation issues:', JSON.stringify(err.issues, null, 2));
-        } else if (err.originalError && err.originalError.issues) {
-          console.error('Validation issues (nested):', JSON.stringify(err.originalError.issues, null, 2));
-        }
-        console.error('Failed entity data:', JSON.stringify(entity, null, 2));
+        // Log error but CONTINUE the loop so one bad entity doesn't kill the whole process
+        console.error(`Failed to process entity "${entity.value}":`, error);
       }
     }
   }
 
   private async processActionItems(actionItems: any[] = [], eventId: string) {
     for (const item of actionItems) {
-      await this.taskModel.create({
-        title: item.text?.substring(0, 100) || 'Untitled Task',
-        description: item.text || '',
-        due_date: item.due ? new Date(item.due) : undefined,
-        priority: (item.priority || 'medium') as 'low' | 'medium' | 'high' | 'urgent',
-        status: (item.status || 'pending') as 'pending' | 'in_progress' | 'completed' | 'blocked' | 'cancelled',
-        metadata: {},
-        related_event_id: eventId,
-      });
+      try {
+        await this.taskModel.create({
+          title: item.text?.substring(0, 100) || 'Untitled Task',
+          description: item.text || '',
+          due_date: item.due_date ? new Date(item.due_date) : undefined,
+          priority: (item.priority || 'medium') as any,
+          status: 'pending',
+          metadata: {},
+          related_event_id: eventId,
+        });
+      } catch (err) {
+        console.error(`Failed to create task for event ${eventId}:`, err);
+      }
     }
   }
 
   private async updateGraphRelationships(eventId: string, extraction: ExtractionResult) {
-    // Create relationships between entities mentioned in the same event
     const entities = extraction.entities.map(e => e.value);
+    const maxEntities = 20;
+    const entitiesToProcess = entities.slice(0, maxEntities);
 
-    for (let i = 0; i < entities.length; i++) {
-      for (let j = i + 1; j < entities.length; j++) {
-        await this.neo4jSession.writeTransaction(tx =>
-          tx.run(
-            `MATCH (e1:Entity {name: $name1}), (e2:Entity {name: $name2})
-             MERGE (e1)-[r:RELATED_TO]-(e2)
-             ON CREATE SET r.weight = 1, r.last_updated = datetime()
-             ON MATCH SET r.weight = r.weight + 1, r.last_updated = datetime()`,
-            { name1: entities[i], name2: entities[j] }
-          )
-        );
+    for (let i = 0; i < entitiesToProcess.length; i++) {
+      for (let j = i + 1; j < entitiesToProcess.length; j++) {
+        try {
+          await this.neo4jSession.writeTransaction(tx =>
+            tx.run(
+              `MATCH (e1:Entity {name: $name1}), (e2:Entity {name: $name2})
+               MERGE (e1)-[r:RELATED_TO]-(e2)
+               ON CREATE SET r.weight = 1, r.last_updated = datetime()
+               ON MATCH SET r.weight = r.weight + 1, r.last_updated = datetime()`,
+              { name1: entitiesToProcess[i], name2: entitiesToProcess[j] }
+            )
+          );
+        } catch (err) {
+          console.error('Error updating graph relationships:', err);
+        }
       }
     }
   }
 
   private async processQueue() {
-    if (this.isProcessing || !this.processingQueue.length) {
-      return;
-    }
+    if (this.isProcessing || !this.processingQueue.length) return;
 
     this.isProcessing = true;
     const processNext = async () => {
@@ -248,17 +229,13 @@ export class EventProcessingService {
         this.isProcessing = false;
         return;
       }
-
       try {
         await task();
       } catch (error) {
         console.error('Error in processing queue:', error);
       }
-
-      // Process next item in the queue
       setImmediate(processNext);
     };
-
     await processNext();
   }
 }

@@ -46,38 +46,81 @@ if (!window.electron) {
       requestAnimationFrame(checkAudioLevel);
 
       // MediaRecorder for actual audio capture
-      const mediaRecorder = new MediaRecorder(stream, {
-        mimeType: 'audio/webm;codecs=opus'
-      });
+      // NOTE: On Chrome/Electron, timeslice doesn't produce valid WebM headers for continuation segments
+      // We must stop and restart the recorder for each segment to get valid headers
+      let currentRecorder: MediaRecorder | null = null;
+      let segmentInterval: NodeJS.Timeout | null = null;
+      let isRecording = true;
 
-      mediaRecorder.ondataavailable = async (event) => {
-        if (event.data.size > 0) {
-          const blob = event.data;
-          const buffer = await blob.arrayBuffer();
-          const base64 = btoa(
-            new Uint8Array(buffer)
-              .reduce((data, byte) => data + String.fromCharCode(byte), '')
-          );
+      const startSegment = () => {
+        if (!isRecording) return;
 
-          ipcRenderer.invoke('process-audio', {
-            audioData: base64,
-            timestamp: new Date().toISOString(),
-            size: blob.size,
-            sampleRate: audioContext.sampleRate
-          }).catch(err => console.error('Error sending audio chunk:', err));
-        }
+        // Create a new MediaRecorder for this segment
+        const mediaRecorder = new MediaRecorder(stream, {
+          mimeType: 'audio/webm;codecs=opus'
+        });
+        currentRecorder = mediaRecorder;
+
+        mediaRecorder.ondataavailable = async (event) => {
+          if (event.data.size > 0) {
+            const blob = event.data;
+            const buffer = await blob.arrayBuffer();
+
+            // DEBUG: Check the WebM header
+            const uint8Array = new Uint8Array(buffer);
+            const headerHex = Array.from(uint8Array.slice(0, 4))
+              .map(b => b.toString(16).padStart(2, '0'))
+              .join('');
+            console.log(`[PreloadAudio] Blob size: ${blob.size}, Type: ${blob.type}, Header: ${headerHex}`);
+
+            const base64 = btoa(
+              uint8Array.reduce((data, byte) => data + String.fromCharCode(byte), '')
+            );
+
+            ipcRenderer.invoke('process-audio', {
+              audioData: base64,
+              timestamp: new Date().toISOString(),
+              size: blob.size,
+              sampleRate: audioContext.sampleRate
+            }).catch(err => console.error('Error sending audio chunk:', err));
+          }
+        };
+
+        mediaRecorder.onstop = () => {
+          // Start next segment after a brief delay
+          if (isRecording) {
+            setTimeout(() => startSegment(), 100);
+          }
+        };
+
+        // Start recording and schedule stop after 5 seconds
+        mediaRecorder.start();
+        setTimeout(() => {
+          if (mediaRecorder.state === 'recording') {
+            mediaRecorder.stop();
+          }
+        }, 5000);
       };
 
-      // Start recording with 5 second chunks
-      mediaRecorder.start(5000);
+      // Start the first segment
+      startSegment();
 
       // Return cleanup function
       return () => {
         isMonitoring = false;
-        if (mediaRecorder.state !== 'inactive') {
-          mediaRecorder.stop();
+        isRecording = false;
+
+        if (segmentInterval) {
+          clearInterval(segmentInterval);
+          segmentInterval = null;
         }
+
+        if (currentRecorder && currentRecorder.state !== 'inactive') {
+          currentRecorder.stop();
+        }
+
         stream.getTracks().forEach(track => track.stop());
+
         if (audioContext.state !== 'closed') {
           audioContext.close();
         }

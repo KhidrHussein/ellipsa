@@ -1,21 +1,21 @@
+// Audio capture module with continuous recording via timeslice
 import { ipcRenderer } from 'electron';
 
 export class AudioCapture {
   private mediaRecorder: MediaRecorder | null = null;
-  private audioChunks: Blob[] = [];
   private isCapturing = false;
-  private segmentInterval: NodeJS.Timeout | null = null;
-  private readonly segmentDuration = 10000; // 10 seconds per segment for faster feedback
   private stream: MediaStream | null = null;
+  private readonly segmentDuration = 10000; // 10 seconds
+
 
   async start(): Promise<boolean> {
     if (this.isCapturing) {
-      console.log('Audio capture is already running');
+      console.log('[AudioCapture] Already running');
       return true;
     }
 
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({
+      this.stream = await navigator.mediaDevices.getUserMedia({
         audio: {
           echoCancellation: true,
           noiseSuppression: true,
@@ -24,135 +24,123 @@ export class AudioCapture {
         },
         video: false
       }).catch(error => {
-        console.error('Error getting audio stream:', error);
+        console.error('[AudioCapture] Error getting audio stream:', error);
         throw new Error('Could not access microphone. Please ensure microphone permissions are granted.');
       });
 
-      this.stream = stream; // Store the stream
-      this.audioChunks = [];
       this.isCapturing = true;
-
-      const startRecordingSegment = () => {
-        if (!this.isCapturing || !this.stream) return;
-
-        const options = { mimeType: 'audio/webm' };
-        let recorder: MediaRecorder;
-
-        try {
-          if (MediaRecorder.isTypeSupported(options.mimeType)) {
-            recorder = new MediaRecorder(this.stream, {
-              ...options,
-              audioBitsPerSecond: 16000
-            });
-          } else {
-            console.warn('Requested MIME type not supported, using default');
-            recorder = new MediaRecorder(this.stream, {
-              audioBitsPerSecond: 16000
-            });
-          }
-        } catch (e) {
-          console.error('Failed to create MediaRecorder:', e);
-          return;
-        }
-
-        this.mediaRecorder = recorder;
-        this.audioChunks = [];
-
-        recorder.ondataavailable = (event) => {
-          if (event.data && event.data.size > 0) {
-            this.audioChunks.push(event.data);
-          }
-        };
-
-        recorder.onstop = () => {
-          this.processAudioSegment();
-          if (this.isCapturing) {
-            startRecordingSegment();
-          }
-        };
-
-        recorder.onerror = (event) => {
-          console.error('MediaRecorder error:', event);
-          this.stop();
-        };
-
-        recorder.start();
-        console.log('Audio segment recording started');
-
-        // Schedule stop
-        setTimeout(() => {
-          if (recorder.state === 'recording') {
-            recorder.stop();
-          }
-        }, this.segmentDuration);
-      };
-
-      // Start the first segment
-      startRecordingSegment();
-      console.log('Audio capture started');
-
+      this.startNewSegment();
+      console.log(`[AudioCapture] Started recording with ${this.segmentDuration}ms segments`);
       return true;
     } catch (error) {
-      console.error('Error starting audio capture:', error);
+      console.error('[AudioCapture] Error starting audio capture:', error);
       return false;
     }
   }
 
-  stop(): void {
-    if (this.isCapturing) {
-      this.isCapturing = false;
+  private startNewSegment(): void {
+    if (!this.isCapturing || !this.stream) return;
 
-      if (this.mediaRecorder && this.mediaRecorder.state === 'recording') {
-        this.mediaRecorder.stop();
+    const options = { mimeType: 'audio/webm;codecs=opus' };
+    let recorder: MediaRecorder;
+
+    try {
+      if (MediaRecorder.isTypeSupported(options.mimeType)) {
+        recorder = new MediaRecorder(this.stream, { ...options, audioBitsPerSecond: 16000 });
+      } else {
+        console.warn('[AudioCapture] audio/webm;codecs=opus not supported, using default');
+        recorder = new MediaRecorder(this.stream, { audioBitsPerSecond: 16000 });
       }
-
-      this.mediaRecorder = null;
-
-      // Stop all tracks from the original stream
-      if (this.stream) {
-        this.stream.getTracks().forEach(track => track.stop());
-        this.stream = null;
-      }
-      console.log('Audio capture stopped');
-    }
-  }
-
-  private async processAudioSegment(): Promise<void> {
-    if (!this.audioChunks.length) return;
-
-    const audioBlob = new Blob(this.audioChunks, { type: 'audio/webm' });
-    if (audioBlob.size < 1000) { // Skip very small chunks
+    } catch (e) {
+      console.error('[AudioCapture] Failed to create MediaRecorder:', e);
       return;
     }
 
-    // Keep a reference to the chunks we're about to process
-    // Note: audioChunks are cleared in onstop before restart, but for the final stop, we need to handle it.
-    // Actually, onstop calls processAudioSegment.
-    // In onstop, we clear audioChunks AFTER processAudioSegment returns? No, processAudioSegment is async.
-    // We should pass the blob to processAudioSegment or use local variable.
-    // The current logic creates audioBlob from this.audioChunks.
+    this.mediaRecorder = recorder;
+
+    // FIX: Process each blob immediately as it arrives from timeslice
+    // Each blob will have a complete WebM header, making it transcribable
+    recorder.ondataavailable = (event) => {
+      if (event.data && event.data.size > 0) {
+        // Each blob from timeslice is a complete, valid WebM file
+        this.processAudioSegment(event.data);
+      }
+    };
+
+    recorder.onerror = (event) => {
+      console.error('[AudioCapture] MediaRecorder error:', event);
+    };
+
+    // Only used when actually stopping capture, not for segment boundaries
+    recorder.onstop = () => {
+      console.log('[AudioCapture] MediaRecorder stopped');
+    };
+
+    // FIX: Use timeslice parameter instead of manual stop/start
+    // This makes MediaRecorder automatically emit complete WebM files every segmentDuration
+    recorder.start(this.segmentDuration);
+    console.log(`[AudioCapture] Started continuous recording with ${this.segmentDuration}ms timeslice`);
+  }
+
+  stop(): void {
+    this.isCapturing = false;
+
+    // Stop the MediaRecorder if it's recording
+    if (this.mediaRecorder && this.mediaRecorder.state === 'recording') {
+      this.mediaRecorder.stop();
+    }
+
+    this.mediaRecorder = null;
+
+    // Stop all audio tracks to release the microphone
+    if (this.stream) {
+      this.stream.getTracks().forEach(track => track.stop());
+      this.stream = null;
+    }
+    console.log('[AudioCapture] Audio capture stopped');
+  }
+
+  private async processAudioSegment(audioBlob: Blob): Promise<void> {
+    if (audioBlob.size < 1000) {
+      return; // Skip empty/tiny blobs
+    }
 
     try {
-      console.log(`Processing audio segment (${audioBlob.size} bytes)`);
-
       const arrayBuffer = await audioBlob.arrayBuffer();
       const uint8Array = new Uint8Array(arrayBuffer);
-      console.log('Audio header (first 4 bytes):', Array.from(uint8Array.slice(0, 4)).map(b => b.toString(16).padStart(2, '0')).join(' '));
+      const headerHex = Array.from(uint8Array.slice(0, 4)).map(b => b.toString(16).padStart(2, '0')).join('');
+      // Using console.error to ensure visibility in terminal logs during debugging
+      console.error(`[AudioCapture] Processing segment. Size: ${audioBlob.size}, Type: ${audioBlob.type}, Header: ${headerHex}`);
 
-      const base64data = Buffer.from(uint8Array).toString('base64');
+      // WebM signature is 1A 45 DF A3
+      if (headerHex.toLowerCase() !== '1a45dfa3') {
+        console.error(`[AudioCapture] Skipping malformed audio segment. Header: ${headerHex}`);
+        return;
+      }
 
-      const success = await ipcRenderer.invoke('process-audio', {
+      // Use FileReader for reliable base64 conversion in renderer
+      const base64data = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          if (typeof reader.result === 'string') {
+            // Remove the data URL prefix (e.g., "data:audio/webm;base64,")
+            const base64 = reader.result.split(',')[1];
+            resolve(base64);
+          } else {
+            reject(new Error('Failed to convert blob to base64'));
+          }
+        };
+        reader.onerror = reject;
+        reader.readAsDataURL(audioBlob);
+      });
+
+      await ipcRenderer.invoke('process-audio', {
         audioData: base64data,
         timestamp: Date.now(),
         size: audioBlob.size,
-        sampleRate: 16000
+        sampleRate: 16000,
+        mimeType: audioBlob.type
       });
-
-      if (!success) {
-        throw new Error('Failed to process audio in main process');
-      }
-
-      console.log('Audio segment processed successfully');
 
     } catch (error) {
       console.error('Error processing audio segment:', error);

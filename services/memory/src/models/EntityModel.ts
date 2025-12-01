@@ -56,6 +56,10 @@ export const EntityType = z.enum([
   'service',
   'project',
   'technology',
+  'activity',
+  'tool',
+  'text',
+  'audio',
   'other',
 ]);
 
@@ -153,16 +157,34 @@ export class EntityModel extends BaseModel<BaseEntity, EntityInput, EntityUpdate
       }
 
       try {
-        await this.collection.add(
-          [entity.id],
-          [embedding],
-          [{
+        // Ensure embedding is valid before adding to collection
+        const validEmbedding = (embedding && Array.isArray(embedding) && embedding.length === 1536 && !embedding.some(isNaN))
+          ? embedding
+          : new Array(1536).fill(0);
+
+        const validDocument = textToEmbed || ' ';
+
+        console.log('Adding to ChromaDB:', {
+          id: entity.id,
+          embeddingLength: validEmbedding.length,
+          documentLength: validDocument.length,
+          metadata: {
+            name: entity.name,
+            type: entity.type,
+            ...(entity.metadata || {}),
+          }
+        });
+
+        await this.collection.add({
+          ids: [entity.id],
+          embeddings: [validEmbedding],
+          metadatas: [{
             name: entity.name,
             type: entity.type,
             ...(entity.metadata || {}),
           }],
-          [textToEmbed]
-        );
+          documents: [validDocument]
+        });
 
         await this.neo4jSession.writeTransaction((neo4jTx: Transaction) =>
           neo4jTx.run(
@@ -196,7 +218,10 @@ export class EntityModel extends BaseModel<BaseEntity, EntityInput, EntityUpdate
    * Generate embedding for the given text
    */
   private async generateEmbedding(text: string): Promise<number[]> {
-    if (!text) return [];
+    // Always return a zero vector if text is empty, but ensure it's the right length
+    if (!text || !text.trim()) {
+      return new Array(1536).fill(0);
+    }
 
     try {
       const result = await this.embeddingFunction.generate([text]);

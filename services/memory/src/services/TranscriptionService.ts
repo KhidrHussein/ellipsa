@@ -13,33 +13,33 @@ export class TranscriptionService {
         });
     }
 
-    /**
-     * Transcribe audio content
-     * @param audioData Base64 encoded audio data or Buffer
-     * @returns Transcribed text
-     */
     async transcribe(audioData: string | Buffer): Promise<string> {
         let tempFilePath: string | null = null;
 
         try {
-            // Convert base64 to buffer if needed
             const buffer = typeof audioData === 'string'
                 ? Buffer.from(audioData, 'base64')
                 : audioData;
 
-            // Create a temporary file for the audio
-            // OpenAI API requires a file object or a read stream
+            // PRE-FLIGHT CHECK: Validate WebM Header (1A 45 DF A3)
+            // This prevents sending malformed audio to OpenAI (400 Invalid File Format)
+            const header = buffer.subarray(0, 4).toString('hex').toLowerCase();
+            if (header !== '1a45dfa3') {
+                // We throw a specific error so the caller knows it wasn't an API failure, but bad data
+                throw new Error(`Invalid audio format detected. Header: ${header}. Expected WebM (1a45dfa3).`);
+            }
+
             const tempDir = os.tmpdir();
             tempFilePath = path.join(tempDir, `audio-${Date.now()}.webm`);
 
             await fs.promises.writeFile(tempFilePath, buffer);
 
             logger.info(`Audio file written to ${tempFilePath}, size: ${buffer.length} bytes`);
-            logger.info(`Audio header (hex): ${buffer.subarray(0, 20).toString('hex')}`);
 
             const transcription = await this.openai.audio.transcriptions.create({
                 file: fs.createReadStream(tempFilePath),
                 model: 'whisper-1',
+                language: 'en',
             });
 
             return transcription.text;
@@ -47,7 +47,6 @@ export class TranscriptionService {
             logger.error('Error transcribing audio:', error);
             throw error;
         } finally {
-            // Clean up temp file
             if (tempFilePath) {
                 try {
                     await fs.promises.unlink(tempFilePath);

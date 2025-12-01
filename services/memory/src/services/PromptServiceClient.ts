@@ -1,4 +1,4 @@
-import { IPromptService, ExtractionResult } from './EventProcessingService';
+import { IPromptService, ExtractionResult } from './interfaces/IPromptService';
 import { logger } from '../utils/logger';
 
 export class PromptServiceClient implements IPromptService {
@@ -27,7 +27,7 @@ export class PromptServiceClient implements IPromptService {
         "sentiment": "positive", "neutral", or "negative",
         "topics": ["topic1", "topic2"],
         "entities": [
-          { "type": "person|organization|location|event|document|concept|task|action_item|file|service|project|technology|other", "value": "Entity Name", "label": "Label", "context": "Context" }
+          { "type": "person|organization|location|event|document|concept|task|action_item|file|service|project|technology|activity|tool|other", "value": "Entity Name", "label": "Label", "context": "Context" }
         ],
         "action_items": [
           { "text": "Action item description", "priority": "low|medium|high", "due_date": "ISO date string (optional)" }
