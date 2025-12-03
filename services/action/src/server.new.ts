@@ -34,7 +34,6 @@ import { createEmailAutomation } from './email/EmailAutomationService.js';
 import { EmailMetrics } from './email/monitoring/EmailMetrics.js';
 import { oauthService } from './email/services/OAuthService.js';
 import type { EmailMessage, EmailSummary, DraftResponse, EmailAttachment } from './email/types/email.types.js';
-import type { EmailMessage, EmailSummary, DraftResponse, EmailAttachment } from './email/types/email.types.js';
 import { Buffer } from 'buffer';
 import { MemoryClient } from '@ellipsa/shared';
 
@@ -411,7 +410,7 @@ function setupActionRoutes(app: express.Express, services: Services) {
 
             // Execute the plan
             const result: ExecutionResult = await services.actionExecutor.execute(actionPlan, {
-                userId: req.user?.id || 'anonymous',
+                userId: (req as any).user?.id || 'anonymous',
                 timestamp: new Date(),
                 headless: true,
                 continueOnError: false,
