@@ -1,4 +1,4 @@
-import { Action, StepResult, Provenance } from '../schemas/action.schema';
+import { Action, StepResult, Provenance } from '../schemas/action.schema.js';
 
 /**
  * Execution context passed to providers
@@ -81,6 +81,11 @@ export interface IActionProvider {
      * Cleanup the provider (called on shutdown)
      */
     cleanup?(): Promise<void>;
+
+    /**
+     * Undo a specific action (optional)
+     */
+    undo?(actionId: string): Promise<void>;
 }
 
 /**

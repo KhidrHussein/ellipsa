@@ -2,6 +2,7 @@ import { ActionPlan, ExecutionResult, Action, StepResult, Provenance } from '../
 import { IActionProvider, ExecutionContext, ValidationResult } from './ActionProvider.interface';
 import { ActionRegistry } from './ActionRegistry';
 import { SafetyValidator } from './SafetyValidator';
+import { ActionHistoryService } from './ActionHistoryService';
 
 /**
  * ActionExecutor orchestrates action execution across multiple providers
@@ -13,7 +14,8 @@ import { SafetyValidator } from './SafetyValidator';
 export class ActionExecutor {
     constructor(
         private registry: ActionRegistry,
-        private safetyValidator: SafetyValidator
+        private safetyValidator: SafetyValidator,
+        private historyService?: ActionHistoryService
     ) { }
 
     /**
@@ -114,7 +116,7 @@ export class ActionExecutor {
 
         console.log(`[ActionExecutor] Execution ${actionId} completed in ${totalDuration}ms with status: ${overallStatus}`);
 
-        return {
+        const result: ExecutionResult = {
             action_id: actionId,
             status: overallStatus,
             steps: allResults,
@@ -123,6 +125,18 @@ export class ActionExecutor {
             completed_at: completedAt.toISOString(),
             total_duration_ms: totalDuration,
         };
+
+        // Log to history service
+        if (this.historyService) {
+            await this.historyService.logAction(actionId, plan, result, {
+                userId: plan.provenance?.user_id,
+                originEventId: plan.provenance?.origin_event_id,
+                promptId: plan.provenance?.prompt_id,
+                source: plan.provenance?.source,
+            });
+        }
+
+        return result;
     }
 
     /**

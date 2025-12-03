@@ -1,0 +1,16 @@
+2025-12-03 13:49:11 [[31merror[39m]: 	[31m[MemoryService] Request failed:[39m
+{
+  "url": "/events",
+  "method": "POST"
+}
+2025-12-03 14:13:19 [[31merror[39m]: 	[31m[MemoryService] Request failed:[39m
+{
+  "url": "/events",
+  "method": "POST"
+}
+2025-12-03 14:15:58 [[31merror[39m]: 	[31m[MemoryService] Circuit breaker opened[39m
+2025-12-03 14:15:58 [[31merror[39m]: 	[31m[MemoryService] Request failed:[39m
+{
+  "url": "/events",
+  "method": "POST"
+}

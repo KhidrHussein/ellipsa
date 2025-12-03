@@ -8,7 +8,19 @@ import { fileURLToPath } from 'url';
 import { ActionExecutor } from './core/ActionExecutor.js';
 import { ActionRegistry } from './core/ActionRegistry.js';
 import { SafetyValidator } from './core/SafetyValidator.js';
+import { ActionHistoryService } from './core/ActionHistoryService.js';
 import { BrowserProvider } from './providers/BrowserProvider.js';
+import { WindowsProvider } from './providers/WindowsProvider.js';
+import { SlackProvider } from './providers/SlackProvider.js';
+import { CalendarProvider } from './providers/CalendarProvider.js';
+import { NotionProvider } from './providers/NotionProvider.js';
+import { GitHubProvider } from './providers/GitHubProvider.js';
+import { GmailProvider } from './providers/GmailProvider.js';
+import { TokenService } from './services/oauth/TokenService.js';
+import { OAuthManager } from './services/oauth/OAuthManager.js';
+import { SlackOAuthProvider } from './services/oauth/SlackOAuthProvider.js';
+import { NotionOAuthProvider } from './services/oauth/NotionOAuthProvider.js';
+import { GitHubOAuthProvider } from './services/oauth/GitHubOAuthProvider.js';
 import { validateActionPlan, ActionPlan, ExecutionResult } from './schemas/action.schema.js';
 import { loadSafetyConfig, getDevSafetyConfig } from './config/safety.config.js';
 
@@ -22,7 +34,9 @@ import { createEmailAutomation } from './email/EmailAutomationService.js';
 import { EmailMetrics } from './email/monitoring/EmailMetrics.js';
 import { oauthService } from './email/services/OAuthService.js';
 import type { EmailMessage, EmailSummary, DraftResponse, EmailAttachment } from './email/types/email.types.js';
+import type { EmailMessage, EmailSummary, DraftResponse, EmailAttachment } from './email/types/email.types.js';
 import { Buffer } from 'buffer';
+import { MemoryClient } from '@ellipsa/shared';
 
 // Get directory name in ES modules
 const __filename = fileURLToPath(import.meta.url);
@@ -164,6 +178,9 @@ interface Services {
     actionExecutor: ActionExecutor;
     actionRegistry: ActionRegistry;
     safetyValidator: SafetyValidator;
+    actionHistoryService: ActionHistoryService;
+    tokenService: TokenService;
+    oauthManager: OAuthManager;
 
     // Existing email services
     emailService: GmailEmailService;
@@ -192,15 +209,83 @@ async function initializeServices(app: express.Express): Promise<Services> {
 
     const safetyValidator = new SafetyValidator(safetyConfig);
     const actionRegistry = new ActionRegistry();
-    const actionExecutor = new ActionExecutor(actionRegistry, safetyValidator);
+
+    // Initialize Memory Client
+    const memoryClient = new MemoryClient(process.env.MEMORY_SERVICE_URL || 'http://localhost:4001');
+
+    const actionHistoryService = new ActionHistoryService(memoryClient);
+    const actionExecutor = new ActionExecutor(actionRegistry, safetyValidator, actionHistoryService);
+
+    // Initialize OAuth infrastructure
+    const tokenService = new TokenService();
+    const oauthManager = new OAuthManager(tokenService);
+
+    // Register Slack OAuth
+    if (process.env.SLACK_CLIENT_ID && process.env.SLACK_CLIENT_SECRET) {
+        oauthManager.registerProvider(new SlackOAuthProvider(
+            process.env.SLACK_CLIENT_ID,
+            process.env.SLACK_CLIENT_SECRET,
+            process.env.SLACK_REDIRECT_URI || `http://localhost:${process.env.PORT || 4007}/auth/slack/callback`
+        ));
+    }
+
+    // Register Notion OAuth
+    if (process.env.NOTION_CLIENT_ID && process.env.NOTION_CLIENT_SECRET) {
+        oauthManager.registerProvider(new NotionOAuthProvider(
+            process.env.NOTION_CLIENT_ID,
+            process.env.NOTION_CLIENT_SECRET,
+            process.env.NOTION_REDIRECT_URI || `http://localhost:${process.env.PORT || 4007}/auth/notion/callback`
+        ));
+    }
+
+    // Register GitHub OAuth
+    if (process.env.GITHUB_CLIENT_ID && process.env.GITHUB_CLIENT_SECRET) {
+        oauthManager.registerProvider(new GitHubOAuthProvider(
+            process.env.GITHUB_CLIENT_ID,
+            process.env.GITHUB_CLIENT_SECRET,
+            process.env.GITHUB_REDIRECT_URI || `http://localhost:${process.env.PORT || 4007}/auth/github/callback`
+        ));
+    }
 
     // Register providers
+    console.log('[Server] Initializing BrowserProvider...');
     const browserProvider = new BrowserProvider();
     await browserProvider.initialize?.();
     actionRegistry.registerProvider(browserProvider);
 
-    console.log(`[Server] Registered ${actionRegistry.getStats().totalProviders} providers`);
-    console.log(`[Server] Available actions: ${actionRegistry.getStats().totalActions}`);
+    // Register Windows provider (only on Windows)
+    if (process.platform === 'win32') {
+        const windowsProvider = new WindowsProvider();
+        await windowsProvider.initialize?.();
+        actionRegistry.registerProvider(windowsProvider);
+    } else {
+        console.log('[Server] Skipping WindowsProvider (not on Windows)');
+    }
+
+    // Register API providers (conditionally based on env vars)
+    console.log('[Server] Initializing SlackProvider...');
+    const slackProvider = new SlackProvider();
+    await slackProvider.initialize?.();
+    if (process.env.SLACK_BOT_TOKEN) {
+        actionRegistry.registerProvider(slackProvider);
+    }
+
+    console.log('[Server] Initializing NotionProvider...');
+    const notionProvider = new NotionProvider();
+    await notionProvider.initialize?.();
+    if (process.env.NOTION_API_KEY) {
+        actionRegistry.registerProvider(notionProvider);
+    }
+
+    console.log('[Server] Initializing GitHubProvider...');
+    const githubProvider = new GitHubProvider();
+    await githubProvider.initialize?.();
+    if (process.env.GITHUB_TOKEN) {
+        actionRegistry.registerProvider(githubProvider);
+    }
+
+    // Calendar provider uses OAuth from Gmail
+    const calendarProvider = new CalendarProvider();
 
     // Initialize email services
     const metrics = new EmailMetrics();
@@ -208,15 +293,42 @@ async function initializeServices(app: express.Express): Promise<Services> {
         apiKey: process.env.OPENAI_API_KEY || '',
         defaultModel: 'gpt-4',
     });
+
     const memoryService: IEmailMemoryService = new MemoryServiceClient();
     const processingService = new EmailProcessingService(promptService, memoryService);
 
+    console.log('[Server] Initializing GmailEmailService...');
     const emailService = GmailEmailService.create(processingService, memoryService);
+
+    // Initialize and register Gmail Provider
+    console.log('[Server] Initializing GmailProvider...');
+    const gmailProvider = new GmailProvider(emailService);
+    actionRegistry.registerProvider(gmailProvider);
+
+    // Initialize and register Calendar Provider (using Gmail's auth)
+    // We need to wait for email service to be connected or just pass the client if available
+    // For now, we'll try to get the auth client from email service
+    try {
+        // This might fail if not connected, but CalendarProvider handles lazy init
+        // We'll just register it for now
+        actionRegistry.registerProvider(calendarProvider);
+
+        // Try to initialize if connected
+        if (await emailService.isConnected()) {
+            const authClient = await emailService.getAuthClient();
+            await calendarProvider.initialize(authClient);
+        }
+    } catch (error) {
+        console.warn('[Server] Failed to initialize Calendar provider with Gmail auth:', error);
+    }
 
     const services: Services = {
         actionExecutor,
         actionRegistry,
         safetyValidator,
+        actionHistoryService,
+        tokenService,
+        oauthManager,
         emailService,
         processingService,
         memoryService,
@@ -366,9 +478,162 @@ function setupActionRoutes(app: express.Express, services: Services) {
             }
 
             res.status(500).json({
-                error: 'Validation failed',
+                error: 'Action execution failed',
                 message: error instanceof Error ? error.message : 'Unknown error',
             });
+        }
+    });
+
+    /**
+     * GET /action/v1/history
+     * Query action history
+     */
+    app.get('/action/v1/history', async (req: Request, res: Response) => {
+        try {
+            const filters = {
+                userId: req.query.userId as string,
+                status: req.query.status as any,
+                actionType: req.query.actionType as string,
+                limit: req.query.limit ? parseInt(req.query.limit as string) : 50,
+            };
+
+            const history = await services.actionHistoryService.queryHistory(filters);
+            res.json(history);
+        } catch (error) {
+            console.error('[Action API] Error getting history:', error);
+            res.status(500).json({ error: 'Failed to get action history' });
+        }
+    });
+
+    /**
+     * GET /action/v1/history/:actionId
+     * Get specific action details
+     */
+    app.get('/action/v1/history/:actionId', async (req: Request, res: Response) => {
+        try {
+            const action = await services.actionHistoryService.getAction(req.params.actionId);
+            if (!action) {
+                return res.status(404).json({ error: 'Action not found' });
+            }
+            res.json(action);
+        } catch (error) {
+            console.error('[Action API] Error getting action:', error);
+            res.status(500).json({ error: 'Failed to get action details' });
+        }
+    });
+
+    /**
+     * DELETE /action/v1/history/:actionId
+     * Delete action from history
+     */
+    app.delete('/action/v1/history/:actionId', async (req: Request, res: Response) => {
+        try {
+            const success = await services.actionHistoryService.deleteAction(req.params.actionId);
+            if (!success) {
+                return res.status(404).json({ error: 'Action not found' });
+            }
+            res.json({ success: true });
+        } catch (error) {
+            console.error('[Action API] Error deleting action:', error);
+            res.status(500).json({ error: 'Failed to delete action' });
+        }
+    });
+
+    /**
+     * GET /action/v1/stats
+     * Get action statistics
+     */
+    app.get('/action/v1/stats', async (req: Request, res: Response) => {
+        try {
+            const stats = await services.actionHistoryService.getStats(req.query.userId as string);
+            res.json(stats);
+        } catch (error) {
+            console.error('[Action API] Error getting stats:', error);
+            res.status(500).json({ error: 'Failed to get action stats' });
+        }
+    });
+
+    /**
+     * POST /telemetry/v1/event
+     * Log telemetry event
+     */
+    app.post('/telemetry/v1/event', (req: Request, res: Response) => {
+        const event = req.body;
+        console.log('[Telemetry] Received event:', JSON.stringify(event, null, 2));
+        // In a real app, we would send this to a telemetry service
+        res.status(200).json({ status: 'received' });
+    });
+
+
+    /**
+     * GET /auth/status
+     * Get connected providers for user
+     */
+    app.get('/auth/status', async (req: Request, res: Response) => {
+        try {
+            const userId = req.query.userId as string;
+            if (!userId) {
+                return res.status(400).json({ error: 'userId required' });
+            }
+            const providers = await services.tokenService.getConnectedProviders(userId);
+            res.json({ connected: providers });
+        } catch (error) {
+            console.error('[Auth API] Error getting status:', error);
+            res.status(500).json({ error: 'Failed to get auth status' });
+        }
+    });
+
+    /**
+     * GET /auth/:provider/url
+     * Get auth URL for provider
+     */
+    app.get('/auth/:provider/url', (req: Request, res: Response) => {
+        try {
+            const provider = req.params.provider;
+            const userId = req.query.userId as string;
+            if (!userId) {
+                return res.status(400).json({ error: 'userId required' });
+            }
+
+            const url = services.oauthManager.getAuthUrl(provider, userId);
+            res.json({ url });
+        } catch (error) {
+            console.error(`[Auth API] Error getting URL for ${req.params.provider}:`, error);
+            res.status(500).json({ error: error instanceof Error ? error.message : 'Failed to get auth URL' });
+        }
+    });
+
+    /**
+     * GET /auth/:provider/callback
+     * Handle OAuth callback
+     */
+    app.get('/auth/:provider/callback', async (req: Request, res: Response) => {
+        try {
+            const provider = req.params.provider;
+            const code = req.query.code as string;
+            const state = req.query.state as string;
+
+            if (!code || !state) {
+                return res.status(400).send('Missing code or state');
+            }
+
+            const { userId } = await services.oauthManager.handleCallback(provider, code, state);
+
+            res.send(`
+                <html>
+                    <body>
+                        <h1>Successfully connected to ${provider}!</h1>
+                        <p>You can close this window now.</p>
+                        <script>
+                            window.opener?.postMessage({ type: 'oauth_success', provider: '${provider}', userId: '${userId}' }, '*');
+                            setTimeout(() => window.close(), 2000);
+                        </script>
+                    </body>
+                </html>
+            `);
+        } catch (error) {
+            console.error(`[Auth API] Error in ${req.params.provider} callback:`, error);
+            res.status(500).send(`Authentication failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
         }
     });
 

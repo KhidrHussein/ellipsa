@@ -100,6 +100,7 @@ const PasteTextActionSchema = z.object({
     op: z.literal('paste_text'),
     args: z.object({
         text: z.string(),
+        trigger: z.boolean().optional().default(true),
     }),
 });
 
@@ -115,6 +116,16 @@ const GetClipboardActionSchema = z.object({
     args: z.object({}),
 });
 
+const CloseWindowActionSchema = z.object({
+    op: z.literal('close_window'),
+    args: z.object({}),
+});
+
+const GetActiveWindowActionSchema = z.object({
+    op: z.literal('get_active_window'),
+    args: z.object({}),
+});
+
 // API Actions - Slack
 const SlackMessageActionSchema = z.object({
     op: z.literal('slack_message'),
@@ -122,6 +133,23 @@ const SlackMessageActionSchema = z.object({
         channel: z.string(),
         text: z.string(),
         threadTs: z.string().optional(),
+    }),
+});
+
+const SlackReplyActionSchema = z.object({
+    op: z.literal('slack_reply'),
+    args: z.object({
+        channel: z.string(),
+        text: z.string(),
+        threadTs: z.string(),
+    }),
+});
+
+const SlackDMActionSchema = z.object({
+    op: z.literal('slack_dm'),
+    args: z.object({
+        userId: z.string(),
+        text: z.string(),
     }),
 });
 
@@ -138,6 +166,33 @@ const CreateCalendarEventActionSchema = z.object({
     }),
 });
 
+const ListCalendarEventsActionSchema = z.object({
+    op: z.literal('list_calendar_events'),
+    args: z.object({
+        timeMin: z.string().optional(),
+        timeMax: z.string().optional(),
+        maxResults: z.number().optional(),
+    }),
+});
+
+const UpdateCalendarEventActionSchema = z.object({
+    op: z.literal('update_calendar_event'),
+    args: z.object({
+        eventId: z.string(),
+        summary: z.string().optional(),
+        start: z.string().optional(),
+        end: z.string().optional(),
+        description: z.string().optional(),
+    }),
+});
+
+const DeleteCalendarEventActionSchema = z.object({
+    op: z.literal('delete_calendar_event'),
+    args: z.object({
+        eventId: z.string(),
+    }),
+});
+
 // API Actions - Notion
 const NotionCreatePageActionSchema = z.object({
     op: z.literal('notion_create_page'),
@@ -145,6 +200,73 @@ const NotionCreatePageActionSchema = z.object({
         parentId: z.string(),
         title: z.string(),
         content: z.array(z.any()).optional(),
+    }),
+});
+
+const NotionUpdatePageActionSchema = z.object({
+    op: z.literal('notion_update_page'),
+    args: z.object({
+        pageId: z.string(),
+        properties: z.record(z.any()),
+    }),
+});
+
+const NotionQueryDatabaseActionSchema = z.object({
+    op: z.literal('notion_query_database'),
+    args: z.object({
+        databaseId: z.string(),
+        filter: z.record(z.any()).optional(),
+    }),
+});
+
+const NotionCreateDatabaseEntryActionSchema = z.object({
+    op: z.literal('notion_create_database_entry'),
+    args: z.object({
+        databaseId: z.string(),
+        properties: z.record(z.any()),
+    }),
+});
+
+// API Actions - GitHub
+const GitHubCreateIssueActionSchema = z.object({
+    op: z.literal('github_create_issue'),
+    args: z.object({
+        owner: z.string().optional(),
+        repo: z.string().optional(),
+        title: z.string(),
+        body: z.string().optional(),
+        labels: z.array(z.string()).optional(),
+    }),
+});
+
+const GitHubCreatePRActionSchema = z.object({
+    op: z.literal('github_create_pr'),
+    args: z.object({
+        owner: z.string().optional(),
+        repo: z.string().optional(),
+        title: z.string(),
+        head: z.string(),
+        base: z.string(),
+        body: z.string().optional(),
+    }),
+});
+
+const GitHubCommentActionSchema = z.object({
+    op: z.literal('github_comment_issue'),
+    args: z.object({
+        owner: z.string().optional(),
+        repo: z.string().optional(),
+        issueNumber: z.number(),
+        body: z.string(),
+    }),
+});
+
+const GitHubCloseIssueActionSchema = z.object({
+    op: z.literal('github_close_issue'),
+    args: z.object({
+        owner: z.string().optional(),
+        repo: z.string().optional(),
+        issueNumber: z.number(),
     }),
 });
 
@@ -171,15 +293,31 @@ export const ActionSchema = z.discriminatedUnion('op', [
     PasteTextActionSchema,
     PressKeysActionSchema,
     GetClipboardActionSchema,
+    CloseWindowActionSchema,
+    GetActiveWindowActionSchema,
 
     // API - Slack
     SlackMessageActionSchema,
+    SlackReplyActionSchema,
+    SlackDMActionSchema,
 
     // API - Calendar
     CreateCalendarEventActionSchema,
+    ListCalendarEventsActionSchema,
+    UpdateCalendarEventActionSchema,
+    DeleteCalendarEventActionSchema,
 
     // API - Notion
     NotionCreatePageActionSchema,
+    NotionUpdatePageActionSchema,
+    NotionQueryDatabaseActionSchema,
+    NotionCreateDatabaseEntryActionSchema,
+
+    // API - GitHub
+    GitHubCreateIssueActionSchema,
+    GitHubCreatePRActionSchema,
+    GitHubCommentActionSchema,
+    GitHubCloseIssueActionSchema,
 ]);
 
 // ============================================================================
