@@ -18,7 +18,28 @@ export interface ExtractionResult {
     suggestions?: string[];
 }
 
+export interface AssistanceContext {
+    transcript: string;
+    screenContext?: string;
+    activityType?: string;
+    memoryBullets?: string[];
+    recentHistory?: string[];
+}
+
+export interface AssistanceResponse {
+    message: string;
+    confidence: number;
+    action_items?: Array<{
+        text: string;
+        priority?: 'low' | 'medium' | 'high';
+    }>;
+    suggested_responses?: string[];
+    supporting_facts?: string[];
+    clarifying_questions?: string[];
+}
+
 export interface IPromptService {
     extractStructuredData(content: string): Promise<ExtractionResult>;
     generate(prompt: string, options?: any): Promise<string>;
+    generateAssistance(context: AssistanceContext): Promise<AssistanceResponse>;
 }

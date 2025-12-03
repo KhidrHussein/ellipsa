@@ -167,45 +167,35 @@ export class WebSocketService {
 
       // Send the result back to the client
       if (ws.readyState === 1) {
-        const response = {
-          type: 'assistant_message', // Change to assistant_message so it shows up in chat
-          content: summary,
-          id: eventId,
-          timestamp: new Date().toISOString(),
-          metadata: {
-            eventId: (result as any).event?.id,
-            entities: (result as any).extraction?.entities,
-            action_items: (result as any).extraction?.action_items
-          }
-        };
+        // Check if we should notify the user (based on confidence/relevance)
+        const shouldNotify = (result as any).event?.metadata?.shouldNotify !== false;
 
-        ws.send(JSON.stringify(response));
+        if (shouldNotify) {
+          const response = {
+            type: 'assistant_message', // Change to assistant_message so it shows up in chat
+            content: summary,
+            id: eventId,
+            timestamp: new Date().toISOString(),
+            metadata: {
+              eventId: (result as any).event?.id,
+              entities: (result as any).extraction?.entities,
+              action_items: (result as any).extraction?.action_items
+            }
+          };
 
-        // Send suggestions as separate messages
-        const suggestions = (result as any).extraction?.suggestions || [];
-        if (Array.isArray(suggestions)) {
-          suggestions.forEach((suggestion: string) => {
-            const suggestionMsg = {
-              type: 'suggestion',
-              content: suggestion,
-              id: Math.random().toString(36).substring(2, 15),
-              timestamp: new Date().toISOString(),
-              metadata: {
-                eventId: (result as any).event?.id
-              }
-            };
-            ws.send(JSON.stringify(suggestionMsg));
-          });
+          ws.send(JSON.stringify(response));
+
+          // Broadcast to other clients
+          this.broadcast(
+            {
+              ...response,
+              data: { summary: 'New event processed' } // Don't send full result to other clients
+            },
+            [ws.id] // Exclude sender
+          );
+        } else {
+          logger.info(`Skipping notification for event ${eventId} (low confidence or generic response)`);
         }
-
-        // Broadcast to other clients
-        this.broadcast(
-          {
-            ...response,
-            data: { summary: 'New event processed' } // Don't send full result to other clients
-          },
-          [ws.id] // Exclude sender
-        );
       }
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';

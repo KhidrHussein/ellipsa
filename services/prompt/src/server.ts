@@ -2,6 +2,7 @@ import express, { Request, Response } from "express";
 import { z } from "zod";
 import OpenAI from "openai";
 import dotenv from "dotenv";
+import { MEETING_ASSISTANT_PROMPT, QUESTION_ANSWER_ASSISTANT_PROMPT, GENERAL_ASSISTANT_PROMPT } from "./lib/assistantPrompts";
 
 // Load environment variables from .env file
 dotenv.config();
@@ -134,6 +135,60 @@ app.get("/prompt/v1/health", async (req, res) => {
       status: "unhealthy",
       error: "OpenAI API connection failed",
       timestamp: new Date().toISOString()
+    });
+  }
+});
+
+// Intelligent Assistance Endpoint
+app.post("/prompt/v1/assist", async (req, res) => {
+  try {
+    const { context, model = "gpt-3.5-turbo" } = req.body;
+
+    if (!context || !context.transcript) {
+      return res.status(400).json({ error: "Context with transcript is required" });
+    }
+
+    console.log(`[${new Date().toISOString()}] Generating assistance for activity: ${context.activityType || 'general'}`);
+
+    let systemPrompt = GENERAL_ASSISTANT_PROMPT;
+    if (context.activityType === 'meeting') {
+      systemPrompt = MEETING_ASSISTANT_PROMPT;
+    } else if (context.activityType === 'question_answering') {
+      systemPrompt = QUESTION_ANSWER_ASSISTANT_PROMPT;
+    }
+
+    // Replace placeholders
+    const filledPrompt = systemPrompt
+      .replace('{transcript}', context.transcript)
+      .replace('{screen_context}', context.screenContext || 'No screen context available')
+      .replace('{activity_type}', context.activityType || 'general')
+      .replace('{memory_bullets}', (context.memoryBullets || []).join('\n- ') || 'No relevant memory found')
+      .replace('{question}', context.transcript) // For QA prompt
+      .replace('{context}', context.screenContext || '') // For QA prompt
+      .replace('{memory_context}', (context.memoryBullets || []).join('\n- ') || ''); // For QA prompt
+
+    const completion = await openai.chat.completions.create({
+      model,
+      messages: [
+        { role: "system", content: filledPrompt },
+        { role: "user", content: "Analyze the current context and provide assistance." }
+      ],
+      response_format: { type: "json_object" }
+    });
+
+    const content = completion.choices[0].message.content;
+    if (!content) {
+      throw new Error("Empty response from OpenAI");
+    }
+
+    const parsed = JSON.parse(content);
+    res.json(parsed);
+
+  } catch (error: any) {
+    console.error(`[${new Date().toISOString()}] Assistance generation error:`, error);
+    res.status(500).json({
+      error: "assistance_failed",
+      message: error.message
     });
   }
 });

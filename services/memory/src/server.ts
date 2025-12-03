@@ -18,6 +18,7 @@ import { getDriver, getSession } from './db/graph/connection';
 import { getConnection, getKnexClient } from './db/relational/connection';
 import { PromptServiceClient } from './services/PromptServiceClient';
 import { TranscriptionService } from './services/TranscriptionService';
+import { MemoryRetrievalService } from './services/MemoryRetrievalService';
 import config from './config';
 
 // Extend the Socket.IO types with our custom properties
@@ -147,6 +148,12 @@ class MemoryServer {
     // Initialize TranscriptionService
     const transcriptionService = new TranscriptionService(config.openaiApiKey || '');
 
+    // Initialize MemoryRetrievalService
+    const chromaClient = getChromaClient();
+    const neo4jDriver = await getDriver();
+    const memoryRetrievalService = new MemoryRetrievalService(chromaClient, neo4jDriver);
+    await memoryRetrievalService.initialize();
+
     // Initialize Event Processing Service
     this.eventProcessingService = new EventProcessingService({
       promptService: promptService as any,
@@ -155,6 +162,7 @@ class MemoryServer {
       taskModel: this.taskModel,
       neo4jSession: this.neo4jSession,
       transcriptionService: transcriptionService,
+      memoryRetrievalService: memoryRetrievalService,
     });
 
     // Initialize WebSocket Service after HTTP server is started

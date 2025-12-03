@@ -1,4 +1,4 @@
-import { IPromptService, ExtractionResult } from './interfaces/IPromptService';
+import { IPromptService, ExtractionResult, AssistanceContext, AssistanceResponse } from './interfaces/IPromptService';
 import { logger } from '../utils/logger';
 
 export class PromptServiceClient implements IPromptService {
@@ -66,6 +66,39 @@ export class PromptServiceClient implements IPromptService {
                 entities: [],
                 action_items: [],
                 suggestions: []
+            };
+        }
+    }
+
+    async generateAssistance(context: AssistanceContext): Promise<AssistanceResponse> {
+        const url = `${this.baseUrl}/prompt/v1/assist`;
+
+        try {
+            const response = await fetch(url, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    context,
+                    model: this.defaultModel
+                })
+            });
+
+            if (!response.ok) {
+                const errorText = await response.text();
+                throw new Error(`Prompt Service returned ${response.status}: ${errorText}`);
+            }
+
+            const data = await response.json();
+            return data;
+        } catch (error) {
+            logger.error(`Failed to call Prompt Service at ${url}:`, error);
+            // Return a safe fallback
+            return {
+                message: "I'm having trouble generating assistance right now.",
+                confidence: 0,
+                action_items: []
             };
         }
     }

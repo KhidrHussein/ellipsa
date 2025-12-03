@@ -1,6 +1,13 @@
 import { OpenAI } from 'openai';
 import { ExtractionResult, validateExtraction } from '../schemas/extraction';
 import { EXTRACTION_PROMPT, FUNCTION_PROMPTS, SUMMARIZATION_PROMPT } from './prompts';
+import {
+  MEETING_ASSISTANT_PROMPT,
+  QUESTION_ANSWER_ASSISTANT_PROMPT,
+  GENERAL_ASSISTANT_PROMPT,
+  AssistanceContext,
+  AssistanceResponse
+} from './assistantPrompts';
 
 type ModelName = 'gpt-4' | 'gpt-3.5-turbo' | 'gpt-4-turbo';
 
@@ -33,7 +40,7 @@ export class PromptService {
     model: ModelName = this.defaultModel
   ): Promise<ExtractionResult> {
     const prompt = EXTRACTION_PROMPT.replace('{content}', content);
-    
+
     for (let attempt = 1; attempt <= this.maxRetries; attempt++) {
       try {
         const response = await this.openai.chat.completions.create({
@@ -56,7 +63,7 @@ export class PromptService {
         console.warn(`Attempt ${attempt} failed, retrying...`, error);
       }
     }
-    
+
     return this.getFallbackExtraction(content);
   }
 
@@ -68,7 +75,7 @@ export class PromptService {
     model: ModelName = this.defaultModel
   ): Promise<string> {
     const prompt = SUMMARIZATION_PROMPT.replace('{content}', content);
-    
+
     const response = await this.openai.chat.completions.create({
       model,
       messages: [
@@ -84,7 +91,7 @@ export class PromptService {
   /**
    * Extract entities using function calling
    */
-  async extractEntities(content: string): Promise<Array<{type: string, value: string}>> {
+  async extractEntities(content: string): Promise<Array<{ type: string, value: string }>> {
     const response = await this.openai.chat.completions.create({
       model: 'gpt-4',
       messages: [
@@ -100,7 +107,7 @@ export class PromptService {
       const args = JSON.parse(functionCall.arguments);
       return args.entities || [];
     }
-    
+
     return [];
   }
 
@@ -132,5 +139,72 @@ export class PromptService {
       topics: [],
       confidence: 0.5
     };
+  }
+
+  async generateAssistance(context: AssistanceContext): Promise<AssistanceResponse> {
+    const { transcript, screenContext = '', activityType = 'general', memoryBullets = [], recentHistory = [] } = context;
+
+    // Detect if there's a question in the transcript
+    const hasQuestion = /\?|\bhow\b|\bwhat\b|\bwhen\b|\bwhere\b|\bwhy\b|\bwho\b/i.test(transcript);
+
+    // Format history for prompt
+    const historyText = recentHistory.length > 0
+      ? recentHistory.map((h, i) => `${i + 1}. ${h}`).join('\n')
+      : 'No recent history.';
+
+    let promptTemplate: string;
+    if (hasQuestion) {
+      promptTemplate = QUESTION_ANSWER_ASSISTANT_PROMPT
+        .replace('{question}', transcript)
+        .replace('{context}', screenContext)
+        .replace('{memory_context}', memoryBullets.map((b, i) => `${i + 1}. ${b}`).join('\n') || 'No relevant memory found');
+    } else {
+      promptTemplate = MEETING_ASSISTANT_PROMPT
+        .replace('{transcript}', transcript)
+        .replace('{screen_context}', screenContext)
+        .replace('{activity_type}', activityType)
+        .replace('{recent_history}', historyText)
+        .replace('{memory_bullets}', memoryBullets.map((b, i) => `${i + 1}. ${b}`).join('\n') || 'No relevant memory found');
+    }
+
+    try {
+      const response = await this.openai.chat.completions.create({
+        model: this.defaultModel,
+        messages: [
+          { role: 'system', content: 'You are a helpful, proactive AI assistant. Always respond with valid JSON.' },
+          { role: 'user', content: promptTemplate }
+        ],
+        response_format: { type: 'json_object' },
+        temperature: 0.7,
+        max_tokens: 500
+      });
+
+      const result = JSON.parse(response.choices[0].message.content || '{}');
+
+      // Handle both question-answer and meeting assistant response formats
+      if (hasQuestion && result.suggested_answer) {
+        return {
+          message: result.suggested_answer,
+          confidence: result.confidence || 0.7,
+          supporting_facts: result.supporting_facts,
+          clarifying_questions: result.clarifying_questions,
+          action_items: []
+        };
+      }
+
+      return {
+        message: result.message || '',
+        confidence: result.confidence || 0.5,
+        action_items: result.action_items || [],
+        suggested_responses: result.suggested_responses || []
+      };
+    } catch (error) {
+      console.error('[PromptService] Error generating assistance:', error);
+      return {
+        message: '',
+        confidence: 0,
+        action_items: []
+      };
+    }
   }
 }

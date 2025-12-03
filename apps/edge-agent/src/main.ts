@@ -528,15 +528,6 @@ async function toggleObserve(): Promise<void> {
           throw error;
         }
 
-        // Start audio capture in the renderer
-        try {
-          await mainWindow.webContents.executeJavaScript('window.ellipsa.startAudioCapture()');
-          console.log('[Main] Audio capture started in renderer');
-        } catch (error) {
-          console.error('[Main] Error starting audio capture in renderer:', error);
-          throw error;
-        }
-
         // Start screen capture
         try {
           // The actual capture logic is handled in the ScreenCapture class
@@ -547,12 +538,17 @@ async function toggleObserve(): Promise<void> {
           console.log('[Main] Screen capture started successfully');
         } catch (error) {
           console.error('[Main] Failed to start screen capture:', error);
-          // Try to stop audio capture if screen capture fails
-          try {
-            await mainWindow.webContents.executeJavaScript('window.ellipsa.stopAudioCapture()');
-          } catch (e) {
-            console.error('[Main] Error stopping audio capture after screen capture failure:', e);
-          }
+          throw error;
+        }
+
+        // Start audio capture in the renderer
+        try {
+          await mainWindow.webContents.executeJavaScript('window.ellipsa.startAudioCapture()');
+          console.log('[Main] Audio capture started in renderer');
+        } catch (error) {
+          console.error('[Main] Error starting audio capture in renderer:', error);
+          // Try to stop screen capture if audio capture fails
+          screenCapture.stopCapture();
           throw error;
         }
       }

@@ -3349,3 +3349,435 @@
 {"level":"error","message":"Error transcribing audio: Invalid audio format detected. Header: 43d48100. Expected WebM (1a45dfa3).","service":"memory-service","stack":"Error: Invalid audio format detected. Header: 43d48100. Expected WebM (1a45dfa3).\n    at TranscriptionService.transcribe (C:\\Users\\Hp\\ellipsa\\services\\memory\\src\\services\\TranscriptionService.ts:29:23)\n    at <anonymous> (C:\\Users\\Hp\\ellipsa\\services\\memory\\src\\services\\EventProcessingService.ts:50:68)\n    at Immediate.processNext (C:\\Users\\Hp\\ellipsa\\services\\memory\\src\\services\\EventProcessingService.ts:233:15)\n    at process.processImmediate (node:internal/timers:483:21)","timestamp":"2025-12-01 15:09:43"}
 {"level":"info","message":"SIGINT received. Closing database connections...","service":"memory-service","timestamp":"2025-12-01 15:13:43"}
 {"level":"info","message":"Shutting down...","service":"memory-service","timestamp":"2025-12-01 15:13:43"}
+{"level":"info","message":"Initializing database connections...","service":"memory-service","timestamp":"2025-12-01 15:13:56"}
+{"level":"info","message":"Running database migrations...","service":"memory-service","timestamp":"2025-12-01 15:13:57"}
+{"level":"info","message":"Successfully connected to PostgreSQL database","service":"memory-service","timestamp":"2025-12-01 15:13:57"}
+{"level":"info","message":"PostgreSQL UUID extension is ready","service":"memory-service","timestamp":"2025-12-01 15:13:57"}
+{"level":"info","message":"Connected to Neo4j Neo4j Kernel v5.13.0 (community) in 132ms","service":"memory-service","timestamp":"2025-12-01 15:13:58"}
+{"level":"debug","message":"Neo4j read/write verification successful","service":"memory-service","timestamp":"2025-12-01 15:13:59"}
+{"level":"info","message":"Successfully connected to Neo4j","service":"memory-service","timestamp":"2025-12-01 15:13:59"}
+{"level":"debug","message":"Created constraint entity_id on :Entity(id)","service":"memory-service","timestamp":"2025-12-01 15:13:59"}
+{"level":"debug","message":"Created constraint event_id on :Event(id)","service":"memory-service","timestamp":"2025-12-01 15:13:59"}
+{"level":"debug","message":"Created constraint task_id on :Task(id)","service":"memory-service","timestamp":"2025-12-01 15:13:59"}
+{"level":"info","message":"Neo4j constraints verified/created","service":"memory-service","timestamp":"2025-12-01 15:13:59"}
+{"level":"info","message":"Initializing vector collections...","service":"memory-service","timestamp":"2025-12-01 15:13:59"}
+{"level":"info","message":"Database initialization completed successfully","service":"memory-service","timestamp":"2025-12-01 15:13:59"}
+{"level":"info","message":"All database connections established","service":"memory-service","timestamp":"2025-12-01 15:13:59"}
+{"level":"info","message":"WebSocket server configured","service":"memory-service","timestamp":"2025-12-01 15:13:59"}
+{"level":"info","message":"Memory Service listening on port 4001","service":"memory-service","timestamp":"2025-12-01 15:13:59"}
+{"level":"info","message":"Memory Service initialized successfully","service":"memory-service","timestamp":"2025-12-01 15:13:59"}
+{"level":"info","message":"Audio file written to C:\\Users\\Hp\\AppData\\Local\\Temp\\audio-1764598538862.webm, size: 80884 bytes","service":"memory-service","timestamp":"2025-12-01 15:15:38"}
+{"level":"info","message":"Audio file written to C:\\Users\\Hp\\AppData\\Local\\Temp\\audio-1764598546453.webm, size: 80982 bytes","service":"memory-service","timestamp":"2025-12-01 15:15:46"}
+{"level":"info","message":"Audio file written to C:\\Users\\Hp\\AppData\\Local\\Temp\\audio-1764598553794.webm, size: 81193 bytes","service":"memory-service","timestamp":"2025-12-01 15:15:53"}
+{"level":"info","message":"Audio file written to C:\\Users\\Hp\\AppData\\Local\\Temp\\audio-1764598562243.webm, size: 81169 bytes","service":"memory-service","timestamp":"2025-12-01 15:16:02"}
+{"level":"info","message":"Audio file written to C:\\Users\\Hp\\AppData\\Local\\Temp\\audio-1764598575645.webm, size: 80900 bytes","service":"memory-service","timestamp":"2025-12-01 15:16:15"}
+{"level":"info","message":"Audio file written to C:\\Users\\Hp\\AppData\\Local\\Temp\\audio-1764598583160.webm, size: 80920 bytes","service":"memory-service","timestamp":"2025-12-01 15:16:23"}
+{"level":"info","message":"Audio file written to C:\\Users\\Hp\\AppData\\Local\\Temp\\audio-1764598590810.webm, size: 80914 bytes","service":"memory-service","timestamp":"2025-12-01 15:16:30"}
+{"level":"info","message":"Audio file written to C:\\Users\\Hp\\AppData\\Local\\Temp\\audio-1764598597438.webm, size: 81105 bytes","service":"memory-service","timestamp":"2025-12-01 15:16:37"}
+{"level":"info","message":"Audio file written to C:\\Users\\Hp\\AppData\\Local\\Temp\\audio-1764598611318.webm, size: 80892 bytes","service":"memory-service","timestamp":"2025-12-01 15:16:51"}
+{"level":"info","message":"Audio file written to C:\\Users\\Hp\\AppData\\Local\\Temp\\audio-1764598617546.webm, size: 80925 bytes","service":"memory-service","timestamp":"2025-12-01 15:16:57"}
+{"level":"info","message":"Audio file written to C:\\Users\\Hp\\AppData\\Local\\Temp\\audio-1764598622288.webm, size: 81188 bytes","service":"memory-service","timestamp":"2025-12-01 15:17:02"}
+{"level":"info","message":"Audio file written to C:\\Users\\Hp\\AppData\\Local\\Temp\\audio-1764598640395.webm, size: 81090 bytes","service":"memory-service","timestamp":"2025-12-01 15:17:20"}
+{"level":"info","message":"Audio file written to C:\\Users\\Hp\\AppData\\Local\\Temp\\audio-1764598646036.webm, size: 80969 bytes","service":"memory-service","timestamp":"2025-12-01 15:17:26"}
+{"level":"info","message":"Audio file written to C:\\Users\\Hp\\AppData\\Local\\Temp\\audio-1764598651500.webm, size: 81053 bytes","service":"memory-service","timestamp":"2025-12-01 15:17:31"}
+{"level":"info","message":"Audio file written to C:\\Users\\Hp\\AppData\\Local\\Temp\\audio-1764598667430.webm, size: 81144 bytes","service":"memory-service","timestamp":"2025-12-01 15:17:47"}
+{"level":"info","message":"Audio file written to C:\\Users\\Hp\\AppData\\Local\\Temp\\audio-1764598673571.webm, size: 80957 bytes","service":"memory-service","timestamp":"2025-12-01 15:17:53"}
+{"level":"info","message":"Audio file written to C:\\Users\\Hp\\AppData\\Local\\Temp\\audio-1764598677051.webm, size: 81069 bytes","service":"memory-service","timestamp":"2025-12-01 15:17:57"}
+{"level":"info","message":"Audio file written to C:\\Users\\Hp\\AppData\\Local\\Temp\\audio-1764598689128.webm, size: 81147 bytes","service":"memory-service","timestamp":"2025-12-01 15:18:09"}
+{"level":"info","message":"Audio file written to C:\\Users\\Hp\\AppData\\Local\\Temp\\audio-1764598695457.webm, size: 81200 bytes","service":"memory-service","timestamp":"2025-12-01 15:18:15"}
+{"level":"info","message":"Audio file written to C:\\Users\\Hp\\AppData\\Local\\Temp\\audio-1764598702826.webm, size: 81216 bytes","service":"memory-service","timestamp":"2025-12-01 15:18:22"}
+{"level":"info","message":"Audio file written to C:\\Users\\Hp\\AppData\\Local\\Temp\\audio-1764598719129.webm, size: 80908 bytes","service":"memory-service","timestamp":"2025-12-01 15:18:39"}
+{"level":"info","message":"Audio file written to C:\\Users\\Hp\\AppData\\Local\\Temp\\audio-1764598724976.webm, size: 81082 bytes","service":"memory-service","timestamp":"2025-12-01 15:18:44"}
+{"level":"info","message":"Audio file written to C:\\Users\\Hp\\AppData\\Local\\Temp\\audio-1764598732801.webm, size: 80908 bytes","service":"memory-service","timestamp":"2025-12-01 15:18:52"}
+{"level":"info","message":"Audio file written to C:\\Users\\Hp\\AppData\\Local\\Temp\\audio-1764598745064.webm, size: 81175 bytes","service":"memory-service","timestamp":"2025-12-01 15:19:05"}
+{"level":"info","message":"Audio file written to C:\\Users\\Hp\\AppData\\Local\\Temp\\audio-1764598750975.webm, size: 81029 bytes","service":"memory-service","timestamp":"2025-12-01 15:19:10"}
+{"level":"info","message":"Audio file written to C:\\Users\\Hp\\AppData\\Local\\Temp\\audio-1764598760638.webm, size: 80848 bytes","service":"memory-service","timestamp":"2025-12-01 15:19:20"}
+{"level":"info","message":"Audio file written to C:\\Users\\Hp\\AppData\\Local\\Temp\\audio-1764598774288.webm, size: 81033 bytes","service":"memory-service","timestamp":"2025-12-01 15:19:34"}
+{"level":"info","message":"Audio file written to C:\\Users\\Hp\\AppData\\Local\\Temp\\audio-1764598782886.webm, size: 80896 bytes","service":"memory-service","timestamp":"2025-12-01 15:19:42"}
+{"level":"info","message":"Audio file written to C:\\Users\\Hp\\AppData\\Local\\Temp\\audio-1764598790378.webm, size: 81059 bytes","service":"memory-service","timestamp":"2025-12-01 15:19:50"}
+{"level":"info","message":"Audio file written to C:\\Users\\Hp\\AppData\\Local\\Temp\\audio-1764598812322.webm, size: 31454 bytes","service":"memory-service","timestamp":"2025-12-01 15:20:12"}
+{"level":"info","message":"Initializing database connections...","service":"memory-service","timestamp":"2025-12-01 15:32:12"}
+{"level":"info","message":"Running database migrations...","service":"memory-service","timestamp":"2025-12-01 15:32:12"}
+{"level":"info","message":"Successfully connected to PostgreSQL database","service":"memory-service","timestamp":"2025-12-01 15:32:12"}
+{"level":"info","message":"PostgreSQL UUID extension is ready","service":"memory-service","timestamp":"2025-12-01 15:32:13"}
+{"level":"info","message":"Connected to Neo4j Neo4j Kernel v5.13.0 (community) in 109ms","service":"memory-service","timestamp":"2025-12-01 15:32:15"}
+{"level":"debug","message":"Neo4j read/write verification successful","service":"memory-service","timestamp":"2025-12-01 15:32:16"}
+{"level":"info","message":"Successfully connected to Neo4j","service":"memory-service","timestamp":"2025-12-01 15:32:16"}
+{"level":"debug","message":"Created constraint entity_id on :Entity(id)","service":"memory-service","timestamp":"2025-12-01 15:32:16"}
+{"level":"debug","message":"Created constraint event_id on :Event(id)","service":"memory-service","timestamp":"2025-12-01 15:32:16"}
+{"level":"debug","message":"Created constraint task_id on :Task(id)","service":"memory-service","timestamp":"2025-12-01 15:32:16"}
+{"level":"info","message":"Neo4j constraints verified/created","service":"memory-service","timestamp":"2025-12-01 15:32:16"}
+{"level":"info","message":"Initializing vector collections...","service":"memory-service","timestamp":"2025-12-01 15:32:16"}
+{"level":"info","message":"Database initialization completed successfully","service":"memory-service","timestamp":"2025-12-01 15:32:16"}
+{"level":"info","message":"All database connections established","service":"memory-service","timestamp":"2025-12-01 15:32:16"}
+{"level":"info","message":"WebSocket server configured","service":"memory-service","timestamp":"2025-12-01 15:32:16"}
+{"level":"info","message":"Memory Service listening on port 4001","service":"memory-service","timestamp":"2025-12-01 15:32:16"}
+{"level":"info","message":"Memory Service initialized successfully","service":"memory-service","timestamp":"2025-12-01 15:32:16"}
+{"level":"info","message":"Initializing database connections...","service":"memory-service","timestamp":"2025-12-01 15:34:30"}
+{"level":"info","message":"Running database migrations...","service":"memory-service","timestamp":"2025-12-01 15:34:30"}
+{"level":"info","message":"Successfully connected to PostgreSQL database","service":"memory-service","timestamp":"2025-12-01 15:34:31"}
+{"level":"info","message":"PostgreSQL UUID extension is ready","service":"memory-service","timestamp":"2025-12-01 15:34:31"}
+{"level":"info","message":"Connected to Neo4j Neo4j Kernel v5.13.0 (community) in 70ms","service":"memory-service","timestamp":"2025-12-01 15:34:31"}
+{"level":"debug","message":"Neo4j read/write verification successful","service":"memory-service","timestamp":"2025-12-01 15:34:31"}
+{"level":"info","message":"Successfully connected to Neo4j","service":"memory-service","timestamp":"2025-12-01 15:34:31"}
+{"level":"debug","message":"Created constraint entity_id on :Entity(id)","service":"memory-service","timestamp":"2025-12-01 15:34:31"}
+{"level":"debug","message":"Created constraint event_id on :Event(id)","service":"memory-service","timestamp":"2025-12-01 15:34:31"}
+{"level":"debug","message":"Created constraint task_id on :Task(id)","service":"memory-service","timestamp":"2025-12-01 15:34:31"}
+{"level":"info","message":"Neo4j constraints verified/created","service":"memory-service","timestamp":"2025-12-01 15:34:31"}
+{"level":"info","message":"Initializing vector collections...","service":"memory-service","timestamp":"2025-12-01 15:34:31"}
+{"level":"info","message":"Database initialization completed successfully","service":"memory-service","timestamp":"2025-12-01 15:34:31"}
+{"level":"info","message":"All database connections established","service":"memory-service","timestamp":"2025-12-01 15:34:31"}
+{"level":"info","message":"WebSocket server configured","service":"memory-service","timestamp":"2025-12-01 15:34:31"}
+{"level":"info","message":"Memory Service listening on port 4001","service":"memory-service","timestamp":"2025-12-01 15:34:31"}
+{"level":"info","message":"Memory Service initialized successfully","service":"memory-service","timestamp":"2025-12-01 15:34:31"}
+{"level":"info","message":"Initializing database connections...","service":"memory-service","timestamp":"2025-12-01 15:44:41"}
+{"level":"info","message":"Running database migrations...","service":"memory-service","timestamp":"2025-12-01 15:44:41"}
+{"level":"info","message":"Successfully connected to PostgreSQL database","service":"memory-service","timestamp":"2025-12-01 15:44:41"}
+{"level":"info","message":"PostgreSQL UUID extension is ready","service":"memory-service","timestamp":"2025-12-01 15:44:41"}
+{"level":"info","message":"Connected to Neo4j Neo4j Kernel v5.13.0 (community) in 59ms","service":"memory-service","timestamp":"2025-12-01 15:44:42"}
+{"level":"debug","message":"Neo4j read/write verification successful","service":"memory-service","timestamp":"2025-12-01 15:44:43"}
+{"level":"info","message":"Successfully connected to Neo4j","service":"memory-service","timestamp":"2025-12-01 15:44:43"}
+{"level":"debug","message":"Created constraint entity_id on :Entity(id)","service":"memory-service","timestamp":"2025-12-01 15:44:43"}
+{"level":"debug","message":"Created constraint event_id on :Event(id)","service":"memory-service","timestamp":"2025-12-01 15:44:43"}
+{"level":"debug","message":"Created constraint task_id on :Task(id)","service":"memory-service","timestamp":"2025-12-01 15:44:43"}
+{"level":"info","message":"Neo4j constraints verified/created","service":"memory-service","timestamp":"2025-12-01 15:44:43"}
+{"level":"info","message":"Initializing vector collections...","service":"memory-service","timestamp":"2025-12-01 15:44:43"}
+{"level":"info","message":"Database initialization completed successfully","service":"memory-service","timestamp":"2025-12-01 15:44:43"}
+{"level":"info","message":"All database connections established","service":"memory-service","timestamp":"2025-12-01 15:44:43"}
+{"level":"info","message":"WebSocket server configured","service":"memory-service","timestamp":"2025-12-01 15:44:43"}
+{"level":"info","message":"Memory Service listening on port 4001","service":"memory-service","timestamp":"2025-12-01 15:44:43"}
+{"level":"info","message":"Memory Service initialized successfully","service":"memory-service","timestamp":"2025-12-01 15:44:43"}
+{"level":"info","message":"Initializing database connections...","service":"memory-service","timestamp":"2025-12-01 15:46:24"}
+{"level":"info","message":"Running database migrations...","service":"memory-service","timestamp":"2025-12-01 15:46:24"}
+{"level":"info","message":"Successfully connected to PostgreSQL database","service":"memory-service","timestamp":"2025-12-01 15:46:24"}
+{"level":"info","message":"PostgreSQL UUID extension is ready","service":"memory-service","timestamp":"2025-12-01 15:46:24"}
+{"level":"info","message":"Connected to Neo4j Neo4j Kernel v5.13.0 (community) in 219ms","service":"memory-service","timestamp":"2025-12-01 15:46:25"}
+{"level":"debug","message":"Neo4j read/write verification successful","service":"memory-service","timestamp":"2025-12-01 15:46:25"}
+{"level":"info","message":"Successfully connected to Neo4j","service":"memory-service","timestamp":"2025-12-01 15:46:25"}
+{"level":"debug","message":"Created constraint entity_id on :Entity(id)","service":"memory-service","timestamp":"2025-12-01 15:46:25"}
+{"level":"debug","message":"Created constraint event_id on :Event(id)","service":"memory-service","timestamp":"2025-12-01 15:46:26"}
+{"level":"debug","message":"Created constraint task_id on :Task(id)","service":"memory-service","timestamp":"2025-12-01 15:46:26"}
+{"level":"info","message":"Neo4j constraints verified/created","service":"memory-service","timestamp":"2025-12-01 15:46:26"}
+{"level":"info","message":"Initializing vector collections...","service":"memory-service","timestamp":"2025-12-01 15:46:26"}
+{"level":"info","message":"Database initialization completed successfully","service":"memory-service","timestamp":"2025-12-01 15:46:26"}
+{"level":"info","message":"All database connections established","service":"memory-service","timestamp":"2025-12-01 15:46:26"}
+{"level":"info","message":"WebSocket server configured","service":"memory-service","timestamp":"2025-12-01 15:46:26"}
+{"level":"info","message":"Memory Service listening on port 4001","service":"memory-service","timestamp":"2025-12-01 15:46:26"}
+{"level":"info","message":"Memory Service initialized successfully","service":"memory-service","timestamp":"2025-12-01 15:46:26"}
+{"level":"info","message":"Initializing database connections...","service":"memory-service","timestamp":"2025-12-01 15:47:28"}
+{"level":"info","message":"Running database migrations...","service":"memory-service","timestamp":"2025-12-01 15:47:28"}
+{"level":"info","message":"Successfully connected to PostgreSQL database","service":"memory-service","timestamp":"2025-12-01 15:47:29"}
+{"level":"info","message":"PostgreSQL UUID extension is ready","service":"memory-service","timestamp":"2025-12-01 15:47:29"}
+{"level":"info","message":"Connected to Neo4j Neo4j Kernel v5.13.0 (community) in 329ms","service":"memory-service","timestamp":"2025-12-01 15:47:30"}
+{"level":"debug","message":"Neo4j read/write verification successful","service":"memory-service","timestamp":"2025-12-01 15:47:30"}
+{"level":"info","message":"Successfully connected to Neo4j","service":"memory-service","timestamp":"2025-12-01 15:47:30"}
+{"level":"debug","message":"Created constraint entity_id on :Entity(id)","service":"memory-service","timestamp":"2025-12-01 15:47:30"}
+{"level":"debug","message":"Created constraint event_id on :Event(id)","service":"memory-service","timestamp":"2025-12-01 15:47:30"}
+{"level":"debug","message":"Created constraint task_id on :Task(id)","service":"memory-service","timestamp":"2025-12-01 15:47:30"}
+{"level":"info","message":"Neo4j constraints verified/created","service":"memory-service","timestamp":"2025-12-01 15:47:30"}
+{"level":"info","message":"Initializing vector collections...","service":"memory-service","timestamp":"2025-12-01 15:47:30"}
+{"level":"info","message":"Database initialization completed successfully","service":"memory-service","timestamp":"2025-12-01 15:47:30"}
+{"level":"info","message":"All database connections established","service":"memory-service","timestamp":"2025-12-01 15:47:30"}
+{"level":"info","message":"WebSocket server configured","service":"memory-service","timestamp":"2025-12-01 15:47:30"}
+{"level":"info","message":"Memory Service listening on port 4001","service":"memory-service","timestamp":"2025-12-01 15:47:30"}
+{"level":"info","message":"Memory Service initialized successfully","service":"memory-service","timestamp":"2025-12-01 15:47:30"}
+{"level":"info","message":"Initializing database connections...","service":"memory-service","timestamp":"2025-12-01 15:51:43"}
+{"level":"info","message":"Running database migrations...","service":"memory-service","timestamp":"2025-12-01 15:51:43"}
+{"level":"info","message":"Successfully connected to PostgreSQL database","service":"memory-service","timestamp":"2025-12-01 15:51:43"}
+{"level":"info","message":"PostgreSQL UUID extension is ready","service":"memory-service","timestamp":"2025-12-01 15:51:43"}
+{"level":"info","message":"Connected to Neo4j Neo4j Kernel v5.13.0 (community) in 991ms","service":"memory-service","timestamp":"2025-12-01 15:51:45"}
+{"level":"debug","message":"Neo4j read/write verification successful","service":"memory-service","timestamp":"2025-12-01 15:51:45"}
+{"level":"info","message":"Successfully connected to Neo4j","service":"memory-service","timestamp":"2025-12-01 15:51:45"}
+{"level":"debug","message":"Created constraint entity_id on :Entity(id)","service":"memory-service","timestamp":"2025-12-01 15:51:45"}
+{"level":"debug","message":"Created constraint event_id on :Event(id)","service":"memory-service","timestamp":"2025-12-01 15:51:45"}
+{"level":"debug","message":"Created constraint task_id on :Task(id)","service":"memory-service","timestamp":"2025-12-01 15:51:45"}
+{"level":"info","message":"Neo4j constraints verified/created","service":"memory-service","timestamp":"2025-12-01 15:51:45"}
+{"level":"info","message":"Initializing vector collections...","service":"memory-service","timestamp":"2025-12-01 15:51:45"}
+{"level":"info","message":"Database initialization completed successfully","service":"memory-service","timestamp":"2025-12-01 15:51:45"}
+{"level":"info","message":"All database connections established","service":"memory-service","timestamp":"2025-12-01 15:51:45"}
+{"level":"info","message":"WebSocket server configured","service":"memory-service","timestamp":"2025-12-01 15:51:45"}
+{"level":"info","message":"Memory Service listening on port 4001","service":"memory-service","timestamp":"2025-12-01 15:51:45"}
+{"level":"info","message":"Memory Service initialized successfully","service":"memory-service","timestamp":"2025-12-01 15:51:45"}
+{"level":"info","message":"Initializing database connections...","service":"memory-service","timestamp":"2025-12-01 15:52:23"}
+{"level":"info","message":"Running database migrations...","service":"memory-service","timestamp":"2025-12-01 15:52:23"}
+{"level":"info","message":"Successfully connected to PostgreSQL database","service":"memory-service","timestamp":"2025-12-01 15:52:24"}
+{"level":"info","message":"PostgreSQL UUID extension is ready","service":"memory-service","timestamp":"2025-12-01 15:52:24"}
+{"level":"info","message":"Connected to Neo4j Neo4j Kernel v5.13.0 (community) in 46ms","service":"memory-service","timestamp":"2025-12-01 15:52:24"}
+{"level":"debug","message":"Neo4j read/write verification successful","service":"memory-service","timestamp":"2025-12-01 15:52:24"}
+{"level":"info","message":"Successfully connected to Neo4j","service":"memory-service","timestamp":"2025-12-01 15:52:24"}
+{"level":"debug","message":"Created constraint entity_id on :Entity(id)","service":"memory-service","timestamp":"2025-12-01 15:52:24"}
+{"level":"debug","message":"Created constraint event_id on :Event(id)","service":"memory-service","timestamp":"2025-12-01 15:52:24"}
+{"level":"debug","message":"Created constraint task_id on :Task(id)","service":"memory-service","timestamp":"2025-12-01 15:52:24"}
+{"level":"info","message":"Neo4j constraints verified/created","service":"memory-service","timestamp":"2025-12-01 15:52:24"}
+{"level":"info","message":"Initializing vector collections...","service":"memory-service","timestamp":"2025-12-01 15:52:24"}
+{"level":"info","message":"Database initialization completed successfully","service":"memory-service","timestamp":"2025-12-01 15:52:24"}
+{"level":"info","message":"All database connections established","service":"memory-service","timestamp":"2025-12-01 15:52:24"}
+{"level":"info","message":"WebSocket server configured","service":"memory-service","timestamp":"2025-12-01 15:52:24"}
+{"level":"info","message":"Memory Service listening on port 4001","service":"memory-service","timestamp":"2025-12-01 15:52:24"}
+{"level":"info","message":"Memory Service initialized successfully","service":"memory-service","timestamp":"2025-12-01 15:52:24"}
+{"level":"info","message":"Connected to Neo4j Neo4j Kernel v5.13.0 (community) in 392ms","service":"memory-service","timestamp":"2025-12-01 15:52:24"}
+{"level":"debug","message":"Neo4j read/write verification successful","service":"memory-service","timestamp":"2025-12-01 15:52:25"}
+{"level":"info","message":"Initializing database connections...","service":"memory-service","timestamp":"2025-12-01 15:52:49"}
+{"level":"info","message":"Running database migrations...","service":"memory-service","timestamp":"2025-12-01 15:52:49"}
+{"level":"info","message":"Successfully connected to PostgreSQL database","service":"memory-service","timestamp":"2025-12-01 15:52:50"}
+{"level":"info","message":"PostgreSQL UUID extension is ready","service":"memory-service","timestamp":"2025-12-01 15:52:50"}
+{"level":"info","message":"Connected to Neo4j Neo4j Kernel v5.13.0 (community) in 48ms","service":"memory-service","timestamp":"2025-12-01 15:52:50"}
+{"level":"debug","message":"Neo4j read/write verification successful","service":"memory-service","timestamp":"2025-12-01 15:52:50"}
+{"level":"info","message":"Successfully connected to Neo4j","service":"memory-service","timestamp":"2025-12-01 15:52:50"}
+{"level":"debug","message":"Created constraint entity_id on :Entity(id)","service":"memory-service","timestamp":"2025-12-01 15:52:50"}
+{"level":"debug","message":"Created constraint event_id on :Event(id)","service":"memory-service","timestamp":"2025-12-01 15:52:50"}
+{"level":"debug","message":"Created constraint task_id on :Task(id)","service":"memory-service","timestamp":"2025-12-01 15:52:50"}
+{"level":"info","message":"Neo4j constraints verified/created","service":"memory-service","timestamp":"2025-12-01 15:52:50"}
+{"level":"info","message":"Initializing vector collections...","service":"memory-service","timestamp":"2025-12-01 15:52:50"}
+{"level":"info","message":"Database initialization completed successfully","service":"memory-service","timestamp":"2025-12-01 15:52:50"}
+{"level":"info","message":"All database connections established","service":"memory-service","timestamp":"2025-12-01 15:52:50"}
+{"level":"info","message":"Connected to Neo4j Neo4j Kernel v5.13.0 (community) in 20ms","service":"memory-service","timestamp":"2025-12-01 15:52:50"}
+{"level":"debug","message":"Neo4j read/write verification successful","service":"memory-service","timestamp":"2025-12-01 15:52:50"}
+{"level":"info","message":"WebSocket server configured","service":"memory-service","timestamp":"2025-12-01 15:52:50"}
+{"level":"info","message":"Memory Service listening on port 4001","service":"memory-service","timestamp":"2025-12-01 15:52:50"}
+{"level":"info","message":"Memory Service initialized successfully","service":"memory-service","timestamp":"2025-12-01 15:52:50"}
+{"level":"info","message":"Initializing database connections...","service":"memory-service","timestamp":"2025-12-01 15:57:32"}
+{"level":"info","message":"Running database migrations...","service":"memory-service","timestamp":"2025-12-01 15:57:32"}
+{"level":"info","message":"Successfully connected to PostgreSQL database","service":"memory-service","timestamp":"2025-12-01 15:57:32"}
+{"level":"info","message":"PostgreSQL UUID extension is ready","service":"memory-service","timestamp":"2025-12-01 15:57:32"}
+{"level":"info","message":"Connected to Neo4j Neo4j Kernel v5.13.0 (community) in 144ms","service":"memory-service","timestamp":"2025-12-01 15:57:36"}
+{"level":"debug","message":"Neo4j read/write verification successful","service":"memory-service","timestamp":"2025-12-01 15:57:36"}
+{"level":"info","message":"Successfully connected to Neo4j","service":"memory-service","timestamp":"2025-12-01 15:57:36"}
+{"level":"debug","message":"Created constraint entity_id on :Entity(id)","service":"memory-service","timestamp":"2025-12-01 15:57:36"}
+{"level":"debug","message":"Created constraint event_id on :Event(id)","service":"memory-service","timestamp":"2025-12-01 15:57:36"}
+{"level":"debug","message":"Created constraint task_id on :Task(id)","service":"memory-service","timestamp":"2025-12-01 15:57:36"}
+{"level":"info","message":"Neo4j constraints verified/created","service":"memory-service","timestamp":"2025-12-01 15:57:36"}
+{"level":"info","message":"Initializing vector collections...","service":"memory-service","timestamp":"2025-12-01 15:57:36"}
+{"level":"info","message":"Database initialization completed successfully","service":"memory-service","timestamp":"2025-12-01 15:57:37"}
+{"level":"info","message":"All database connections established","service":"memory-service","timestamp":"2025-12-01 15:57:37"}
+{"level":"info","message":"Connected to Neo4j Neo4j Kernel v5.13.0 (community) in 20ms","service":"memory-service","timestamp":"2025-12-01 15:57:37"}
+{"level":"debug","message":"Neo4j read/write verification successful","service":"memory-service","timestamp":"2025-12-01 15:57:37"}
+{"level":"info","message":"WebSocket server configured","service":"memory-service","timestamp":"2025-12-01 15:57:37"}
+{"level":"info","message":"Memory Service listening on port 4001","service":"memory-service","timestamp":"2025-12-01 15:57:37"}
+{"level":"info","message":"Memory Service initialized successfully","service":"memory-service","timestamp":"2025-12-01 15:57:37"}
+{"level":"info","message":"Initializing database connections...","service":"memory-service","timestamp":"2025-12-01 16:09:47"}
+{"level":"info","message":"Running database migrations...","service":"memory-service","timestamp":"2025-12-01 16:09:47"}
+{"level":"info","message":"Successfully connected to PostgreSQL database","service":"memory-service","timestamp":"2025-12-01 16:09:48"}
+{"level":"info","message":"PostgreSQL UUID extension is ready","service":"memory-service","timestamp":"2025-12-01 16:09:48"}
+{"level":"info","message":"Connected to Neo4j Neo4j Kernel v5.13.0 (community) in 69ms","service":"memory-service","timestamp":"2025-12-01 16:09:49"}
+{"level":"debug","message":"Neo4j read/write verification successful","service":"memory-service","timestamp":"2025-12-01 16:09:49"}
+{"level":"info","message":"Successfully connected to Neo4j","service":"memory-service","timestamp":"2025-12-01 16:09:49"}
+{"level":"debug","message":"Created constraint entity_id on :Entity(id)","service":"memory-service","timestamp":"2025-12-01 16:09:49"}
+{"level":"debug","message":"Created constraint event_id on :Event(id)","service":"memory-service","timestamp":"2025-12-01 16:09:49"}
+{"level":"debug","message":"Created constraint task_id on :Task(id)","service":"memory-service","timestamp":"2025-12-01 16:09:49"}
+{"level":"info","message":"Neo4j constraints verified/created","service":"memory-service","timestamp":"2025-12-01 16:09:49"}
+{"level":"info","message":"Initializing vector collections...","service":"memory-service","timestamp":"2025-12-01 16:09:49"}
+{"level":"info","message":"Database initialization completed successfully","service":"memory-service","timestamp":"2025-12-01 16:09:49"}
+{"level":"info","message":"All database connections established","service":"memory-service","timestamp":"2025-12-01 16:09:49"}
+{"level":"info","message":"Connected to Neo4j Neo4j Kernel v5.13.0 (community) in 17ms","service":"memory-service","timestamp":"2025-12-01 16:09:49"}
+{"level":"debug","message":"Neo4j read/write verification successful","service":"memory-service","timestamp":"2025-12-01 16:09:49"}
+{"level":"info","message":"WebSocket server configured","service":"memory-service","timestamp":"2025-12-01 16:09:49"}
+{"level":"info","message":"Memory Service listening on port 4001","service":"memory-service","timestamp":"2025-12-01 16:09:49"}
+{"level":"info","message":"Memory Service initialized successfully","service":"memory-service","timestamp":"2025-12-01 16:09:49"}
+{"level":"info","message":"Initializing database connections...","service":"memory-service","timestamp":"2025-12-01 16:11:07"}
+{"level":"info","message":"Running database migrations...","service":"memory-service","timestamp":"2025-12-01 16:11:07"}
+{"level":"info","message":"Successfully connected to PostgreSQL database","service":"memory-service","timestamp":"2025-12-01 16:11:07"}
+{"level":"info","message":"PostgreSQL UUID extension is ready","service":"memory-service","timestamp":"2025-12-01 16:11:07"}
+{"level":"info","message":"Connected to Neo4j Neo4j Kernel v5.13.0 (community) in 51ms","service":"memory-service","timestamp":"2025-12-01 16:11:07"}
+{"level":"debug","message":"Neo4j read/write verification successful","service":"memory-service","timestamp":"2025-12-01 16:11:07"}
+{"level":"info","message":"Successfully connected to Neo4j","service":"memory-service","timestamp":"2025-12-01 16:11:07"}
+{"level":"debug","message":"Created constraint entity_id on :Entity(id)","service":"memory-service","timestamp":"2025-12-01 16:11:07"}
+{"level":"debug","message":"Created constraint event_id on :Event(id)","service":"memory-service","timestamp":"2025-12-01 16:11:07"}
+{"level":"debug","message":"Created constraint task_id on :Task(id)","service":"memory-service","timestamp":"2025-12-01 16:11:07"}
+{"level":"info","message":"Neo4j constraints verified/created","service":"memory-service","timestamp":"2025-12-01 16:11:07"}
+{"level":"info","message":"Initializing vector collections...","service":"memory-service","timestamp":"2025-12-01 16:11:08"}
+{"level":"info","message":"Database initialization completed successfully","service":"memory-service","timestamp":"2025-12-01 16:11:08"}
+{"level":"info","message":"All database connections established","service":"memory-service","timestamp":"2025-12-01 16:11:08"}
+{"level":"info","message":"Connected to Neo4j Neo4j Kernel v5.13.0 (community) in 18ms","service":"memory-service","timestamp":"2025-12-01 16:11:08"}
+{"level":"debug","message":"Neo4j read/write verification successful","service":"memory-service","timestamp":"2025-12-01 16:11:08"}
+{"level":"info","message":"WebSocket server configured","service":"memory-service","timestamp":"2025-12-01 16:11:08"}
+{"level":"info","message":"Memory Service listening on port 4001","service":"memory-service","timestamp":"2025-12-01 16:11:08"}
+{"level":"info","message":"Memory Service initialized successfully","service":"memory-service","timestamp":"2025-12-01 16:11:08"}
+{"level":"info","message":"Initializing database connections...","service":"memory-service","timestamp":"2025-12-01 16:16:55"}
+{"level":"info","message":"Running database migrations...","service":"memory-service","timestamp":"2025-12-01 16:16:55"}
+{"level":"info","message":"Successfully connected to PostgreSQL database","service":"memory-service","timestamp":"2025-12-01 16:16:55"}
+{"level":"info","message":"PostgreSQL UUID extension is ready","service":"memory-service","timestamp":"2025-12-01 16:16:55"}
+{"level":"info","message":"Connected to Neo4j Neo4j Kernel v5.13.0 (community) in 47ms","service":"memory-service","timestamp":"2025-12-01 16:16:55"}
+{"level":"debug","message":"Neo4j read/write verification successful","service":"memory-service","timestamp":"2025-12-01 16:16:55"}
+{"level":"info","message":"Successfully connected to Neo4j","service":"memory-service","timestamp":"2025-12-01 16:16:55"}
+{"level":"debug","message":"Created constraint entity_id on :Entity(id)","service":"memory-service","timestamp":"2025-12-01 16:16:55"}
+{"level":"debug","message":"Created constraint event_id on :Event(id)","service":"memory-service","timestamp":"2025-12-01 16:16:55"}
+{"level":"debug","message":"Created constraint task_id on :Task(id)","service":"memory-service","timestamp":"2025-12-01 16:16:55"}
+{"level":"info","message":"Neo4j constraints verified/created","service":"memory-service","timestamp":"2025-12-01 16:16:55"}
+{"level":"info","message":"Initializing vector collections...","service":"memory-service","timestamp":"2025-12-01 16:16:55"}
+{"level":"info","message":"Database initialization completed successfully","service":"memory-service","timestamp":"2025-12-01 16:16:56"}
+{"level":"info","message":"All database connections established","service":"memory-service","timestamp":"2025-12-01 16:16:56"}
+{"level":"info","message":"Connected to Neo4j Neo4j Kernel v5.13.0 (community) in 11ms","service":"memory-service","timestamp":"2025-12-01 16:16:56"}
+{"level":"debug","message":"Neo4j read/write verification successful","service":"memory-service","timestamp":"2025-12-01 16:16:56"}
+{"level":"info","message":"WebSocket server configured","service":"memory-service","timestamp":"2025-12-01 16:16:56"}
+{"level":"info","message":"Memory Service listening on port 4001","service":"memory-service","timestamp":"2025-12-01 16:16:56"}
+{"level":"info","message":"Memory Service initialized successfully","service":"memory-service","timestamp":"2025-12-01 16:16:56"}
+{"level":"info","message":"Initializing database connections...","service":"memory-service","timestamp":"2025-12-01 16:19:54"}
+{"level":"info","message":"Running database migrations...","service":"memory-service","timestamp":"2025-12-01 16:19:54"}
+{"level":"info","message":"Successfully connected to PostgreSQL database","service":"memory-service","timestamp":"2025-12-01 16:19:55"}
+{"level":"info","message":"PostgreSQL UUID extension is ready","service":"memory-service","timestamp":"2025-12-01 16:19:55"}
+{"level":"info","message":"Connected to Neo4j Neo4j Kernel v5.13.0 (community) in 78ms","service":"memory-service","timestamp":"2025-12-01 16:19:55"}
+{"level":"debug","message":"Neo4j read/write verification successful","service":"memory-service","timestamp":"2025-12-01 16:19:55"}
+{"level":"info","message":"Successfully connected to Neo4j","service":"memory-service","timestamp":"2025-12-01 16:19:55"}
+{"level":"debug","message":"Created constraint entity_id on :Entity(id)","service":"memory-service","timestamp":"2025-12-01 16:19:55"}
+{"level":"debug","message":"Created constraint event_id on :Event(id)","service":"memory-service","timestamp":"2025-12-01 16:19:55"}
+{"level":"debug","message":"Created constraint task_id on :Task(id)","service":"memory-service","timestamp":"2025-12-01 16:19:55"}
+{"level":"info","message":"Neo4j constraints verified/created","service":"memory-service","timestamp":"2025-12-01 16:19:55"}
+{"level":"info","message":"Initializing vector collections...","service":"memory-service","timestamp":"2025-12-01 16:19:55"}
+{"level":"info","message":"Database initialization completed successfully","service":"memory-service","timestamp":"2025-12-01 16:19:55"}
+{"level":"info","message":"All database connections established","service":"memory-service","timestamp":"2025-12-01 16:19:55"}
+{"level":"info","message":"Connected to Neo4j Neo4j Kernel v5.13.0 (community) in 18ms","service":"memory-service","timestamp":"2025-12-01 16:19:55"}
+{"level":"debug","message":"Neo4j read/write verification successful","service":"memory-service","timestamp":"2025-12-01 16:19:55"}
+{"level":"info","message":"WebSocket server configured","service":"memory-service","timestamp":"2025-12-01 16:19:55"}
+{"level":"info","message":"Memory Service listening on port 4001","service":"memory-service","timestamp":"2025-12-01 16:19:55"}
+{"level":"info","message":"Memory Service initialized successfully","service":"memory-service","timestamp":"2025-12-01 16:19:55"}
+{"level":"info","message":"Initializing database connections...","service":"memory-service","timestamp":"2025-12-01 16:42:35"}
+{"level":"info","message":"Running database migrations...","service":"memory-service","timestamp":"2025-12-01 16:42:35"}
+{"level":"info","message":"Successfully connected to PostgreSQL database","service":"memory-service","timestamp":"2025-12-01 16:42:35"}
+{"level":"info","message":"PostgreSQL UUID extension is ready","service":"memory-service","timestamp":"2025-12-01 16:42:35"}
+{"level":"info","message":"Connected to Neo4j Neo4j Kernel v5.13.0 (community) in 183ms","service":"memory-service","timestamp":"2025-12-01 16:42:37"}
+{"level":"debug","message":"Neo4j read/write verification successful","service":"memory-service","timestamp":"2025-12-01 16:42:37"}
+{"level":"info","message":"Successfully connected to Neo4j","service":"memory-service","timestamp":"2025-12-01 16:42:37"}
+{"level":"debug","message":"Created constraint entity_id on :Entity(id)","service":"memory-service","timestamp":"2025-12-01 16:42:37"}
+{"level":"debug","message":"Created constraint event_id on :Event(id)","service":"memory-service","timestamp":"2025-12-01 16:42:37"}
+{"level":"debug","message":"Created constraint task_id on :Task(id)","service":"memory-service","timestamp":"2025-12-01 16:42:37"}
+{"level":"info","message":"Neo4j constraints verified/created","service":"memory-service","timestamp":"2025-12-01 16:42:37"}
+{"level":"info","message":"Initializing vector collections...","service":"memory-service","timestamp":"2025-12-01 16:42:37"}
+{"level":"info","message":"Database initialization completed successfully","service":"memory-service","timestamp":"2025-12-01 16:42:37"}
+{"level":"info","message":"All database connections established","service":"memory-service","timestamp":"2025-12-01 16:42:37"}
+{"level":"info","message":"Connected to Neo4j Neo4j Kernel v5.13.0 (community) in 22ms","service":"memory-service","timestamp":"2025-12-01 16:42:37"}
+{"level":"debug","message":"Neo4j read/write verification successful","service":"memory-service","timestamp":"2025-12-01 16:42:37"}
+{"level":"info","message":"WebSocket server configured","service":"memory-service","timestamp":"2025-12-01 16:42:37"}
+{"level":"info","message":"Memory Service listening on port 4001","service":"memory-service","timestamp":"2025-12-01 16:42:38"}
+{"level":"info","message":"Memory Service initialized successfully","service":"memory-service","timestamp":"2025-12-01 16:42:38"}
+{"level":"info","message":"Audio file written to C:\\Users\\Hp\\AppData\\Local\\Temp\\audio-1764603797312.webm, size: 80837 bytes","service":"memory-service","timestamp":"2025-12-01 16:43:17"}
+{"level":"info","message":"Audio file written to C:\\Users\\Hp\\AppData\\Local\\Temp\\audio-1764603808243.webm, size: 80982 bytes","service":"memory-service","timestamp":"2025-12-01 16:43:28"}
+{"level":"info","message":"Audio file written to C:\\Users\\Hp\\AppData\\Local\\Temp\\audio-1764603812235.webm, size: 80800 bytes","service":"memory-service","timestamp":"2025-12-01 16:43:32"}
+{"level":"info","message":"Audio file written to C:\\Users\\Hp\\AppData\\Local\\Temp\\audio-1764603827790.webm, size: 80958 bytes","service":"memory-service","timestamp":"2025-12-01 16:43:47"}
+{"level":"info","message":"Initializing database connections...","service":"memory-service","timestamp":"2025-12-01 16:45:42"}
+{"level":"info","message":"Running database migrations...","service":"memory-service","timestamp":"2025-12-01 16:45:42"}
+{"level":"info","message":"Successfully connected to PostgreSQL database","service":"memory-service","timestamp":"2025-12-01 16:45:42"}
+{"level":"info","message":"PostgreSQL UUID extension is ready","service":"memory-service","timestamp":"2025-12-01 16:45:42"}
+{"level":"info","message":"Connected to Neo4j Neo4j Kernel v5.13.0 (community) in 201ms","service":"memory-service","timestamp":"2025-12-01 16:45:43"}
+{"level":"debug","message":"Neo4j read/write verification successful","service":"memory-service","timestamp":"2025-12-01 16:45:43"}
+{"level":"info","message":"Successfully connected to Neo4j","service":"memory-service","timestamp":"2025-12-01 16:45:43"}
+{"level":"debug","message":"Created constraint entity_id on :Entity(id)","service":"memory-service","timestamp":"2025-12-01 16:45:43"}
+{"level":"debug","message":"Created constraint event_id on :Event(id)","service":"memory-service","timestamp":"2025-12-01 16:45:43"}
+{"level":"debug","message":"Created constraint task_id on :Task(id)","service":"memory-service","timestamp":"2025-12-01 16:45:43"}
+{"level":"info","message":"Neo4j constraints verified/created","service":"memory-service","timestamp":"2025-12-01 16:45:43"}
+{"level":"info","message":"Initializing vector collections...","service":"memory-service","timestamp":"2025-12-01 16:45:43"}
+{"level":"info","message":"Database initialization completed successfully","service":"memory-service","timestamp":"2025-12-01 16:45:43"}
+{"level":"info","message":"All database connections established","service":"memory-service","timestamp":"2025-12-01 16:45:43"}
+{"level":"info","message":"Connected to Neo4j Neo4j Kernel v5.13.0 (community) in 20ms","service":"memory-service","timestamp":"2025-12-01 16:45:43"}
+{"level":"debug","message":"Neo4j read/write verification successful","service":"memory-service","timestamp":"2025-12-01 16:45:44"}
+{"level":"info","message":"WebSocket server configured","service":"memory-service","timestamp":"2025-12-01 16:45:44"}
+{"level":"info","message":"Memory Service listening on port 4001","service":"memory-service","timestamp":"2025-12-01 16:45:44"}
+{"level":"info","message":"Memory Service initialized successfully","service":"memory-service","timestamp":"2025-12-01 16:45:44"}
+{"level":"info","message":"Initializing database connections...","service":"memory-service","timestamp":"2025-12-01 16:49:35"}
+{"level":"info","message":"Running database migrations...","service":"memory-service","timestamp":"2025-12-01 16:49:35"}
+{"level":"info","message":"Successfully connected to PostgreSQL database","service":"memory-service","timestamp":"2025-12-01 16:49:35"}
+{"level":"info","message":"PostgreSQL UUID extension is ready","service":"memory-service","timestamp":"2025-12-01 16:49:35"}
+{"level":"info","message":"Connected to Neo4j Neo4j Kernel v5.13.0 (community) in 78ms","service":"memory-service","timestamp":"2025-12-01 16:49:37"}
+{"level":"debug","message":"Neo4j read/write verification successful","service":"memory-service","timestamp":"2025-12-01 16:49:37"}
+{"level":"info","message":"Successfully connected to Neo4j","service":"memory-service","timestamp":"2025-12-01 16:49:37"}
+{"level":"debug","message":"Created constraint entity_id on :Entity(id)","service":"memory-service","timestamp":"2025-12-01 16:49:37"}
+{"level":"debug","message":"Created constraint event_id on :Event(id)","service":"memory-service","timestamp":"2025-12-01 16:49:37"}
+{"level":"debug","message":"Created constraint task_id on :Task(id)","service":"memory-service","timestamp":"2025-12-01 16:49:37"}
+{"level":"info","message":"Neo4j constraints verified/created","service":"memory-service","timestamp":"2025-12-01 16:49:37"}
+{"level":"info","message":"Initializing vector collections...","service":"memory-service","timestamp":"2025-12-01 16:49:37"}
+{"level":"info","message":"Database initialization completed successfully","service":"memory-service","timestamp":"2025-12-01 16:49:37"}
+{"level":"info","message":"All database connections established","service":"memory-service","timestamp":"2025-12-01 16:49:37"}
+{"level":"info","message":"Connected to Neo4j Neo4j Kernel v5.13.0 (community) in 26ms","service":"memory-service","timestamp":"2025-12-01 16:49:37"}
+{"level":"debug","message":"Neo4j read/write verification successful","service":"memory-service","timestamp":"2025-12-01 16:49:37"}
+{"level":"info","message":"WebSocket server configured","service":"memory-service","timestamp":"2025-12-01 16:49:37"}
+{"level":"info","message":"Memory Service listening on port 4001","service":"memory-service","timestamp":"2025-12-01 16:49:37"}
+{"level":"info","message":"Memory Service initialized successfully","service":"memory-service","timestamp":"2025-12-01 16:49:37"}
+{"level":"info","message":"Audio file written to C:\\Users\\Hp\\AppData\\Local\\Temp\\audio-1764604218592.webm, size: 80864 bytes","service":"memory-service","timestamp":"2025-12-01 16:50:18"}
+{"level":"info","message":"Audio file written to C:\\Users\\Hp\\AppData\\Local\\Temp\\audio-1764604227702.webm, size: 81230 bytes","service":"memory-service","timestamp":"2025-12-01 16:50:27"}
+{"level":"info","message":"Audio file written to C:\\Users\\Hp\\AppData\\Local\\Temp\\audio-1764604237521.webm, size: 81195 bytes","service":"memory-service","timestamp":"2025-12-01 16:50:37"}
+{"level":"info","message":"Audio file written to C:\\Users\\Hp\\AppData\\Local\\Temp\\audio-1764604258825.webm, size: 81212 bytes","service":"memory-service","timestamp":"2025-12-01 16:50:58"}
+{"level":"info","message":"Audio file written to C:\\Users\\Hp\\AppData\\Local\\Temp\\audio-1764604268606.webm, size: 80900 bytes","service":"memory-service","timestamp":"2025-12-01 16:51:08"}
+{"level":"info","message":"Audio file written to C:\\Users\\Hp\\AppData\\Local\\Temp\\audio-1764604281143.webm, size: 81151 bytes","service":"memory-service","timestamp":"2025-12-01 16:51:21"}
+{"level":"info","message":"Audio file written to C:\\Users\\Hp\\AppData\\Local\\Temp\\audio-1764604299804.webm, size: 81000 bytes","service":"memory-service","timestamp":"2025-12-01 16:51:39"}
+{"level":"info","message":"Audio file written to C:\\Users\\Hp\\AppData\\Local\\Temp\\audio-1764604308743.webm, size: 80967 bytes","service":"memory-service","timestamp":"2025-12-01 16:51:48"}
+{"level":"info","message":"Audio file written to C:\\Users\\Hp\\AppData\\Local\\Temp\\audio-1764604316930.webm, size: 80930 bytes","service":"memory-service","timestamp":"2025-12-01 16:51:56"}
+{"level":"info","message":"Audio file written to C:\\Users\\Hp\\AppData\\Local\\Temp\\audio-1764604334086.webm, size: 80880 bytes","service":"memory-service","timestamp":"2025-12-01 16:52:14"}
+{"level":"info","message":"Audio file written to C:\\Users\\Hp\\AppData\\Local\\Temp\\audio-1764604346380.webm, size: 80900 bytes","service":"memory-service","timestamp":"2025-12-01 16:52:26"}
+{"level":"info","message":"Audio file written to C:\\Users\\Hp\\AppData\\Local\\Temp\\audio-1764604351301.webm, size: 80929 bytes","service":"memory-service","timestamp":"2025-12-01 16:52:31"}
+{"level":"info","message":"Audio file written to C:\\Users\\Hp\\AppData\\Local\\Temp\\audio-1764604371924.webm, size: 80876 bytes","service":"memory-service","timestamp":"2025-12-01 16:52:51"}
+{"level":"info","message":"Audio file written to C:\\Users\\Hp\\AppData\\Local\\Temp\\audio-1764604379635.webm, size: 81192 bytes","service":"memory-service","timestamp":"2025-12-01 16:52:59"}
+{"level":"info","message":"Audio file written to C:\\Users\\Hp\\AppData\\Local\\Temp\\audio-1764604393935.webm, size: 81176 bytes","service":"memory-service","timestamp":"2025-12-01 16:53:13"}
+{"level":"info","message":"Audio file written to C:\\Users\\Hp\\AppData\\Local\\Temp\\audio-1764604401496.webm, size: 80963 bytes","service":"memory-service","timestamp":"2025-12-01 16:53:21"}
+{"level":"info","message":"Audio file written to C:\\Users\\Hp\\AppData\\Local\\Temp\\audio-1764604410022.webm, size: 80849 bytes","service":"memory-service","timestamp":"2025-12-01 16:53:30"}
+{"level":"info","message":"Audio file written to C:\\Users\\Hp\\AppData\\Local\\Temp\\audio-1764604428787.webm, size: 80964 bytes","service":"memory-service","timestamp":"2025-12-01 16:53:48"}
+{"level":"info","message":"Audio file written to C:\\Users\\Hp\\AppData\\Local\\Temp\\audio-1764604436352.webm, size: 81018 bytes","service":"memory-service","timestamp":"2025-12-01 16:53:56"}
+{"level":"info","message":"Initializing database connections...","service":"memory-service","timestamp":"2025-12-01 16:56:59"}
+{"level":"info","message":"Running database migrations...","service":"memory-service","timestamp":"2025-12-01 16:56:59"}
+{"level":"info","message":"Successfully connected to PostgreSQL database","service":"memory-service","timestamp":"2025-12-01 16:56:59"}
+{"level":"info","message":"PostgreSQL UUID extension is ready","service":"memory-service","timestamp":"2025-12-01 16:56:59"}
+{"level":"info","message":"Connected to Neo4j Neo4j Kernel v5.13.0 (community) in 238ms","service":"memory-service","timestamp":"2025-12-01 16:57:00"}
+{"level":"debug","message":"Neo4j read/write verification successful","service":"memory-service","timestamp":"2025-12-01 16:57:00"}
+{"level":"info","message":"Successfully connected to Neo4j","service":"memory-service","timestamp":"2025-12-01 16:57:00"}
+{"level":"debug","message":"Created constraint entity_id on :Entity(id)","service":"memory-service","timestamp":"2025-12-01 16:57:00"}
+{"level":"debug","message":"Created constraint event_id on :Event(id)","service":"memory-service","timestamp":"2025-12-01 16:57:00"}
+{"level":"debug","message":"Created constraint task_id on :Task(id)","service":"memory-service","timestamp":"2025-12-01 16:57:00"}
+{"level":"info","message":"Neo4j constraints verified/created","service":"memory-service","timestamp":"2025-12-01 16:57:00"}
+{"level":"info","message":"Initializing vector collections...","service":"memory-service","timestamp":"2025-12-01 16:57:00"}
+{"level":"info","message":"Database initialization completed successfully","service":"memory-service","timestamp":"2025-12-01 16:57:00"}
+{"level":"info","message":"All database connections established","service":"memory-service","timestamp":"2025-12-01 16:57:00"}
+{"level":"info","message":"Connected to Neo4j Neo4j Kernel v5.13.0 (community) in 12ms","service":"memory-service","timestamp":"2025-12-01 16:57:00"}
+{"level":"debug","message":"Neo4j read/write verification successful","service":"memory-service","timestamp":"2025-12-01 16:57:00"}
+{"level":"info","message":"WebSocket server configured","service":"memory-service","timestamp":"2025-12-01 16:57:00"}
+{"level":"info","message":"Memory Service listening on port 4001","service":"memory-service","timestamp":"2025-12-01 16:57:00"}
+{"level":"info","message":"Memory Service initialized successfully","service":"memory-service","timestamp":"2025-12-01 16:57:00"}
+{"level":"info","message":"Initializing database connections...","service":"memory-service","timestamp":"2025-12-01 17:10:21"}
+{"level":"info","message":"Running database migrations...","service":"memory-service","timestamp":"2025-12-01 17:10:22"}
+{"level":"info","message":"Successfully connected to PostgreSQL database","service":"memory-service","timestamp":"2025-12-01 17:10:22"}
+{"level":"info","message":"PostgreSQL UUID extension is ready","service":"memory-service","timestamp":"2025-12-01 17:10:22"}
+{"level":"info","message":"Connected to Neo4j Neo4j Kernel v5.13.0 (community) in 93ms","service":"memory-service","timestamp":"2025-12-01 17:10:25"}
+{"level":"debug","message":"Neo4j read/write verification successful","service":"memory-service","timestamp":"2025-12-01 17:10:26"}
+{"level":"info","message":"Successfully connected to Neo4j","service":"memory-service","timestamp":"2025-12-01 17:10:26"}
+{"level":"debug","message":"Created constraint entity_id on :Entity(id)","service":"memory-service","timestamp":"2025-12-01 17:10:26"}
+{"level":"debug","message":"Created constraint event_id on :Event(id)","service":"memory-service","timestamp":"2025-12-01 17:10:26"}
+{"level":"debug","message":"Created constraint task_id on :Task(id)","service":"memory-service","timestamp":"2025-12-01 17:10:26"}
+{"level":"info","message":"Neo4j constraints verified/created","service":"memory-service","timestamp":"2025-12-01 17:10:26"}
+{"level":"info","message":"Initializing vector collections...","service":"memory-service","timestamp":"2025-12-01 17:10:26"}
+{"level":"info","message":"Database initialization completed successfully","service":"memory-service","timestamp":"2025-12-01 17:10:26"}
+{"level":"info","message":"All database connections established","service":"memory-service","timestamp":"2025-12-01 17:10:26"}
+{"level":"info","message":"Connected to Neo4j Neo4j Kernel v5.13.0 (community) in 11ms","service":"memory-service","timestamp":"2025-12-01 17:10:26"}
+{"level":"debug","message":"Neo4j read/write verification successful","service":"memory-service","timestamp":"2025-12-01 17:10:26"}
+{"level":"info","message":"WebSocket server configured","service":"memory-service","timestamp":"2025-12-01 17:10:26"}
+{"level":"info","message":"Memory Service listening on port 4001","service":"memory-service","timestamp":"2025-12-01 17:10:26"}
+{"level":"info","message":"Memory Service initialized successfully","service":"memory-service","timestamp":"2025-12-01 17:10:26"}
+{"level":"info","message":"Audio file written to C:\\Users\\Hp\\AppData\\Local\\Temp\\audio-1764605558865.webm, size: 80904 bytes","service":"memory-service","timestamp":"2025-12-01 17:12:38"}
+{"level":"info","message":"Audio file written to C:\\Users\\Hp\\AppData\\Local\\Temp\\audio-1764605570898.webm, size: 80953 bytes","service":"memory-service","timestamp":"2025-12-01 17:12:50"}
+{"level":"info","message":"Audio file written to C:\\Users\\Hp\\AppData\\Local\\Temp\\audio-1764605577279.webm, size: 80973 bytes","service":"memory-service","timestamp":"2025-12-01 17:12:57"}
+{"level":"info","message":"Audio file written to C:\\Users\\Hp\\AppData\\Local\\Temp\\audio-1764605588617.webm, size: 80892 bytes","service":"memory-service","timestamp":"2025-12-01 17:13:08"}
+{"level":"info","message":"Audio file written to C:\\Users\\Hp\\AppData\\Local\\Temp\\audio-1764605594891.webm, size: 81103 bytes","service":"memory-service","timestamp":"2025-12-01 17:13:14"}
+{"level":"info","message":"Audio file written to C:\\Users\\Hp\\AppData\\Local\\Temp\\audio-1764605611104.webm, size: 81019 bytes","service":"memory-service","timestamp":"2025-12-01 17:13:31"}
+{"level":"info","message":"Audio file written to C:\\Users\\Hp\\AppData\\Local\\Temp\\audio-1764605620646.webm, size: 80939 bytes","service":"memory-service","timestamp":"2025-12-01 17:13:40"}
+{"level":"info","message":"Audio file written to C:\\Users\\Hp\\AppData\\Local\\Temp\\audio-1764605627738.webm, size: 80878 bytes","service":"memory-service","timestamp":"2025-12-01 17:13:47"}
+{"level":"info","message":"Audio file written to C:\\Users\\Hp\\AppData\\Local\\Temp\\audio-1764605637759.webm, size: 80888 bytes","service":"memory-service","timestamp":"2025-12-01 17:13:57"}
+{"level":"info","message":"Audio file written to C:\\Users\\Hp\\AppData\\Local\\Temp\\audio-1764605651266.webm, size: 80894 bytes","service":"memory-service","timestamp":"2025-12-01 17:14:11"}
+{"level":"info","message":"Audio file written to C:\\Users\\Hp\\AppData\\Local\\Temp\\audio-1764605660791.webm, size: 80896 bytes","service":"memory-service","timestamp":"2025-12-01 17:14:20"}
+{"level":"info","message":"Audio file written to C:\\Users\\Hp\\AppData\\Local\\Temp\\audio-1764605666186.webm, size: 81114 bytes","service":"memory-service","timestamp":"2025-12-01 17:14:26"}
+{"level":"info","message":"Audio file written to C:\\Users\\Hp\\AppData\\Local\\Temp\\audio-1764605681673.webm, size: 81162 bytes","service":"memory-service","timestamp":"2025-12-01 17:14:41"}
+{"level":"info","message":"Audio file written to C:\\Users\\Hp\\AppData\\Local\\Temp\\audio-1764605692032.webm, size: 81145 bytes","service":"memory-service","timestamp":"2025-12-01 17:14:52"}
+{"level":"info","message":"Audio file written to C:\\Users\\Hp\\AppData\\Local\\Temp\\audio-1764605705832.webm, size: 80917 bytes","service":"memory-service","timestamp":"2025-12-01 17:15:05"}
+{"level":"info","message":"Audio file written to C:\\Users\\Hp\\AppData\\Local\\Temp\\audio-1764605718541.webm, size: 80940 bytes","service":"memory-service","timestamp":"2025-12-01 17:15:18"}
+{"level":"info","message":"Audio file written to C:\\Users\\Hp\\AppData\\Local\\Temp\\audio-1764605728111.webm, size: 80900 bytes","service":"memory-service","timestamp":"2025-12-01 17:15:28"}
+{"level":"info","message":"Audio file written to C:\\Users\\Hp\\AppData\\Local\\Temp\\audio-1764605736326.webm, size: 80966 bytes","service":"memory-service","timestamp":"2025-12-01 17:15:36"}
+{"level":"info","message":"Audio file written to C:\\Users\\Hp\\AppData\\Local\\Temp\\audio-1764605743139.webm, size: 80899 bytes","service":"memory-service","timestamp":"2025-12-01 17:15:43"}
+{"level":"info","message":"Audio file written to C:\\Users\\Hp\\AppData\\Local\\Temp\\audio-1764605755607.webm, size: 80898 bytes","service":"memory-service","timestamp":"2025-12-01 17:15:55"}
+{"level":"info","message":"Audio file written to C:\\Users\\Hp\\AppData\\Local\\Temp\\audio-1764605763467.webm, size: 81122 bytes","service":"memory-service","timestamp":"2025-12-01 17:16:03"}
+{"level":"info","message":"Audio file written to C:\\Users\\Hp\\AppData\\Local\\Temp\\audio-1764605773380.webm, size: 80860 bytes","service":"memory-service","timestamp":"2025-12-01 17:16:13"}
+{"level":"info","message":"Audio file written to C:\\Users\\Hp\\AppData\\Local\\Temp\\audio-1764605789224.webm, size: 80935 bytes","service":"memory-service","timestamp":"2025-12-01 17:16:29"}
+{"level":"info","message":"Audio file written to C:\\Users\\Hp\\AppData\\Local\\Temp\\audio-1764605800132.webm, size: 81014 bytes","service":"memory-service","timestamp":"2025-12-01 17:16:40"}
+{"level":"error","message":"Failed to call Prompt Service at http://localhost:4003/prompt/v1/assist: Prompt Service returned 400: {\"error\":\"Context with transcript is required\"}","service":"memory-service","stack":"Error: Prompt Service returned 400: {\"error\":\"Context with transcript is required\"}\n    at PromptServiceClient.generateAssistance (C:\\Users\\Hp\\ellipsa\\services\\memory\\src\\services\\PromptServiceClient.ts:90:23)\n    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)\n    at async <anonymous> (C:\\Users\\Hp\\ellipsa\\services\\memory\\src\\services\\EventProcessingService.ts:92:36)\n    at async Immediate.processNext (C:\\Users\\Hp\\ellipsa\\services\\memory\\src\\services\\EventProcessingService.ts:330:9)","timestamp":"2025-12-01 17:16:42"}
+{"level":"info","message":"Audio file written to C:\\Users\\Hp\\AppData\\Local\\Temp\\audio-1764605806196.webm, size: 80918 bytes","service":"memory-service","timestamp":"2025-12-01 17:16:46"}
+{"level":"error","message":"Failed to call Prompt Service at http://localhost:4003/prompt/v1/assist: Prompt Service returned 400: {\"error\":\"Context with transcript is required\"}","service":"memory-service","stack":"Error: Prompt Service returned 400: {\"error\":\"Context with transcript is required\"}\n    at PromptServiceClient.generateAssistance (C:\\Users\\Hp\\ellipsa\\services\\memory\\src\\services\\PromptServiceClient.ts:90:23)\n    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)\n    at async <anonymous> (C:\\Users\\Hp\\ellipsa\\services\\memory\\src\\services\\EventProcessingService.ts:92:36)\n    at async Immediate.processNext (C:\\Users\\Hp\\ellipsa\\services\\memory\\src\\services\\EventProcessingService.ts:330:9)","timestamp":"2025-12-01 17:16:48"}
+{"level":"info","message":"Audio file written to C:\\Users\\Hp\\AppData\\Local\\Temp\\audio-1764605818910.webm, size: 80907 bytes","service":"memory-service","timestamp":"2025-12-01 17:16:58"}
+{"level":"info","message":"Audio file written to C:\\Users\\Hp\\AppData\\Local\\Temp\\audio-1764605826935.webm, size: 81024 bytes","service":"memory-service","timestamp":"2025-12-01 17:17:06"}
+{"level":"info","message":"Audio file written to C:\\Users\\Hp\\AppData\\Local\\Temp\\audio-1764605834822.webm, size: 80896 bytes","service":"memory-service","timestamp":"2025-12-01 17:17:14"}
+{"level":"info","message":"Audio file written to C:\\Users\\Hp\\AppData\\Local\\Temp\\audio-1764605844192.webm, size: 80945 bytes","service":"memory-service","timestamp":"2025-12-01 17:17:24"}
+{"level":"info","message":"Audio file written to C:\\Users\\Hp\\AppData\\Local\\Temp\\audio-1764605857035.webm, size: 37393 bytes","service":"memory-service","timestamp":"2025-12-01 17:17:37"}
