@@ -1,5 +1,5 @@
 import { ChromaClient, Collection } from 'chromadb';
-import { Driver as Neo4jDriver, Session } from 'neo4j-driver';
+import neo4j, { Driver as Neo4jDriver, Session } from 'neo4j-driver';
 import { getEmbeddingFunction } from '../db/vector/chroma';
 
 export interface MemoryBullet {
@@ -98,7 +98,7 @@ export class MemoryRetrievalService {
             const results = await this.eventsCollection.query({
                 queryTexts: [query],
                 nResults: limit
-            });
+            } as any);
 
             if (!results.ids || !results.ids[0] || results.ids[0].length === 0) {
                 console.log('[MemoryRetrieval] No vector results found');
@@ -151,11 +151,21 @@ export class MemoryRetrievalService {
         RETURN evt.id as event_id, 
                evt.description as summary,
                evt.created_at as timestamp,
-               COUNT(r) as relationship_count,
+        ORDER BY relationship_count DESC
+        LIMIT $limit
+            `;
+
+            const result = await session.run(cypher, { entities, limit: neo4j.int(limit) });
+
+            const graphResults: GraphResult[] = result.records.map(record => ({
+                event_id: record.get('event_id'),
+                summary: record.get('summary') || 'No summary',
+                timestamp: new Date(record.get('timestamp')).getTime(),
+                graphStrength: record.get('relationship_count').toNumber(),
                 similarity: 0.5 // Neutral similarity for graph results
             }));
 
-            console.log(`[MemoryRetrieval] Graph search found ${ graphResults.length } results for entities: ${ entities.join(', ') } `);
+            console.log(`[MemoryRetrieval] Graph search found ${graphResults.length} results for entities: ${entities.join(', ')} `);
             return graphResults;
         } catch (error) {
             console.error('[MemoryRetrieval] Graph search error:', error);
