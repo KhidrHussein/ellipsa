@@ -105,6 +105,7 @@ Steps: ${result.steps.length}`;
 
         await this.memoryClient.storeEvent({
             type: 'action_execution',
+            title: `Action: ${plan.goal || 'No goal specified'}`,
             content,
             start_time: result.started_at,
             end_time: result.completed_at,

@@ -14,3 +14,156 @@
   "url": "/events",
   "method": "POST"
 }
+2025-12-04 14:12:08 [[31merror[39m]: 	[31m[MemoryService] Request failed:[39m
+{
+  "url": "/events",
+  "method": "POST",
+  "status": 404,
+  "statusText": "Not Found",
+  "data": "<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n<meta charset=\"utf-8\">\n<title>Error</title>\n</head>\n<body>\n<pre>Cannot POST /events</pre>\n</body>\n</html>\n"
+}
+2025-12-04 14:17:08 [[31merror[39m]: 	[31m[MemoryService] Request failed:[39m
+{
+  "url": "/events",
+  "method": "POST",
+  "status": 500,
+  "statusText": "Internal Server Error",
+  "data": {
+    "success": false,
+    "error": {
+      "code": "EVENT_CREATION_FAILED",
+      "message": "Failed to create event",
+      "details": "insert into \"events\" (\"content\", \"embedding\", \"end_time\", \"metadata\", \"participants\", \"start_time\", \"type\") values ($1, $2, $3, $4, $5, $6, $7) returning * - column \"content\" of relation \"events\" does not exist"
+    },
+    "meta": {
+      "version": "1.0.0",
+      "timestamp": "2025-12-04T13:17:08.831Z"
+    }
+  }
+}
+2025-12-04 14:27:15 [[31merror[39m]: 	[31m[MemoryService] Request failed:[39m
+{
+  "url": "/events",
+  "method": "POST",
+  "status": 500,
+  "statusText": "Internal Server Error",
+  "data": {
+    "success": false,
+    "error": {
+      "code": "EVENT_CREATION_FAILED",
+      "message": "Failed to create event",
+      "details": "insert into \"events\" (\"content\", \"embedding\", \"end_time\", \"metadata\", \"participants\", \"start_time\", \"type\") values ($1, $2, $3, $4, $5, $6, $7) returning * - column \"content\" of relation \"events\" does not exist"
+    },
+    "meta": {
+      "version": "1.0.0",
+      "timestamp": "2025-12-04T13:27:15.803Z"
+    }
+  }
+}
+2025-12-04 15:45:30 [[31merror[39m]: 	[31m[MemoryService] Request failed:[39m
+{
+  "url": "/events",
+  "method": "POST",
+  "status": 500,
+  "statusText": "Internal Server Error",
+  "data": {
+    "success": false,
+    "error": {
+      "code": "EVENT_CREATION_FAILED",
+      "message": "Failed to create event",
+      "details": "insert into \"events\" (\"content\", \"embedding\", \"end_time\", \"metadata\", \"participants\", \"start_time\", \"type\") values ($1, $2, $3, $4, $5, $6, $7) returning * - invalid input syntax for type json"
+    },
+    "meta": {
+      "version": "1.0.0",
+      "timestamp": "2025-12-04T14:45:30.608Z"
+    }
+  }
+}
+2025-12-04 15:57:25 [[31merror[39m]: 	[31m[MemoryService] Request failed:[39m
+{
+  "url": "/events",
+  "method": "POST",
+  "status": 500,
+  "statusText": "Internal Server Error",
+  "data": {
+    "success": false,
+    "error": {
+      "code": "EVENT_CREATION_FAILED",
+      "message": "Failed to create event",
+      "details": "insert into \"events\" (\"content\", \"embedding\", \"end_time\", \"metadata\", \"participants\", \"start_time\", \"type\") values ($1, $2, $3, $4, $5, $6, $7) returning * - null value in column \"title\" of relation \"events\" violates not-null constraint"
+    },
+    "meta": {
+      "version": "1.0.0",
+      "timestamp": "2025-12-04T14:57:25.312Z"
+    }
+  }
+}
+2025-12-04 16:06:44 [[31merror[39m]: 	[31m[MemoryService] Request failed:[39m
+{
+  "url": "/events",
+  "method": "POST",
+  "status": 500,
+  "statusText": "Internal Server Error",
+  "data": {
+    "success": false,
+    "error": {
+      "code": "EVENT_CREATION_FAILED",
+      "message": "Failed to create event",
+      "details": "Failed to find entities with id unknown_user"
+    },
+    "meta": {
+      "version": "1.0.0",
+      "timestamp": "2025-12-04T15:06:44.871Z"
+    }
+  }
+}
+2025-12-04 16:08:10 [[31merror[39m]: 	[31m[MemoryService] Circuit breaker opened[39m
+2025-12-04 16:08:10 [[31merror[39m]: 	[31m[MemoryService] Request failed:[39m
+{
+  "url": "/events",
+  "method": "POST"
+}
+2025-12-04 16:58:41 [[31merror[39m]: 	[31m[MemoryService] Request failed:[39m
+{
+  "url": "/events",
+  "method": "POST",
+  "status": 500,
+  "statusText": "Internal Server Error",
+  "data": {
+    "success": false,
+    "error": {
+      "code": "EVENT_CREATION_FAILED",
+      "message": "Failed to create event",
+      "details": "Cannot read properties of undefined (reading 'emit')"
+    },
+    "meta": {
+      "version": "1.0.0",
+      "timestamp": "2025-12-04T15:58:39.498Z"
+    }
+  }
+}
+2025-12-04 17:00:31 [[31merror[39m]: 	[31m[MemoryService] Circuit breaker opened[39m
+2025-12-04 17:00:31 [[31merror[39m]: 	[31m[MemoryService] Request failed:[39m
+{
+  "url": "/events",
+  "method": "POST"
+}
+2025-12-04 17:02:34 [[31merror[39m]: 	[31m[MemoryService] Request failed:[39m
+{
+  "url": "/events",
+  "method": "POST",
+  "status": 500,
+  "statusText": "Internal Server Error",
+  "data": {
+    "success": false,
+    "error": {
+      "code": "EVENT_CREATION_FAILED",
+      "message": "Failed to create event",
+      "details": "Cannot read properties of undefined (reading 'emit')"
+    },
+    "meta": {
+      "version": "1.0.0",
+      "timestamp": "2025-12-04T16:02:34.284Z"
+    }
+  }
+}

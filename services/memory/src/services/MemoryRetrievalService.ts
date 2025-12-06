@@ -15,6 +15,7 @@ interface VectorResult {
     similarity: number;
     timestamp: number;
     event_id: string;
+    metadata?: Record<string, any>;
 }
 
 interface GraphResult {
@@ -89,40 +90,74 @@ export class MemoryRetrievalService {
      * Vector search using ChromaDB semantic similarity
      */
     private async vectorSearch(query: string, limit: number): Promise<VectorResult[]> {
-        if (!this.eventsCollection) {
-            console.warn('[MemoryRetrieval] Events collection not initialized');
+        if (!this.eventsCollection || !this.entitiesCollection) {
+            console.warn('[MemoryRetrieval] Collections not initialized');
             return [];
         }
 
         try {
-            const results = await this.eventsCollection.query({
+            const vectorResults: VectorResult[] = [];
+
+            // Query Events
+            const eventResults = await this.eventsCollection.query({
                 queryTexts: [query],
                 nResults: limit
             } as any);
 
-            if (!results.ids || !results.ids[0] || results.ids[0].length === 0) {
-                console.log('[MemoryRetrieval] No vector results found');
-                return [];
-            }
+            if (eventResults.ids && eventResults.ids[0]) {
+                for (let i = 0; i < eventResults.ids[0].length; i++) {
+                    const metadata = eventResults.metadatas?.[0]?.[i] as any;
+                    const distance = eventResults.distances?.[0]?.[i] || 1;
 
-            // Transform ChromaDB results
-            const vectorResults: VectorResult[] = [];
-            for (let i = 0; i < results.ids[0].length; i++) {
-                const metadata = results.metadatas?.[0]?.[i] as any;
-                const distance = results.distances?.[0]?.[i] || 1;
-
-                if (metadata) {
-                    vectorResults.push({
-                        id: results.ids[0][i] as string,
-                        summary: metadata.summary || metadata.description || 'No summary',
-                        similarity: 1 - distance, // Convert distance to similarity
-                        timestamp: metadata.timestamp ? new Date(metadata.timestamp).getTime() : Date.now(),
-                        event_id: metadata.event_id || results.ids[0][i] as string
-                    });
+                    if (metadata) {
+                        vectorResults.push({
+                            id: eventResults.ids[0][i] as string,
+                            summary: metadata.summary || metadata.description || metadata.content || 'No summary',
+                            similarity: 1 - distance,
+                            timestamp: metadata.timestamp ? new Date(metadata.timestamp).getTime() : 0,
+                            event_id: metadata.event_id || eventResults.ids[0][i] as string,
+                            metadata: metadata
+                        });
+                    }
                 }
             }
 
-            console.log(`[MemoryRetrieval] Vector search found ${vectorResults.length} results`);
+            // Query Entities
+            const entityResults = await this.entitiesCollection.query({
+                queryTexts: [query],
+                nResults: limit
+            } as any);
+
+            if (entityResults.ids && entityResults.ids[0]) {
+                console.log(`[MemoryRetrieval] Raw entity results for query "${query}":`, JSON.stringify(entityResults.metadatas?.[0], null, 2));
+                for (let i = 0; i < entityResults.ids[0].length; i++) {
+                    const metadata = entityResults.metadatas?.[0]?.[i] as any;
+                    const distance = entityResults.distances?.[0]?.[i] || 1;
+
+                    if (metadata) {
+                        // Format entity result to look like a memory bullet
+                        // We use the entity name and observations as the summary
+                        const observations = metadata.observations ?
+                            (Array.isArray(metadata.observations) ? metadata.observations.join('. ') : metadata.observations)
+                            : '';
+
+                        const summary = `Entity: ${metadata.name} (${metadata.type}). ${observations}`;
+
+                        vectorResults.push({
+                            id: entityResults.ids[0][i] as string,
+                            summary: summary,
+                            similarity: 1 - distance,
+                            timestamp: metadata.updated_at ? new Date(metadata.updated_at).getTime() :
+                                (metadata.created_at ? new Date(metadata.created_at).getTime() :
+                                    (metadata.timestamp ? new Date(metadata.timestamp).getTime() : 0)),
+                            event_id: `entity:${entityResults.ids[0][i]}`, // Prefix to distinguish
+                            metadata: metadata
+                        });
+                    }
+                }
+            }
+
+            console.log(`[MemoryRetrieval] Vector search found ${vectorResults.length} results (Events + Entities)`);
             return vectorResults;
         } catch (error) {
             console.error('[MemoryRetrieval] Vector search error:', error);
@@ -139,34 +174,49 @@ export class MemoryRetrievalService {
         try {
             // Extract potential entity names from query (simple approach)
             const entities = this.extractPotentialEntities(query);
-
             if (entities.length === 0) {
                 return [];
             }
 
-            // Query Neo4j for events related to these entities
+            // Query Neo4j for events AND entities related to these entities
+            // Use UNION to combine results and avoid nested aggregation errors
             const cypher = `
-        MATCH (e:Entity)-[r:RELATED_TO|PART_OF]-(evt:Event)
-        WHERE e.name IN $entities
-        RETURN evt.id as event_id, 
-               evt.description as summary,
-               evt.created_at as timestamp,
-        ORDER BY relationship_count DESC
-        LIMIT $limit
+                MATCH (e:Entity)-[r:RELATED_TO|PART_OF]-(evt:Event)
+                WHERE e.name IN $entities
+                RETURN 'event' as type, 
+                       evt.id as id, 
+                       evt.description as summary, 
+                       toString(evt.created_at) as timestamp, 
+                       count(r) as strength
+
+                UNION
+
+                MATCH (e:Entity)-[r:RELATED_TO|PART_OF]-(related:Entity)
+                WHERE e.name IN $entities
+                RETURN 'entity' as type, 
+                       related.id as id, 
+                       'Entity: ' + related.name + ' (' + related.type + '). ' + coalesce(r.context, '') as summary, 
+                       toString(coalesce(related.updated_at, related.created_at, datetime())) as timestamp, 
+                       2 as strength
             `;
 
             const result = await session.run(cypher, { entities, limit: neo4j.int(limit) });
 
-            const graphResults: GraphResult[] = result.records.map(record => ({
-                event_id: record.get('event_id'),
-                summary: record.get('summary') || 'No summary',
-                timestamp: new Date(record.get('timestamp')).getTime(),
-                graphStrength: record.get('relationship_count').toNumber(),
-                similarity: 0.5 // Neutral similarity for graph results
-            }));
+            // Process rows directly (UNION returns multiple records)
+            const graphResults: GraphResult[] = result.records
+                .map(record => ({
+                    event_id: record.get('type') === 'event' ? record.get('id') : `entity:${record.get('id')}`,
+                    summary: record.get('summary') || 'No summary',
+                    timestamp: new Date(record.get('timestamp')).getTime(),
+                    graphStrength: Number(record.get('strength')),
+                    similarity: 0.5 // Neutral similarity for graph results
+                }))
+                .sort((a, b) => b.graphStrength - a.graphStrength)
+                .slice(0, limit);
 
             console.log(`[MemoryRetrieval] Graph search found ${graphResults.length} results for entities: ${entities.join(', ')} `);
             return graphResults;
+
         } catch (error) {
             console.error('[MemoryRetrieval] Graph search error:', error);
             return [];
@@ -192,8 +242,44 @@ export class MemoryRetrievalService {
     private rerankWithRecency(results: Array<VectorResult | GraphResult>): Array<any> {
         const now = Date.now();
 
-        const scored = results.map(r => {
-            const ageInDays = (now - r.timestamp) / (1000 * 60 * 60 * 24);
+        // 1. Group by Unique Key (Name + Type) to find the LATEST version of each entity
+        // This ensures that newer updates (e.g. "John is Friend") override older ones (e.g. "John is User")
+        // regardless of semantic similarity to the query.
+        const latestVersions = new Map<string, VectorResult | GraphResult>();
+
+        for (const r of results) {
+            // Create a unique key for deduplication
+            // Use name + type for stricter deduplication of entities
+            // Fallback to summary if name/type not available
+            let uniqueKey = r.summary.toLowerCase().trim();
+
+            if ('metadata' in r && r.metadata && r.metadata.name && r.metadata.type) {
+                uniqueKey = `${r.metadata.name}:${r.metadata.type}`.toLowerCase().trim();
+            }
+
+            const existing = latestVersions.get(uniqueKey);
+            if (!existing || r.timestamp > existing.timestamp) {
+                latestVersions.set(uniqueKey, r);
+            }
+        }
+
+        // 2. Calculate scores ONLY for the latest versions
+        const scored = Array.from(latestVersions.values()).map(r => {
+            let ageInDays = 0;
+            const isStaticFact = 'metadata' in r && r.metadata &&
+                ['email', 'phone', 'address', 'birthday', 'website', 'account'].includes(r.metadata.type);
+
+            if (isStaticFact) {
+                // Static facts (like emails) do not decay. They are valid forever.
+                ageInDays = 0;
+            } else if (r.timestamp > 0) {
+                ageInDays = (now - r.timestamp) / (1000 * 60 * 60 * 24);
+            } else {
+                // If timestamp is 0 (unknown), assume it's moderately recent (e.g., 7 days)
+                // to avoid penalizing it too heavily compared to brand new items,
+                // but still prefer explicitly recent items.
+                ageInDays = 7;
+            }
 
             // Exponential decay: recent items get higher scores
             // λ = 0.1 means items lose ~10% value per day
@@ -216,7 +302,7 @@ export class MemoryRetrievalService {
             };
         });
 
-        // Sort by final score descending
+        // 3. Sort by final score descending
         scored.sort((a, b) => b.score - a.score);
 
         // Log top results for debugging

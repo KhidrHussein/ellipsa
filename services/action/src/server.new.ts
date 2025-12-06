@@ -340,40 +340,8 @@ async function initializeServices(app: express.Express): Promise<Services> {
     app.use('/api/emails', emailRouter);
     console.log('[Server] Email routes mounted at /api/emails');
 
-    // OAuth callback route
-    app.get('/oauth2callback', async (req, res) => {
-        const code = req.query.code as string;
-
-        if (!code) {
-            return res.status(400).send('Authorization code is required');
-        }
-
-        try {
-            const oauth2Client = oauthService.getClient();
-            const { tokens } = await oauth2Client.getToken(code);
-            oauth2Client.setCredentials(tokens);
-
-            await emailService.connect();
-
-            const emailAutomationService = await createEmailAutomation({
-                emailService,
-                promptService,
-                memoryService: memoryService as any,
-                metrics,
-                checkInterval: 5 * 60 * 1000,
-                maxEmailsPerCheck: 10,
-            });
-
-            emailAutomationService.start();
-            services.emailAutomationService = emailAutomationService;
-
-            console.log('[Server] Gmail authenticated and email automation started');
-            return res.send('Successfully authenticated! You can close this window.');
-        } catch (error) {
-            console.error('[Server] OAuth callback error:', error);
-            return res.status(500).send('Authentication failed. Please try again.');
-        }
-    });
+    // OAuth callback route moved to startServer
+    console.log('[Server] OAuth callback route configured');
 
     // OAuth URL endpoint
     app.get('/auth/url', async (req, res) => {
@@ -667,6 +635,47 @@ async function startServer() {
         // Setup new action routes
         setupActionRoutes(app, services);
 
+        // OAuth callback route
+        app.get('/oauth2callback', async (req, res) => {
+            console.log('[Server] Received OAuth callback request');
+            const code = req.query.code as string;
+
+            if (!code) {
+                console.error('[Server] No authorization code in callback');
+                return res.status(400).send('Authorization code is required');
+            }
+
+            try {
+                const oauth2Client = oauthService.getClient();
+                const { tokens } = await oauth2Client.getToken(code);
+                oauth2Client.setCredentials(tokens);
+
+                if (services?.emailService) {
+                    await services.emailService.connect();
+
+                    // Initialize automation if not already running
+                    if (!services.emailAutomationService) {
+                        const emailAutomationService = await createEmailAutomation({
+                            emailService: services.emailService,
+                            promptService: new PromptService({ apiKey: process.env.OPENAI_API_KEY || '', defaultModel: 'gpt-4' }),
+                            memoryService: services.memoryService as any,
+                            metrics: services.metrics,
+                            checkInterval: 5 * 60 * 1000,
+                            maxEmailsPerCheck: 10,
+                        });
+                        emailAutomationService.start();
+                        services.emailAutomationService = emailAutomationService;
+                    }
+                }
+
+                console.log('[Server] Gmail authenticated and email automation started');
+                return res.send('Successfully authenticated! You can close this window.');
+            } catch (error) {
+                console.error('[Server] OAuth callback error:', error);
+                return res.status(500).send('Authentication failed. Please try again.');
+            }
+        });
+
         // Health check endpoint
         app.get('/health', (req, res) => {
             const oauth2Client = oauthService.getClient();
@@ -696,7 +705,7 @@ async function startServer() {
         });
 
         // Start listening
-        const PORT = process.env.PORT || 4004;
+        const PORT = 4004; // Force port 4004 to match Google OAuth redirect URI
         app.listen(PORT, () => {
             console.log('========================================');
             console.log(`🚀 Action Service running on port ${PORT}`);

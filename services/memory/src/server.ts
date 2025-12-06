@@ -43,7 +43,7 @@ class MemoryServer {
   private io: SocketIOServer;
   private knex!: Knex;
   private neo4jSession: any;
-  private chromaCollection: any;
+  private chromaCollections: { events: any; entities: any } | any;
   private eventModel!: EventModel;
   private entityModel!: EntityModel;
   private taskModel!: TaskModel;
@@ -63,6 +63,7 @@ class MemoryServer {
         methods: ['GET', 'POST'],
       },
     });
+    this.app.set('io', this.io);
   }
 
   async initialize() {
@@ -103,10 +104,10 @@ class MemoryServer {
       // Store connections
       this.knex = knex;
       this.neo4jSession = getSession();
-      this.chromaCollection = chromaCollections.events; // Using events collection for now
+      this.chromaCollections = chromaCollections;
 
       logger.info('All database connections established');
-      return { knex, neo4jSession: this.neo4jSession, chromaCollection: this.chromaCollection };
+      return { knex, neo4jSession: this.neo4jSession, chromaCollections: this.chromaCollections };
     } catch (error) {
       logger.error('Failed to initialize databases:', error);
       throw error;
@@ -118,13 +119,13 @@ class MemoryServer {
     this.eventModel = new EventModel(
       this.knex,
       this.neo4jSession,
-      this.chromaCollection
+      this.chromaCollections.events
     );
 
     this.entityModel = new EntityModel(
       this.knex,
       this.neo4jSession,
-      this.chromaCollection
+      this.chromaCollections.entities
     );
 
     this.taskModel = new TaskModel(
@@ -213,6 +214,20 @@ class MemoryServer {
     // Health check endpoint
     this.app.get('/health', (req, res) => {
       res.json({ status: 'ok', timestamp: new Date().toISOString() });
+    });
+
+    // Mount API router
+    this.app.use('/api', createApiRouter(
+      this.eventModel,
+      this.entityModel,
+      this.taskModel,
+      this.retrievalService
+    ));
+
+    // Redirect /events to /api/v1/events for compatibility with Action Service
+    this.app.use('/events', (req, res) => {
+      // Use 307 Temporary Redirect to preserve the method (POST) and body
+      res.redirect(307, '/api/v1/events');
     });
   }
 

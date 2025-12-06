@@ -60,6 +60,10 @@ export const EntityType = z.enum([
   'tool',
   'text',
   'audio',
+  'email',
+  'time',
+  'contact',
+  'user',
   'other',
 ]);
 
@@ -181,6 +185,7 @@ export class EntityModel extends BaseModel<BaseEntity, EntityInput, EntityUpdate
           metadatas: [{
             name: entity.name,
             type: entity.type,
+            updated_at: entity.updated_at ? new Date(entity.updated_at).toISOString() : new Date().toISOString(),
             ...(entity.metadata || {}),
           }],
           documents: [validDocument]
@@ -225,11 +230,16 @@ export class EntityModel extends BaseModel<BaseEntity, EntityInput, EntityUpdate
 
     try {
       const result = await this.embeddingFunction.generate([text]);
-      if (!result || !result.embeddings || !result.embeddings[0]) {
+      // console.log('Raw embedding result:', JSON.stringify(result).substring(0, 100));
+
+      // Handle both object return (older versions) and direct array return (newer versions)
+      const embeddings = Array.isArray(result) ? result : result?.embeddings;
+
+      if (!embeddings || !embeddings[0]) {
         console.warn('Embedding service returned no result for text:', text.substring(0, 50));
         return new Array(1536).fill(0); // Return zero vector as fallback
       }
-      return result.embeddings[0] as number[];
+      return embeddings[0] as number[];
     } catch (error) {
       console.error('Failed to generate embedding:', error);
       return new Array(1536).fill(0); // Return zero vector on error to allow processing to continue

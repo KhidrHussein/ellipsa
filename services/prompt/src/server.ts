@@ -193,8 +193,60 @@ app.post("/prompt/v1/assist", async (req, res) => {
   }
 });
 
+
+// Chat Endpoint
+app.post("/prompt/v1/chat", async (req: Request, res: Response) => {
+  try {
+    const { context, model = "gpt-3.5-turbo" } = req.body;
+
+    if (!context || !context.message) {
+      return res.status(400).json({ error: "Chat context with message is required" });
+    }
+
+    console.log(`[${new Date().toISOString()}] Generating chat response`);
+
+    // Import the template dynamically or ensure it's available
+    const { CHAT_ASSISTANT_PROMPT } = require("./lib/assistantPrompts");
+
+    // Replace placeholders
+    const memoryContext = context.memoryContext ? `Memory:\n${context.memoryContext.join('\n')}` : '';
+    const screenContext = context.screenContext ? `Screen:\n${context.screenContext}` : '';
+
+    const systemPrompt = CHAT_ASSISTANT_PROMPT
+      .replace('{memory_context}', memoryContext)
+      .replace('{screen_context}', screenContext);
+
+    const messages = [
+      { role: "system", content: systemPrompt },
+      ...(context.history || []).map((h: any) => ({ role: h.role, content: h.content })),
+      { role: "user", content: context.message }
+    ];
+
+    const completion = await openai.chat.completions.create({
+      model,
+      messages,
+      response_format: { type: "json_object" }
+    });
+
+    const content = completion.choices[0].message.content;
+    if (!content) {
+      throw new Error("Empty response from OpenAI");
+    }
+
+    const parsed = JSON.parse(content);
+    res.json(parsed);
+
+  } catch (error: any) {
+    console.error(`[${new Date().toISOString()}] Chat generation error:`, error);
+    res.status(500).json({
+      error: "chat_failed",
+      message: error.message
+    });
+  }
+});
+
 // Error handling middleware
-app.use((err: any, req: any, res: any, next: any) => {
+app.use((err: any, req: Request, res: Response, next: any) => {
   console.error(`[${new Date().toISOString()}] Unhandled error:`, err);
   res.status(500).json({
     error: "internal_server_error",

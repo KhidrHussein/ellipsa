@@ -4,12 +4,12 @@ import { google } from 'googleapis';
 import type { OAuth2Client } from 'google-auth-library';
 
 // Import types from local modules
-import type { 
-  EmailMessage, 
-  EmailSummary, 
-  DraftResponse, 
-  EmailSweepOptions, 
-  EmailSweepResult, 
+import type {
+  EmailMessage,
+  EmailSummary,
+  DraftResponse,
+  EmailSweepOptions,
+  EmailSweepResult,
   EmailAddress,
   EmailAttachment
 } from '../types';
@@ -100,8 +100,8 @@ const mockOAuthService: typeof oauthService = {
   getAuthUrl: () => '',
   getTokens: () => Promise.resolve({}),
   revokeToken: () => Promise.resolve(),
-  on: () => {},
-  off: () => {}
+  on: () => { },
+  off: () => { }
 };
 
 // Use mock services if the real ones aren't available
@@ -149,7 +149,7 @@ export class GmailEmailService implements IEmailService {
   ): GmailEmailService {
     try {
       const oauth2Client = oauthService.getClient();
-      
+
       // Verify we have the required scopes (just log a warning if not, don't fail)
       const requiredScopes = [
         'https://mail.google.com/',
@@ -160,7 +160,7 @@ export class GmailEmailService implements IEmailService {
 
       const currentScopes = oauth2Client.credentials.scope?.split(' ') || [];
       const hasAllScopes = requiredScopes.every(scope => currentScopes.includes(scope));
-      
+
       if (!hasAllScopes) {
         console.warn('Note: Missing required Gmail scopes. The service will connect when first used.');
       }
@@ -179,6 +179,7 @@ export class GmailEmailService implements IEmailService {
   ) {
     this.oAuth2Client = oauth2Client;
     this.gmail = google.gmail({ version: 'v1', auth: this.oAuth2Client });
+    console.log('[GmailEmailService] Initialized. Using mock OAuth?', (oauthService as any) === mockOAuthService);
   }
 
   // IEmailService implementation
@@ -186,36 +187,40 @@ export class GmailEmailService implements IEmailService {
   private connectionPromise: Promise<void> | null = null;
 
   private async ensureConnected(): Promise<void> {
+    console.log('[GmailEmailService] ensureConnected called. isConnected:', this._isConnected);
     if (this._isConnected) return;
-    
+
     if (!this.connectionPromise) {
       this.connectionPromise = this.connect();
     }
-    
+
     await this.connectionPromise;
   }
 
   async connect(): Promise<void> {
+    console.log('[GmailEmailService] connect called');
     if (this._isConnected) return;
-    
+
     try {
       // Verify the credentials are valid
+      console.log('[GmailEmailService] Verifying credentials...');
       const response = await this.withRetry(async () => {
         return this.gmail.users.getProfile({ userId: 'me' });
       });
-      
+      console.log('[GmailEmailService] getProfile response status:', response.status);
+
       if (!response.data.emailAddress) {
         throw new Error('Failed to get user profile');
       }
-      
+
       console.log(`Connected to Gmail as ${response.data.emailAddress}`);
       this._isConnected = true;
     } catch (error) {
       this.connectionPromise = null; // Reset so we can retry
       console.error('Failed to connect to Gmail:', error);
-      if (error instanceof Error && 
-          (error.message.includes('invalid_grant') || 
-           error.message.includes('No refresh token'))) {
+      if (error instanceof Error &&
+        (error.message.includes('invalid_grant') ||
+          error.message.includes('No refresh token'))) {
         // Token has been revoked, expired, or not available
         throw new Error('Authentication token is invalid or has been revoked. Please re-authenticate.');
       }
@@ -231,13 +236,13 @@ export class GmailEmailService implements IEmailService {
   async markAsRead(messageId: string): Promise<void> {
     await this.markMultipleAsRead([messageId]);
   }
-  
+
   // Optional: Add a separate method for batch operations
   async markMultipleAsRead(messageIds: string[]): Promise<void> {
     if (messageIds.length === 0) return;
-    
+
     await this.ensureConnected();
-    
+
     try {
       await this.gmail.users.messages.batchModify({
         userId: 'me',
@@ -254,7 +259,7 @@ export class GmailEmailService implements IEmailService {
 
   async isConnected(): Promise<boolean> {
     if (!this._isConnected) return false;
-    
+
     try {
       await this.gmail.users.getProfile({ userId: 'me' });
       return true;
@@ -283,24 +288,24 @@ export class GmailEmailService implements IEmailService {
 
       // Build Gmail search query
       const queryParts: string[] = [];
-      
+
       // Handle unread only filter
       if (options.unreadOnly) {
         queryParts.push('is:unread');
       }
-      
+
       if (options.labelIds?.length) {
         queryParts.push(options.labelIds.map(id => `label:${id}`).join(' OR '));
       }
-      
+
       if (options.from) {
         queryParts.push(`from:${options.from}`);
       }
-      
+
       if (options.after) {
         queryParts.push(`after:${Math.floor(options.after.getTime() / 1000)}`);
       }
-      
+
       if (options.before) {
         queryParts.push(`before:${Math.floor(options.before.getTime() / 1000)}`);
       }
@@ -323,7 +328,7 @@ export class GmailEmailService implements IEmailService {
         });
 
         const messageList = response.data.messages || [];
-        
+
         // Process messages in parallel with a limit on concurrency
         const batch = await Promise.all(
           messageList.slice(0, maxResults - processedCount).map(async (msg: gmail_v1.Schema$Message) => {
@@ -337,25 +342,25 @@ export class GmailEmailService implements IEmailService {
             }
           })
         );
-        
+
         // Add successfully fetched messages to the result
         for (const result of batch) {
           if (result) {
             messages.push(result);
             processedCount++;
-            
+
             // Stop if we've reached the limit
             if (processedCount >= maxResults) break;
           }
         }
 
         pageToken = response.data.nextPageToken as string | undefined;
-        
+
         // Stop if we've reached the limit or there are no more pages
         if (processedCount >= maxResults || !pageToken) {
           break;
         }
-        
+
       } while (true);
 
       return messages;
@@ -381,7 +386,7 @@ export class GmailEmailService implements IEmailService {
         ...options,
         maxResults: options.maxResults || options.limit || 10,
       });
-      
+
       for (const email of emails) {
         try {
           const summary = await this.summarizeEmail(email);
@@ -414,7 +419,7 @@ export class GmailEmailService implements IEmailService {
 
   async sendEmail(draft: DraftResponse): Promise<{ success: boolean; messageId?: string }> {
     await this.ensureConnected();
-    
+
     try {
       const message = this.createRawEmail({
         ...draft,
@@ -426,8 +431,8 @@ export class GmailEmailService implements IEmailService {
           size: att.size || (att.content ? att.content.length : 0)
         }))
       });
-      
-      const response = await this.withRetry(() => 
+
+      const response = await this.withRetry(() =>
         this.gmail.users.messages.send({
           userId: 'me',
           requestBody: {
@@ -451,16 +456,55 @@ export class GmailEmailService implements IEmailService {
     }
   }
 
+  async createDraft(draft: DraftResponse): Promise<{ success: boolean; id?: string; message?: EmailMessage }> {
+    await this.ensureConnected();
+
+    try {
+      const message = this.createRawEmail({
+        ...draft,
+        body: draft.body || draft.text || draft.html || '',
+        attachments: draft.attachments?.map(att => ({
+          ...att,
+          size: att.size || (att.content ? att.content.length : 0)
+        }))
+      });
+
+      const response = await this.withRetry(() =>
+        this.gmail.users.drafts.create({
+          userId: 'me',
+          requestBody: {
+            message: {
+              raw: message,
+            },
+          },
+        })
+      );
+
+      return {
+        success: true,
+        id: response.data.id || undefined,
+        message: response.data.message ? this.parseGmailMessage(response.data.message) : undefined
+      };
+    } catch (error) {
+      console.error('Error creating draft:', error);
+      // Check for auth errors specifically to propagate them
+      if (error instanceof Error && error.message.includes('Authentication token is invalid')) {
+        throw error;
+      }
+      return { success: false };
+    }
+  }
+
   // Helper method to send raw emails (used internally)
   private async sendRawEmail(email: Omit<EmailMessage, 'id' | 'date'>): Promise<{ id: string; threadId: string }> {
     const message = this.createRawEmail(email);
-    const response = await this.withRetry(() => 
+    const response = await this.withRetry(() =>
       this.gmail.users.messages.send({
         userId: 'me',
         requestBody: { raw: message },
       })
     );
-    
+
     return {
       id: response.data.id || '',
       threadId: response.data.threadId || '',
@@ -470,16 +514,16 @@ export class GmailEmailService implements IEmailService {
   private async withRetry<T>(fn: () => Promise<T>, retries = GmailEmailService.MAX_RETRIES): Promise<T> {
     try {
       return await fn();
-    } catch (error: any) {  
+    } catch (error: any) {
       if (retries <= 0) {
         throw error;
       }
-      
+
       // If it's an auth error, try to refresh the token
       if (error.code === 401) {
         await this.refreshAuthToken();
       }
-      
+
       await new Promise(resolve => setTimeout(resolve, GmailEmailService.RETRY_DELAY_MS));
       return this.withRetry(fn, retries - 1);
     }
@@ -494,7 +538,7 @@ export class GmailEmailService implements IEmailService {
 
   private async getEmails(limit: number = 10, pageToken?: string): Promise<{ emails: EmailMessage[]; nextPageToken?: string }> {
     await this.ensureConnected();
-    
+
     try {
       const response = await this.gmail.users.messages.list({
         userId: 'me',
@@ -559,10 +603,10 @@ export class GmailEmailService implements IEmailService {
     const references = getHeader('References')?.split(/\s+/) || [];
 
     // Process message parts
-    const processPart = (part: GmailMessagePart, parentMimeType?: string): { 
-      body: string; 
-      html: string; 
-      attachments: EmailAttachment[] 
+    const processPart = (part: GmailMessagePart, parentMimeType?: string): {
+      body: string;
+      html: string;
+      attachments: EmailAttachment[]
     } => {
       const result = {
         body: '',
@@ -571,7 +615,7 @@ export class GmailEmailService implements IEmailService {
       };
 
       const mimeType = part.mimeType || parentMimeType || '';
-      
+
       if (mimeType.startsWith('multipart/') && part.parts) {
         // Process each part of the multipart message
         for (const p of part.parts) {
@@ -582,10 +626,10 @@ export class GmailEmailService implements IEmailService {
         }
         return result;
       }
-      
+
       if (part.body?.data) {
         const content = Buffer.from(part.body.data, 'base64');
-        
+
         if (mimeType === 'text/plain') {
           result.body = content.toString('utf-8');
         } else if (mimeType === 'text/html') {
@@ -601,7 +645,7 @@ export class GmailEmailService implements IEmailService {
           });
         }
       }
-      
+
       return result;
     };
 
@@ -638,17 +682,17 @@ export class GmailEmailService implements IEmailService {
 
   private parseEmailAddress(address: string): EmailAddress | undefined {
     if (!address) return undefined;
-    
+
     // Handle "Display Name <email@example.com>" format
     const match = address.match(/^(?:(.*?)\s*<)?([^>]+)>?$/);
     if (!match) return undefined;
-    
+
     const [, name, email] = match;
     const emailValue = email?.trim();
-    
+
     // If the email part is empty, return undefined
     if (!emailValue) return undefined;
-    
+
     return {
       name: name ? name.trim() : undefined,
       address: emailValue.toLowerCase()
@@ -657,10 +701,10 @@ export class GmailEmailService implements IEmailService {
 
   private parseEmailAddresses(addresses: string | undefined | null): EmailAddress[] {
     if (!addresses) return [];
-    
+
     // Split by comma but ignore commas inside quotes
     const addressList = addresses.split(/,(?=(?:[^"]*"[^"]*")*[^"]*$)/);
-    
+
     return addressList
       .map(addr => this.parseEmailAddress(addr.trim()))
       .filter((addr): addr is EmailAddress => addr !== undefined);
@@ -698,16 +742,16 @@ export class GmailEmailService implements IEmailService {
     // Set content type based on available content
     const hasHtml = !!draft.html;
     const hasText = !!draft.text || !!draft.body;
-    
+
     let body = '';
-    
+
     if (hasHtml && hasText) {
       // Multipart/alternative for both HTML and plain text
       const boundary = `_${Math.random().toString(36).substring(2, 11)}_`;
       const textContent = draft.text || draft.body || '';
-      
+
       headers.push(`Content-Type: multipart/alternative; boundary="${boundary}"`);
-      
+
       body = [
         `--${boundary}`,
         'Content-Type: text/plain; charset=UTF-8',

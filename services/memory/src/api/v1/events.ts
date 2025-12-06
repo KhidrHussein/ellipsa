@@ -14,20 +14,27 @@ export function createEventsRouter(
   router.post('/', async (req, res) => {
     try {
       const eventData = req.body;
-      
+
       // Validate and create event
       const event = await eventModel.create({
         ...eventData,
         start_time: new Date(eventData.start_time),
         end_time: eventData.end_time ? new Date(eventData.end_time) : undefined,
       });
-      
+
       // Process participants - create entities first if they don't exist
       if (eventData.participants?.length) {
+        const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
         await Promise.all(
           eventData.participants.map(async (participant: any) => {
+            // Skip if entity_id is not a valid UUID (e.g. "unknown_user" or "provider:gmail")
+            if (!participant.entity_id || !uuidRegex.test(participant.entity_id)) {
+              return;
+            }
+
             const existingEntity = await entityModel.findById(participant.entity_id);
-            
+
             if (!existingEntity) {
               await entityModel.create({
                 name: participant.name || `Participant ${participant.entity_id}`,
@@ -60,10 +67,10 @@ export function createEventsRouter(
       // Emit WebSocket event
       req.app.get('io').emit('event:created', { eventId: event.id });
 
-      res.status(201).json({ 
+      res.status(201).json({
         success: true,
-        data: { 
-          event_id: event.id 
+        data: {
+          event_id: event.id
         },
         meta: {
           version: '1.0.0',
@@ -73,7 +80,7 @@ export function createEventsRouter(
     } catch (error: unknown) {
       console.error('Error creating event:', error);
       const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
-      res.status(500).json({ 
+      res.status(500).json({
         success: false,
         error: {
           code: 'EVENT_CREATION_FAILED',
@@ -93,7 +100,7 @@ export function createEventsRouter(
     try {
       const event = await eventModel.findById(req.params.id);
       if (!event) {
-        return res.status(404).json({ 
+        return res.status(404).json({
           success: false,
           error: {
             code: 'NOT_FOUND',
@@ -105,8 +112,8 @@ export function createEventsRouter(
           }
         });
       }
-      
-      res.json({ 
+
+      res.json({
         success: true,
         data: event,
         meta: {
@@ -117,7 +124,7 @@ export function createEventsRouter(
     } catch (error: unknown) {
       console.error('Error fetching event:', error);
       const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
-      res.status(500).json({ 
+      res.status(500).json({
         success: false,
         error: {
           code: 'FETCH_EVENT_FAILED',

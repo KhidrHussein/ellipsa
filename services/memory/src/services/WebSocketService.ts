@@ -98,6 +98,9 @@ export class WebSocketService {
             case 'process_event':
               await this.handleProcessEvent(ws, message);
               break;
+            case 'user_message':
+              await this.handleUserMessage(ws, message);
+              break;
             case 'subscribe':
               // Handle subscription logic
               break;
@@ -135,6 +138,42 @@ export class WebSocketService {
     };
     if (ws.readyState === 1) { // 1 = OPEN
       ws.send(JSON.stringify(errorMessage));
+    }
+  }
+
+  public async handleUserMessage(ws: ExtendedWebSocket, message: WebSocketMessage): Promise<void> {
+    const { content, metadata = {} } = message;
+    const { id, contextId } = metadata;
+    const messageId = id || `msg-${Date.now()}`;
+
+    if (!content) {
+      return this.sendError(ws, 'Missing content', { id: messageId });
+    }
+
+    try {
+      // Process the user message
+      const response = await this.eventProcessingService.processUserMessage(content, metadata);
+
+      // Send response back to client
+      if (ws.readyState === 1) {
+        ws.send(JSON.stringify({
+          type: 'assistant_message',
+          content: response.message,
+          id: `resp-${Date.now()}`,
+          timestamp: new Date().toISOString(),
+          contextId: contextId,
+          metadata: {
+            actionPlan: response.actionPlan,
+            suggestedActions: response.suggestedActions
+          }
+        }));
+      }
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      logger.error('Error processing user message:', errorMessage);
+      this.sendError(ws, `Failed to process message: ${errorMessage}`, {
+        id: messageId
+      });
     }
   }
 

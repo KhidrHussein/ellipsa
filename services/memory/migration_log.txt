@@ -1,0 +1,40 @@
+Requiring external module [35mts-node/register[39m
+Using environment: [35mdevelopment[39m
+[
+  {
+    sql: 'select * from information_schema.tables where table_name = ? and table_schema = current_schema()',
+    bindings: [ 'knex_migrations' ],
+    output: [Function: output]
+  }
+]
+[
+  {
+    sql: 'select * from information_schema.tables where table_name = ? and table_schema = current_schema()',
+    bindings: [ 'knex_migrations_lock' ],
+    output: [Function: output]
+  }
+]
+{
+  method: 'select',
+  options: {},
+  timeout: false,
+  cancelOnTimeout: false,
+  bindings: [],
+  __knexQueryUid: '8qeZCnqYxbfqIj8OXZ2iL',
+  sql: 'select * from "knex_migrations_lock"'
+}
+{
+  method: 'select',
+  options: {},
+  timeout: false,
+  cancelOnTimeout: false,
+  bindings: [],
+  __knexQueryUid: 'iIXWUS0P8gLEX5jM3XG6b',
+  sql: 'select "name" from "knex_migrations" order by "id" asc'
+}
+[31mThe migration directory is corrupt, the following files are missing: 20251204140000_add_content_to_events.ts[39m
+[31mError: The migration directory is corrupt, the following files are missing: 20251204140000_add_content_to_events.ts
+    at validateMigrationList (C:\Users\Hp\ellipsa\node_modules\.pnpm\knex@3.1.0_better-sqlite3@9.6.0_pg@8.16.3_sqlite3@5.1.7\node_modules\knex\lib\migrations\migrate\Migrator.js:567:11)
+    at Migrator.latest (C:\Users\Hp\ellipsa\node_modules\.pnpm\knex@3.1.0_better-sqlite3@9.6.0_pg@8.16.3_sqlite3@5.1.7\node_modules\knex\lib\migrations\migrate\Migrator.js:69:7)
+    at processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async Command.<anonymous> (C:\Users\Hp\ellipsa\node_modules\.pnpm\knex@3.1.0_better-sqlite3@9.6.0_pg@8.16.3_sqlite3@5.1.7\node_modules\knex\bin\cli.js:250:32)[39m

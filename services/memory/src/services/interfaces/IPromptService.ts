@@ -38,8 +38,22 @@ export interface AssistanceResponse {
     clarifying_questions?: string[];
 }
 
+export interface ChatContext {
+    message: string;
+    history: Array<{ role: 'user' | 'assistant'; content: string }>;
+    memoryContext?: string[];
+    screenContext?: string;
+}
+
+export interface ChatResponse {
+    message: string;
+    actionPlan?: any; // JSON action plan for ActionService
+    suggestedActions?: string[];
+}
+
 export interface IPromptService {
     extractStructuredData(content: string): Promise<ExtractionResult>;
     generate(prompt: string, options?: any): Promise<string>;
     generateAssistance(context: AssistanceContext): Promise<AssistanceResponse>;
+    generateChatResponse(context: ChatContext): Promise<ChatResponse>;
 }

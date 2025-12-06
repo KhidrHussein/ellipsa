@@ -1,7 +1,7 @@
 import { Knex } from 'knex';
 import { z, type ZodType } from 'zod';
 import { BaseModel, type PaginationOptions, type PaginatedResult } from './BaseModel';
-import { Session } from 'neo4j-driver';
+import { Session, Transaction } from 'neo4j-driver';
 import { getEmbeddingFunction } from '../db/vector/chroma';
 import type { BaseModel as BaseModelType } from './BaseModel';
 
@@ -15,6 +15,9 @@ export const EventType = z.enum([
   'system_event',
   'reminder',
   'task',
+  'user_message',
+  'assistant_message',
+  'action_execution',
   'other',
 ]);
 
@@ -22,7 +25,7 @@ export type EventType = z.infer<typeof EventType>;
 
 // Participant schema for events
 export const ParticipantSchema = z.object({
-  entity_id: z.string().uuid(),
+  entity_id: z.string(),
   role: z.string().optional(),
   metadata: z.record(z.any()).optional(),
 });
@@ -41,6 +44,7 @@ export const EventInputSchema = z.object({
   source: z.string().optional(),
   source_id: z.string().optional(),
   metadata: z.record(z.any()).default({}),
+  content: z.string().optional(),
   embedding: z.array(z.number()).optional(),
 });
 
@@ -59,6 +63,7 @@ const BaseEventSchema = z.object({
   source: z.string().optional(),
   source_id: z.string().optional(),
   metadata: z.record(z.any()).default({}),
+  content: z.string().optional(),
   created_at: z.union([z.string(), z.date()]),
   updated_at: z.union([z.string(), z.date()]),
   embedding: z.array(z.number()).optional(),
@@ -105,10 +110,10 @@ export class EventModel extends BaseModel<BaseEvent, EventInput, EventUpdate> {
     const embedding = await this.generateEmbedding(textToEmbed);
 
     // Create the event with the generated embedding
-    // We must stringify the embedding array to ensure Knex treats it as JSON
-    // and not as a Postgres Array (which uses curly braces {})
     const eventData = {
       ...data,
+      participants: JSON.stringify(data.participants) as any,
+      metadata: JSON.stringify(data.metadata) as any,
       embedding: JSON.stringify(embedding) as any,
     };
 
@@ -117,8 +122,57 @@ export class EventModel extends BaseModel<BaseEvent, EventInput, EventUpdate> {
       .insert(eventData)
       .returning('*');
 
-    return this.toEvent(result);
+    const event = this.toEvent(result);
+
+    try {
+      // 1. Store in ChromaDB (Vector)
+      if (this.collection) {
+        await this.collection.add({
+          ids: [event.id],
+          embeddings: [embedding],
+          metadatas: [{
+            type: event.type,
+            title: event.title,
+            timestamp: new Date(event.start_time).toISOString(),
+            event_id: event.id,
+            // Store a summary for display in search results
+            summary: textToEmbed.substring(0, 1000)
+          }],
+          documents: [textToEmbed || ' ']
+        });
+        // console.log('[EventModel] Added event to ChromaDB:', event.id);
+      }
+
+      // 2. Store in Neo4j (Graph)
+      if (this.neo4jSession) {
+        await this.neo4jSession.writeTransaction((tx: Transaction) =>
+          tx.run(
+            `CREATE (e:Event {
+              id: $id,
+              type: $type,
+              title: $title,
+              start_time: $start_time,
+              created_at: datetime()
+            })`,
+            {
+              id: event.id,
+              type: event.type,
+              title: event.title,
+              start_time: new Date(event.start_time).toISOString()
+            }
+          )
+        );
+        // console.log('[EventModel] Added event to Neo4j:', event.id);
+      }
+    } catch (error) {
+      console.error('[EventModel] Failed to sync to Vector/Graph store:', error);
+      // We don't fail the request if secondary storage fails, but we log it
+    }
+
+    return event;
   }
+
+  // ... (findAll and findById remain unchanged)
 
   /**
    * Find all events with optional filtering
@@ -201,17 +255,69 @@ export class EventModel extends BaseModel<BaseEvent, EventInput, EventUpdate> {
 
     // If title or description changed, update the embedding
     const updatedData = { ...data };
+    let embedding: number[] | undefined;
+
     if (data.title || data.description) {
       const title = data.title || existing.title;
       const description = data.description || existing.description || '';
       const textToEmbed = `${title} ${description}`.trim();
-      const embedding = await this.generateEmbedding(textToEmbed);
+      embedding = await this.generateEmbedding(textToEmbed);
       updatedData.embedding = JSON.stringify(embedding) as any;
     }
 
     // Call the parent's update method
     const result = await super.update(id, updatedData);
-    return result ? this.toEvent(result) : null;
+    const updatedEvent = result ? this.toEvent(result) : null;
+
+    if (updatedEvent) {
+      try {
+        // 1. Update ChromaDB
+        if (this.collection && (data.title || data.description)) {
+          const textToEmbed = `${updatedEvent.title} ${updatedEvent.description || ''}`.trim();
+          // In ChromaDB, upsert effectively updates
+          await this.collection.upsert({
+            ids: [updatedEvent.id],
+            embeddings: embedding ? [embedding] : undefined,
+            metadatas: [{
+              type: updatedEvent.type,
+              title: updatedEvent.title,
+              timestamp: new Date(updatedEvent.start_time).toISOString(),
+              event_id: updatedEvent.id,
+              summary: textToEmbed.substring(0, 1000)
+            }],
+            documents: [textToEmbed || ' ']
+          });
+        }
+
+        // 2. Update Neo4j
+        if (this.neo4jSession) {
+          const updateFields: string[] = [];
+          const params: any = { id: updatedEvent.id };
+
+          if (data.title) {
+            updateFields.push('e.title = $title');
+            params.title = data.title;
+          }
+          if (data.type) {
+            updateFields.push('e.type = $type');
+            params.type = data.type;
+          }
+
+          if (updateFields.length > 0) {
+            await this.neo4jSession.writeTransaction((tx: Transaction) =>
+              tx.run(
+                `MATCH (e:Event {id: $id}) SET ${updateFields.join(', ')}`,
+                params
+              )
+            );
+          }
+        }
+      } catch (error) {
+        console.error('[EventModel] Failed to sync update to Vector/Graph store:', error);
+      }
+    }
+
+    return updatedEvent;
   }
 
   /**
@@ -222,9 +328,22 @@ export class EventModel extends BaseModel<BaseEvent, EventInput, EventUpdate> {
       // Delete from the database
       const count = await this.db(this.tableName).where({ id }).del();
 
-      // If you need to delete from vector/graph store, add that logic here
-      // Example:
-      // await this.collection.delete(id);
+      if (count > 0) {
+        // Sync Delete to Vector/Graph
+        try {
+          if (this.collection) {
+            await this.collection.delete({ ids: [id] });
+          }
+
+          if (this.neo4jSession) {
+            await this.neo4jSession.writeTransaction((tx: Transaction) =>
+              tx.run(`MATCH (e:Event {id: $id}) DETACH DELETE e`, { id })
+            );
+          }
+        } catch (error) {
+          console.error('[EventModel] Failed to sync delete to Vector/Graph store:', error);
+        }
+      }
 
       return count > 0;
     } catch (error) {
@@ -253,6 +372,7 @@ export class EventModel extends BaseModel<BaseEvent, EventInput, EventUpdate> {
       source: eventData.source,
       source_id: eventData.source_id,
       metadata: eventData.metadata || {},
+      content: eventData.content,
       created_at: eventData.created_at,
       updated_at: eventData.updated_at,
       embedding: eventData.embedding,
@@ -277,6 +397,7 @@ export class EventModel extends BaseModel<BaseEvent, EventInput, EventUpdate> {
       source: eventData.source,
       source_id: eventData.source_id,
       metadata: eventData.metadata || {},
+      content: eventData.content,
       created_at: eventData.created_at,
       updated_at: eventData.updated_at,
       embedding: eventData.embedding,

@@ -132,6 +132,11 @@ export class GmailProvider implements IActionProvider {
             inReplyTo: args.threadId, // Using threadId as inReplyTo for simplicity if provided
         };
 
+        // Check authentication status first
+        if (!await this.emailService.isConnected()) {
+            throw new Error('Authentication required. Please log in to Google.');
+        }
+
         const result = await this.emailService.sendEmail(draft);
 
         if (!result.success) {
@@ -150,25 +155,36 @@ export class GmailProvider implements IActionProvider {
     }
 
     private async draftEmail(action: Action): Promise<StepResult> {
-        // For now, draft_email just prepares the object, but GmailEmailService doesn't have a "save draft" method exposed
-        // The design says "draft email via webmail" or "return draft".
-        // We will just return the draft object as success for now, or we could implement saveDraft in GmailEmailService later.
-        // Re-reading GmailEmailService, it has `draftResponse` but that generates a draft from context.
-        // It doesn't seem to have a `createDraft` method that calls the Gmail API to save a draft.
-        // However, `MemoryServiceClient` has `createDraft`.
-        // Let's assume for this phase we just return the constructed draft.
+        if (!this.emailService) throw new Error('Service not initialized');
 
         const args = action.args as any;
+        if (!args.to) {
+            throw new Error('Missing required arguments: to');
+        }
+
+        // Check authentication status first
+        if (!await this.emailService.isConnected()) {
+            throw new Error('Authentication required. Please log in to Google to create a draft.');
+        }
+
+        const draft: DraftResponse = {
+            to: (Array.isArray(args.to) ? args.to : [args.to]).map((email: string) => ({ address: email })),
+            subject: args.subject,
+            text: args.body,
+        };
+
+        const result = await this.emailService.createDraft(draft);
+
+        if (!result.success) {
+            throw new Error('Failed to create draft');
+        }
+
         return {
             op: action.op,
             status: 'success',
             output: {
-                draft: {
-                    to: args.to,
-                    subject: args.subject,
-                    body: args.context?.additionalContext || '',
-                },
-                note: 'Draft created in memory (not saved to Gmail yet)',
+                draftId: result.id,
+                note: 'Draft created in Gmail',
             },
         };
     }

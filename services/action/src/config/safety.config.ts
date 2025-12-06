@@ -108,7 +108,7 @@ export function getDevSafetyConfig(): SafetyConfig {
             patterns: [],
         },
         approvalRequired: {
-            destructive: true, // Still require approval for destructive actions in dev
+            destructive: false, // Disable approval for destructive actions in dev for testing
             newDomains: false, // Don't require approval for new domains in dev
             allActions: false,
         },

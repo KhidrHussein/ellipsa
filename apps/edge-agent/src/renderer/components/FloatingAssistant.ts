@@ -193,7 +193,56 @@ class FloatingAssistantUI {
           <div class="message-timestamp">Just now</div>
         </div>
       </div>
+      <div class="input-area">
+        <input type="text" class="chat-input" placeholder="Type a message..." />
+        <button class="send-button">➤</button>
+      </div>
     `;
+
+    // Add styles for input area
+    const inputStyle = document.createElement('style');
+    inputStyle.textContent = `
+      .input-area {
+        padding: 12px;
+        background: #f9f9f9;
+        border-top: 1px solid #eee;
+        display: flex;
+        gap: 8px;
+      }
+      .chat-input {
+        flex: 1;
+        padding: 8px 12px;
+        border: 1px solid #ddd;
+        border-radius: 20px;
+        outline: none;
+        font-size: 14px;
+      }
+      .chat-input:focus {
+        border-color: #4a90e2;
+      }
+      .send-button {
+        background: #4a90e2;
+        color: white;
+        border: none;
+        width: 32px;
+        height: 32px;
+        border-radius: 50%;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 14px;
+        transition: background 0.2s;
+      }
+      .send-button:hover {
+        background: #357abd;
+      }
+      .send-button:disabled {
+        background: #ccc;
+        cursor: not-allowed;
+      }
+    `;
+    document.head.appendChild(inputStyle);
 
     // Assemble the UI
     this.container.appendChild(this.button);
@@ -254,6 +303,33 @@ class FloatingAssistantUI {
         this.closePanel();
       }
     });
+
+    // Chat input handling
+    const input = this.notificationPanel.querySelector('.chat-input') as HTMLInputElement;
+    const sendBtn = this.notificationPanel.querySelector('.send-button') as HTMLButtonElement;
+
+    const sendMessage = () => {
+      const text = input.value.trim();
+      if (text) {
+        this.handleUserInput(text);
+        input.value = '';
+      }
+    };
+
+    sendBtn?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      sendMessage();
+    });
+
+    input?.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        sendMessage();
+      }
+      e.stopPropagation(); // Prevent bubbling to document
+    });
+
+    // Focus input when panel opens
+    // We'll handle this in openPanel
   }
 
   private setupRealtimeListeners(): void {
@@ -441,6 +517,9 @@ class FloatingAssistantUI {
 
     setTimeout(() => {
       this.button.style.transform = '';
+      // Focus input
+      const input = this.notificationPanel.querySelector('.chat-input') as HTMLInputElement;
+      input?.focus();
     }, 200);
   }
 
@@ -646,9 +725,10 @@ class FloatingAssistantUI {
     this.updateTypingIndicator();
 
     // Send message to realtime service
-    realtimeService.sendMessage('user_message', {
-      text,
-      contextId: this.activeContextId
+    realtimeService.sendMessage('user_message', text, {
+      metadata: {
+        contextId: this.activeContextId
+      }
     });
 
     // Auto-hide typing indicator after timeout

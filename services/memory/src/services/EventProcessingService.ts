@@ -12,7 +12,7 @@ const VALID_ENTITY_TYPES = [
   'product', 'tool', 'file', 'concept', 'service', 'other'
 ];
 
-interface EventProcessingServiceOptions {
+export interface EventProcessingServiceOptions {
   promptService: IPromptService;
   eventModel: EventModel;
   entityModel: EntityModel;
@@ -29,16 +29,16 @@ export class EventProcessingService {
   private neo4jSession: Session;
   private transcriptionService?: TranscriptionService;
   private memoryRetrievalService?: MemoryRetrievalService;
-  private processingQueue: Array<() => Promise<void>> = [];
+  private processingQueue: (() => Promise<void>)[] = [];
   private isProcessing = false;
 
-  // Screen context cache for OCR/ASR alignment
-  private screenContextCache: { content: string; timestamp: number } | null = null;
-  private readonly SCREEN_CONTEXT_TTL = 30000; // 30 seconds
+  // Cache for screen context to avoid re-reading for every event
+  private screenContextCache: { content: string, timestamp: number } | null = null;
+  private readonly SCREEN_CONTEXT_TTL = 5000; // 5 seconds
 
-  // Short-term history to prevent repetitive responses
-  private recentHistory: string[] = [];
-  private readonly MAX_HISTORY_LENGTH = 5;
+  // History for chat context
+  private recentHistory: Array<{ role: 'user' | 'assistant', content: string }> = [];
+  private readonly MAX_HISTORY_LENGTH = 10;
 
   constructor(options: EventProcessingServiceOptions & { transcriptionService?: TranscriptionService }) {
     this.promptService = options.promptService;
@@ -98,7 +98,7 @@ export class EventProcessingService {
                   screenContext,
                   activityType: metadata.activityType || 'general',
                   memoryBullets,
-                  recentHistory: this.recentHistory
+                  recentHistory: this.recentHistory.map(h => `${h.role}: ${h.content}`)
                 });
 
                 // Also extract structured data for entities and action items
@@ -110,7 +110,7 @@ export class EventProcessingService {
                   extraction.summary = assistance.message;
 
                   // Update history
-                  this.recentHistory.push(assistance.message);
+                  this.recentHistory.push({ role: 'assistant', content: assistance.message });
                   if (this.recentHistory.length > this.MAX_HISTORY_LENGTH) {
                     this.recentHistory.shift();
                   }
@@ -324,6 +324,203 @@ export class EventProcessingService {
           console.error('Error updating graph relationships:', err);
         }
       }
+    }
+  }
+
+  async processUserMessage(text: string, metadata: any = {}): Promise<any> {
+    try {
+      console.log(`[EventProcessing] Processing user message: "${text}"`);
+
+      // 1. Retrieve relevant memory context
+      let memoryContext: string[] = [];
+      if (this.memoryRetrievalService) {
+        try {
+          const memoryResults = await this.memoryRetrievalService.retrieveRelevantContext(text, 15);
+          memoryContext = memoryResults.map(m => `[${m.timestamp.toISOString()}] ${m.text}`);
+        } catch (error) {
+          console.error('[EventProcessing] Error retrieving memory context:', error);
+        }
+      }
+
+      // 2. Get screen context
+      let screenContext = '';
+      if (this.screenContextCache) {
+        const age = Date.now() - this.screenContextCache.timestamp;
+        if (age < this.SCREEN_CONTEXT_TTL) {
+          screenContext = this.screenContextCache.content;
+        }
+      }
+
+      // 3. Generate response using Prompt Service
+      const chatContext = {
+        message: text,
+        history: this.recentHistory,
+        memoryContext,
+        screenContext
+      };
+
+      // Persist user message as an event
+      const event = await this.eventModel.create({
+        type: 'user_message',
+        title: 'User Message',
+        start_time: new Date(),
+        source: 'chat',
+        content: text,
+        participants: [],
+        metadata: { ...metadata, role: 'user' }
+      });
+
+      // Extract entities from user message asynchronously
+      this.promptService.extractStructuredData(text).then(async (extraction) => {
+        if (extraction.entities && extraction.entities.length > 0) {
+          console.log(`[EventProcessing] Extracted ${extraction.entities.length} entities from user message`);
+          for (const entity of extraction.entities) {
+            await this.entityModel.create({
+              name: entity.value,
+              type: entity.type as EntityType,
+              description: entity.context || text,
+              metadata: {
+                source: 'chat',
+                confidence: 1.0,
+                observations: [entity.context || text]
+              }
+            });
+          }
+
+          // Link entities if multiple are found (heuristic: co-occurrence)
+          if (extraction.entities.length > 1) {
+            await this.updateGraphRelationships(event.id, extraction);
+          }
+        }
+      }).catch(err => {
+        console.error('[EventProcessing] Entity extraction failed:', err);
+        if (err.originalError && err.originalError.issues) {
+          console.error('[EventProcessing] Validation issues:', JSON.stringify(err.originalError.issues, null, 2));
+        }
+      });
+
+      // We need to cast promptService to any because we just added generateChatResponse to the interface
+      // but TypeScript might not pick it up immediately in this file context if not recompiled
+      const response = await (this.promptService as any).generateChatResponse(chatContext);
+
+      // 4. Execute action plan if present and valid
+      if (response.actionPlan && Object.keys(response.actionPlan).length > 0 && response.actionPlan.action) {
+        console.log('[EventProcessing] Executing action plan:', response.actionPlan);
+        try {
+          await this.executeActionPlan(response.actionPlan);
+          response.message += "\n\n(Action executed successfully)";
+        } catch (error) {
+          console.error('[EventProcessing] Action execution failed:', error);
+          response.message += `\n\n(Action failed: ${error instanceof Error ? error.message : String(error)})`;
+        }
+      }
+
+      // Update history
+      this.recentHistory.push({ role: 'user', content: text });
+      this.recentHistory.push({ role: 'assistant', content: response.message });
+
+      while (this.recentHistory.length > this.MAX_HISTORY_LENGTH) {
+        this.recentHistory.shift();
+      }
+
+      // Persist assistant response
+      await this.eventModel.create({
+        type: 'assistant_message',
+        title: 'Assistant Message',
+        start_time: new Date(),
+        source: 'chat',
+        content: response.message,
+        participants: [],
+        metadata: {
+          role: 'assistant',
+          actionPlan: response.actionPlan
+        }
+      });
+
+      return response;
+
+    } catch (error) {
+      console.error('[EventProcessing] Error processing user message:', error);
+      throw error;
+    }
+  }
+
+  private mapActionToSchema(actionPlan: any): any {
+    const { action, parameters } = actionPlan;
+
+    if (!action) {
+      throw new Error('Invalid action plan: "action" field is missing');
+    }
+
+    if (action === 'sendEmail' || action === 'send_email') {
+      return {
+        op: 'send_email',
+        args: {
+          to: [parameters.recipient || parameters.to || parameters.recipient_email],
+          subject: parameters.subject,
+          body: parameters.message || parameters.body
+        }
+      };
+    }
+
+    if (action === 'draftEmail' || action === 'draft_email') {
+      return {
+        op: 'draft_email',
+        args: {
+          to: [parameters.recipient || parameters.to || parameters.recipient_email],
+          subject: parameters.subject,
+          body: parameters.message || parameters.body
+        }
+      };
+    }
+
+    // Default mapping for other actions (assuming simple snake_case conversion if needed)
+    // This might need more specific mappings for other actions
+    return {
+      op: action.replace(/([A-Z])/g, "_$1").toLowerCase(), // camelCase to snake_case
+      args: parameters
+    };
+  }
+
+  private async executeActionPlan(actionPlan: any): Promise<void> {
+    const actionServiceUrl = process.env.ACTION_SERVICE_URL || 'http://localhost:4004'; // Default to port 4004
+    const url = `${actionServiceUrl}/action/v1/execute`;
+
+    const mappedAction = this.mapActionToSchema(actionPlan);
+
+    let response;
+    try {
+      response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ plan: [mappedAction] })
+      });
+    } catch (error) {
+      console.error('[EventProcessing] Failed to connect to Action Service:', error);
+      throw new Error(`Failed to connect to Action Service at ${actionServiceUrl}. Is it running?`);
+    }
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Action Service returned ${response.status}: ${errorText}`);
+    }
+
+    const result = await response.json();
+    if (result.status === 'failed' || result.status === 'partial') {
+      const errors = result.steps
+        .filter((s: any) => s.status === 'failed')
+        .map((s: any) => `${s.op}: ${s.error}`)
+        .join(', ');
+
+      let errorMessage = `Action execution failed: ${errors}`;
+      if (errors.includes('Authentication required')) {
+        errorMessage += ` Please visit ${actionServiceUrl}/auth/url to log in.`;
+      }
+      throw new Error(errorMessage);
+    } else if (result.status === 'pending_approval') {
+      throw new Error('Action requires approval (pending_approval). Please check the server logs.');
     }
   }
 

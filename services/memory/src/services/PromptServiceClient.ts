@@ -1,4 +1,4 @@
-import { IPromptService, ExtractionResult, AssistanceContext, AssistanceResponse } from './interfaces/IPromptService';
+import { IPromptService, ExtractionResult, AssistanceContext, AssistanceResponse, ChatContext, ChatResponse } from './interfaces/IPromptService';
 import { logger } from '../utils/logger';
 
 export class PromptServiceClient implements IPromptService {
@@ -149,6 +149,35 @@ export class PromptServiceClient implements IPromptService {
         } catch (error) {
             logger.error(`Failed to call Prompt Service at ${url}:`, error);
             throw error;
+        }
+    }
+    async generateChatResponse(context: ChatContext): Promise<ChatResponse> {
+        const url = `${this.baseUrl}/prompt/v1/chat`;
+
+        try {
+            const response = await fetch(url, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    context,
+                    model: this.defaultModel
+                })
+            });
+
+            if (!response.ok) {
+                const errorText = await response.text();
+                throw new Error(`Prompt Service returned ${response.status}: ${errorText}`);
+            }
+
+            const data = await response.json();
+            return data;
+        } catch (error) {
+            logger.error(`Failed to call Prompt Service at ${url}:`, error);
+            return {
+                message: "I'm sorry, I encountered an error while processing your request.",
+            };
         }
     }
 }
