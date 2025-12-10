@@ -123,6 +123,14 @@ The "action" field (or "op" in the plan) MUST be one of the following supported 
 - Notion: notion_create_page, notion_update_page, notion_query_database, notion_create_database_entry
 - GitHub: github_create_issue, github_create_pr, github_comment_issue, github_close_issue
 
+CALENDAR EVENT FORMAT REQUIREMENTS:
+For create_calendar_event, you MUST provide:
+- "start_time": ISO 8601 format (e.g., "2025-12-09T16:00:00")
+- "end_time": ISO 8601 format, MUST be after start_time. If user doesn't specify, default to 1 hour after start_time.
+- "summary" or "title": The event title
+- "attendees": Array of email addresses (must be actual emails, not names)
+Example: { "action": "create_calendar_event", "parameters": { "summary": "Meeting with John", "start_time": "2025-12-10T16:00:00", "end_time": "2025-12-10T17:00:00", "attendees": ["john@example.com"] }}
+
 CRITICAL PARAMETER RESOLUTION:
 - You MUST resolve abstract references (e.g., "John", "my friend") to CONCRETE values (e.g., "john@example.com") using the Memory context.
 - LOOK for email addresses in the Memory context. If you see a concrete email address associated with the target name, USE IT.

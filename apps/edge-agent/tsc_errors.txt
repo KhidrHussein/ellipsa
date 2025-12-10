@@ -1,0 +1,318 @@
+﻿src/renderer/components/FloatingAssistant.ts(1,63): error TS6307: File 'C:/Users/Hp/ellipsa/apps/edge-agent/src/services/RealtimeService.ts' is not listed within the file list of project 'C:/Users/Hp/ellipsa/apps/edge-agent/tsconfig.renderer.json'. Projects must list all files or use an 'include' pattern.
+  The file is in the program because:
+    Imported via '../../services/RealtimeService' from file 'C:/Users/Hp/ellipsa/apps/edge-agent/src/renderer/components/FloatingAssistant.ts'
+    Imported via '../../services/RealtimeService' from file 'C:/Users/Hp/ellipsa/apps/edge-agent/src/renderer/contexts/ServiceContext.tsx'
+    Imported via '../services/RealtimeService' from file 'C:/Users/Hp/ellipsa/apps/edge-agent/src/renderer/chat.tsx'
+    Imported via '../services/RealtimeService' from file 'C:/Users/Hp/ellipsa/apps/edge-agent/src/renderer/index.tsx'
+src/renderer/components/FloatingAssistant.ts(285,27): error TS2339: Property 'showContextMenu' does not exist on type '{ showReminder: (data: any) => void; openEmail: (id: string) => void; startAudioCapture: () => Promise<void>; stopAudioCapture: () => Promise<void>; onAudioLevel: (callback: (level: number) => void) => () => void; ... 13 more ...; cleanup: () => void; }'.
+src/renderer/components/FloatingAssistant.ts(286,24): error TS2339: Property 'showContextMenu' does not exist on type '{ showReminder: (data: any) => void; openEmail: (id: string) => void; startAudioCapture: () => Promise<void>; stopAudioCapture: () => Promise<void>; onAudioLevel: (callback: (level: number) => void) => () => void; ... 13 more ...; cleanup: () => void; }'.
+src/renderer/components/FloatingAssistant.ts(358,38): error TS2345: Argument of type '(isObserving: boolean) => void' is not assignable to parameter of type '(status: { observing: boolean; }) => void'.
+  Types of parameters 'isObserving' and 'status' are incompatible.
+    Type '{ observing: boolean; }' is not assignable to type 'boolean'.
+src/renderer/components/FloatingAssistant.ts(454,25): error TS2339: Property 'window' does not exist on type '{ showReminder: (data: any) => void; openEmail: (id: string) => void; startAudioCapture: () => Promise<void>; stopAudioCapture: () => Promise<void>; onAudioLevel: (callback: (level: number) => void) => () => void; ... 13 more ...; cleanup: () => void; }'.
+src/renderer/components/FloatingAssistant.ts(455,22): error TS2339: Property 'window' does not exist on type '{ showReminder: (data: any) => void; openEmail: (id: string) => void; startAudioCapture: () => Promise<void>; stopAudioCapture: () => Promise<void>; onAudioLevel: (callback: (level: number) => void) => () => void; ... 13 more ...; cleanup: () => void; }'.
+src/renderer/components/FloatingAssistant.ts(488,25): error TS2339: Property 'window' does not exist on type '{ showReminder: (data: any) => void; openEmail: (id: string) => void; startAudioCapture: () => Promise<void>; stopAudioCapture: () => Promise<void>; onAudioLevel: (callback: (level: number) => void) => () => void; ... 13 more ...; cleanup: () => void; }'.
+src/renderer/components/FloatingAssistant.ts(493,43): error TS2339: Property 'getScreenSize' does not exist on type '{ showReminder: (data: any) => void; openEmail: (id: string) => void; startAudioCapture: () => Promise<void>; stopAudioCapture: () => Promise<void>; onAudioLevel: (callback: (level: number) => void) => () => void; ... 13 more ...; cleanup: () => void; }'.
+src/renderer/components/FloatingAssistant.ts(496,22): error TS2339: Property 'window' does not exist on type '{ showReminder: (data: any) => void; openEmail: (id: string) => void; startAudioCapture: () => Promise<void>; stopAudioCapture: () => Promise<void>; onAudioLevel: (callback: (level: number) => void) => () => void; ... 13 more ...; cleanup: () => void; }'.
+src/renderer/components/FloatingAssistant.ts(515,22): error TS2339: Property 'window' does not exist on type '{ showReminder: (data: any) => void; openEmail: (id: string) => void; startAudioCapture: () => Promise<void>; stopAudioCapture: () => Promise<void>; onAudioLevel: (callback: (level: number) => void) => () => void; ... 13 more ...; cleanup: () => void; }'.
+src/renderer/components/FloatingAssistant.ts(531,25): error TS2339: Property 'window' does not exist on type '{ showReminder: (data: any) => void; openEmail: (id: string) => void; startAudioCapture: () => Promise<void>; stopAudioCapture: () => Promise<void>; onAudioLevel: (callback: (level: number) => void) => () => void; ... 13 more ...; cleanup: () => void; }'.
+src/renderer/components/FloatingAssistant.ts(536,22): error TS2339: Property 'window' does not exist on type '{ showReminder: (data: any) => void; openEmail: (id: string) => void; startAudioCapture: () => Promise<void>; stopAudioCapture: () => Promise<void>; onAudioLevel: (callback: (level: number) => void) => () => void; ... 13 more ...; cleanup: () => void; }'.
+src/renderer/components/FloatingAssistant.ts(543,22): error TS2339: Property 'window' does not exist on type '{ showReminder: (data: any) => void; openEmail: (id: string) => void; startAudioCapture: () => Promise<void>; stopAudioCapture: () => Promise<void>; onAudioLevel: (callback: (level: number) => void) => () => void; ... 13 more ...; cleanup: () => void; }'.
+src/renderer/components/FloatingAssistant.ts(770,63): error TS2551: Property 'setObserveStatus' does not exist on type '{ showReminder: (data: any) => void; openEmail: (id: string) => void; startAudioCapture: () => Promise<void>; stopAudioCapture: () => Promise<void>; onAudioLevel: (callback: (level: number) => void) => () => void; ... 13 more ...; cleanup: () => void; }'. Did you mean 'getObserveStatus'?
+src/renderer/components/FloatingAssistant.ts(772,30): error TS2551: Property 'setObserveStatus' does not exist on type '{ showReminder: (data: any) => void; openEmail: (id: string) => void; startAudioCapture: () => Promise<void>; stopAudioCapture: () => Promise<void>; onAudioLevel: (callback: (level: number) => void) => () => void; ... 13 more ...; cleanup: () => void; }'. Did you mean 'getObserveStatus'?
+src/renderer/components/FloatingAssistant.ts(791,10): error TS2339: Property 'FloatingAssistantUI' does not exist on type 'Window & typeof globalThis'.
+src/renderer/components/FloatingAssistant.ts(794,15): error TS2339: Property 'ellipsaAssistant' does not exist on type 'Window & typeof globalThis'.
+src/renderer/components/FloatingAssistant.ts(797,16): error TS2339: Property 'ellipsaAssistant' does not exist on type 'Window & typeof globalThis'.
+src/renderer/components/ui/accordion.tsx(16,3): error TS2339: Property 'className' does not exist on type 'AccordionItemProps & RefAttributes<HTMLDivElement>'.
+src/renderer/components/ui/accordion.tsx(22,7): error TS2322: Type '{ disabled?: boolean; value: string; key?: Key; ref?: LegacyRef<HTMLDivElement>; "data-slot": string; className: string; }' is not assignable to type 'IntrinsicAttributes & AccordionItemProps & RefAttributes<HTMLDivElement>'.
+  Property 'className' does not exist on type 'IntrinsicAttributes & AccordionItemProps & RefAttributes<HTMLDivElement>'.
+src/renderer/components/ui/accordion.tsx(29,3): error TS2339: Property 'className' does not exist on type 'AccordionTriggerProps & RefAttributes<HTMLButtonElement>'.
+src/renderer/components/ui/accordion.tsx(30,3): error TS2339: Property 'children' does not exist on type 'AccordionTriggerProps & RefAttributes<HTMLButtonElement>'.
+src/renderer/components/ui/accordion.tsx(34,6): error TS2322: Type '{ children: Element; className: string; }' is not assignable to type 'IntrinsicAttributes & AccordionHeaderProps & RefAttributes<HTMLHeadingElement>'.
+  Property 'children' does not exist on type 'IntrinsicAttributes & AccordionHeaderProps & RefAttributes<HTMLHeadingElement>'.
+src/renderer/components/ui/accordion.tsx(35,8): error TS2322: Type '{ children: any[]; key?: Key; ref?: LegacyRef<HTMLButtonElement>; "data-slot": string; className: string; }' is not assignable to type 'IntrinsicAttributes & AccordionTriggerProps & RefAttributes<HTMLButtonElement>'.
+  Property 'children' does not exist on type 'IntrinsicAttributes & AccordionTriggerProps & RefAttributes<HTMLButtonElement>'.
+src/renderer/components/ui/accordion.tsx(51,3): error TS2339: Property 'className' does not exist on type 'AccordionContentProps & RefAttributes<HTMLDivElement>'.
+src/renderer/components/ui/accordion.tsx(52,3): error TS2339: Property 'children' does not exist on type 'AccordionContentProps & RefAttributes<HTMLDivElement>'.
+src/renderer/components/ui/accordion.tsx(56,6): error TS2322: Type '{ children: Element; key?: Key; forceMount?: true; ref?: LegacyRef<HTMLDivElement>; "data-slot": string; className: string; }' is not assignable to type 'IntrinsicAttributes & AccordionContentProps & RefAttributes<HTMLDivElement>'.
+  Property 'children' does not exist on type 'IntrinsicAttributes & AccordionContentProps & RefAttributes<HTMLDivElement>'.
+src/renderer/components/ui/alert-dialog.tsx(32,3): error TS2339: Property 'className' does not exist on type 'AlertDialogOverlayProps & RefAttributes<HTMLDivElement>'.
+src/renderer/components/ui/alert-dialog.tsx(38,7): error TS2322: Type '{ key?: Key; forceMount?: true; ref?: LegacyRef<HTMLDivElement>; "data-slot": string; className: string; }' is not assignable to type 'IntrinsicAttributes & AlertDialogOverlayProps & RefAttributes<HTMLDivElement>'.
+  Property 'className' does not exist on type 'IntrinsicAttributes & AlertDialogOverlayProps & RefAttributes<HTMLDivElement>'.
+src/renderer/components/ui/alert-dialog.tsx(96,3): error TS2339: Property 'className' does not exist on type 'AlertDialogTitleProps & RefAttributes<HTMLHeadingElement>'.
+src/renderer/components/ui/alert-dialog.tsx(102,7): error TS2322: Type '{ key?: Key; ref?: LegacyRef<HTMLHeadingElement>; "data-slot": string; className: string; }' is not assignable to type 'IntrinsicAttributes & AlertDialogTitleProps & RefAttributes<HTMLHeadingElement>'.
+  Property 'className' does not exist on type 'IntrinsicAttributes & AlertDialogTitleProps & RefAttributes<HTMLHeadingElement>'.
+src/renderer/components/ui/alert-dialog.tsx(109,3): error TS2339: Property 'className' does not exist on type 'AlertDialogDescriptionProps & RefAttributes<HTMLParagraphElement>'.
+src/renderer/components/ui/alert-dialog.tsx(115,7): error TS2322: Type '{ key?: Key; ref?: LegacyRef<HTMLParagraphElement>; "data-slot": string; className: string; }' is not assignable to type 'IntrinsicAttributes & AlertDialogDescriptionProps & RefAttributes<HTMLParagraphElement>'.
+  Property 'className' does not exist on type 'IntrinsicAttributes & AlertDialogDescriptionProps & RefAttributes<HTMLParagraphElement>'.
+src/renderer/components/ui/alert-dialog.tsx(122,3): error TS2339: Property 'className' does not exist on type 'AlertDialogActionProps & RefAttributes<HTMLButtonElement>'.
+src/renderer/components/ui/alert-dialog.tsx(127,7): error TS2322: Type '{ key?: Key; ref?: LegacyRef<HTMLButtonElement>; className: string; }' is not assignable to type 'IntrinsicAttributes & AlertDialogActionProps & RefAttributes<HTMLButtonElement>'.
+  Property 'className' does not exist on type 'IntrinsicAttributes & AlertDialogActionProps & RefAttributes<HTMLButtonElement>'.
+src/renderer/components/ui/alert-dialog.tsx(134,3): error TS2339: Property 'className' does not exist on type 'AlertDialogCancelProps & RefAttributes<HTMLButtonElement>'.
+src/renderer/components/ui/alert-dialog.tsx(139,7): error TS2322: Type '{ key?: Key; ref?: LegacyRef<HTMLButtonElement>; className: string; }' is not assignable to type 'IntrinsicAttributes & AlertDialogCancelProps & RefAttributes<HTMLButtonElement>'.
+  Property 'className' does not exist on type 'IntrinsicAttributes & AlertDialogCancelProps & RefAttributes<HTMLButtonElement>'.
+src/renderer/components/ui/avatar.tsx(9,3): error TS2339: Property 'className' does not exist on type 'AvatarProps & RefAttributes<HTMLSpanElement>'.
+src/renderer/components/ui/avatar.tsx(15,7): error TS2322: Type '{ ref?: LegacyRef<HTMLSpanElement>; key?: Key; "data-slot": string; className: string; }' is not assignable to type 'IntrinsicAttributes & AvatarProps & RefAttributes<HTMLSpanElement>'.
+  Property 'className' does not exist on type 'IntrinsicAttributes & AvatarProps & RefAttributes<HTMLSpanElement>'.
+src/renderer/components/ui/avatar.tsx(25,3): error TS2339: Property 'className' does not exist on type 'AvatarImageProps & RefAttributes<HTMLImageElement>'.
+src/renderer/components/ui/avatar.tsx(31,7): error TS2322: Type '{ onLoadingStatusChange?: (status: ImageLoadingStatus) => void; ref?: LegacyRef<HTMLImageElement>; key?: Key; "data-slot": string; className: string; }' is not assignable to type 'IntrinsicAttributes & AvatarImageProps & RefAttributes<HTMLImageElement>'.
+  Property 'className' does not exist on type 'IntrinsicAttributes & AvatarImageProps & RefAttributes<HTMLImageElement>'.
+src/renderer/components/ui/avatar.tsx(38,3): error TS2339: Property 'className' does not exist on type 'AvatarFallbackProps & RefAttributes<HTMLSpanElement>'.
+src/renderer/components/ui/avatar.tsx(44,7): error TS2322: Type '{ delayMs?: number; ref?: LegacyRef<HTMLSpanElement>; key?: Key; "data-slot": string; className: string; }' is not assignable to type 'IntrinsicAttributes & AvatarFallbackProps & RefAttributes<HTMLSpanElement>'.
+  Property 'className' does not exist on type 'IntrinsicAttributes & AvatarFallbackProps & RefAttributes<HTMLSpanElement>'.
+src/renderer/components/ui/calendar.tsx(63,9): error TS2353: Object literal may only specify known properties, and 'IconLeft' does not exist in type 'Partial<CustomComponents>'.
+src/renderer/components/ui/checkbox.tsx(22,8): error TS2322: Type '{ children: Element; "data-slot": string; className: string; }' is not assignable to type 'IntrinsicAttributes & CheckboxIndicatorProps & RefAttributes<HTMLSpanElement>'.
+  Property 'children' does not exist on type 'IntrinsicAttributes & CheckboxIndicatorProps & RefAttributes<HTMLSpanElement>'.
+src/renderer/components/ui/context-menu.tsx(57,3): error TS2339: Property 'className' does not exist on type 'ContextMenuSubTriggerProps & RefAttributes<HTMLDivElement> & { inset?: boolean; }'.
+src/renderer/components/ui/context-menu.tsx(59,3): error TS2339: Property 'children' does not exist on type 'ContextMenuSubTriggerProps & RefAttributes<HTMLDivElement> & { inset?: boolean; }'.
+src/renderer/components/ui/context-menu.tsx(65,6): error TS2322: Type '{ children: any[]; ref?: LegacyRef<HTMLDivElement>; key?: Key; "data-slot": string; "data-inset": boolean; className: string; }' is not assignable to type 'IntrinsicAttributes & ContextMenuSubTriggerProps & RefAttributes<HTMLDivElement>'.
+  Property 'children' does not exist on type 'IntrinsicAttributes & ContextMenuSubTriggerProps & RefAttributes<HTMLDivElement>'.
+src/renderer/components/ui/context-menu.tsx(81,3): error TS2339: Property 'className' does not exist on type 'ContextMenuSubContentProps & RefAttributes<HTMLDivElement>'.
+src/renderer/components/ui/context-menu.tsx(87,7): error TS2322: Type '{ ref?: LegacyRef<HTMLDivElement>; key?: Key; "data-slot": string; className: string; }' is not assignable to type 'IntrinsicAttributes & ContextMenuSubContentProps & RefAttributes<HTMLDivElement>'.
+  Property 'className' does not exist on type 'IntrinsicAttributes & ContextMenuSubContentProps & RefAttributes<HTMLDivElement>'.
+src/renderer/components/ui/context-menu.tsx(115,3): error TS2339: Property 'className' does not exist on type 'ContextMenuItemProps & RefAttributes<HTMLDivElement> & { inset?: boolean; variant?: "default" | "destructive"; }'.
+src/renderer/components/ui/context-menu.tsx(128,7): error TS2322: Type '{ ref?: LegacyRef<HTMLDivElement>; key?: Key; "data-slot": string; "data-inset": boolean; "data-variant": "default" | "destructive"; className: string; }' is not assignable to type 'IntrinsicAttributes & ContextMenuItemProps & RefAttributes<HTMLDivElement>'.
+  Property 'className' does not exist on type 'IntrinsicAttributes & ContextMenuItemProps & RefAttributes<HTMLDivElement>'.
+src/renderer/components/ui/context-menu.tsx(138,3): error TS2339: Property 'className' does not exist on type 'ContextMenuCheckboxItemProps & RefAttributes<HTMLDivElement>'.
+src/renderer/components/ui/context-menu.tsx(139,3): error TS2339: Property 'children' does not exist on type 'ContextMenuCheckboxItemProps & RefAttributes<HTMLDivElement>'.
+src/renderer/components/ui/context-menu.tsx(140,3): error TS2339: Property 'checked' does not exist on type 'ContextMenuCheckboxItemProps & RefAttributes<HTMLDivElement>'.
+src/renderer/components/ui/context-menu.tsx(144,6): error TS2322: Type '{ children: any[]; ref?: LegacyRef<HTMLDivElement>; key?: Key; "data-slot": string; className: string; checked: any; }' is not assignable to type 'IntrinsicAttributes & ContextMenuCheckboxItemProps & RefAttributes<HTMLDivElement>'.
+  Property 'children' does not exist on type 'IntrinsicAttributes & ContextMenuCheckboxItemProps & RefAttributes<HTMLDivElement>'.
+src/renderer/components/ui/context-menu.tsx(164,3): error TS2339: Property 'className' does not exist on type 'ContextMenuRadioItemProps & RefAttributes<HTMLDivElement>'.
+src/renderer/components/ui/context-menu.tsx(165,3): error TS2339: Property 'children' does not exist on type 'ContextMenuRadioItemProps & RefAttributes<HTMLDivElement>'.
+src/renderer/components/ui/context-menu.tsx(169,6): error TS2322: Type '{ children: any[]; ref?: LegacyRef<HTMLDivElement>; key?: Key; "data-slot": string; className: string; }' is not assignable to type 'IntrinsicAttributes & ContextMenuRadioItemProps & RefAttributes<HTMLDivElement>'.
+  Property 'children' does not exist on type 'IntrinsicAttributes & ContextMenuRadioItemProps & RefAttributes<HTMLDivElement>'.
+src/renderer/components/ui/context-menu.tsx(188,3): error TS2339: Property 'className' does not exist on type 'ContextMenuLabelProps & RefAttributes<HTMLDivElement> & { inset?: boolean; }'.
+src/renderer/components/ui/context-menu.tsx(198,7): error TS2322: Type '{ ref?: LegacyRef<HTMLDivElement>; key?: Key; "data-slot": string; "data-inset": boolean; className: string; }' is not assignable to type 'IntrinsicAttributes & ContextMenuLabelProps & RefAttributes<HTMLDivElement>'.
+  Property 'className' does not exist on type 'IntrinsicAttributes & ContextMenuLabelProps & RefAttributes<HTMLDivElement>'.
+src/renderer/components/ui/context-menu.tsx(208,3): error TS2339: Property 'className' does not exist on type 'ContextMenuSeparatorProps & RefAttributes<HTMLDivElement>'.
+src/renderer/components/ui/context-menu.tsx(214,7): error TS2322: Type '{ ref?: LegacyRef<HTMLDivElement>; key?: Key; "data-slot": string; className: string; }' is not assignable to type 'IntrinsicAttributes & ContextMenuSeparatorProps & RefAttributes<HTMLDivElement>'.
+  Property 'className' does not exist on type 'IntrinsicAttributes & ContextMenuSeparatorProps & RefAttributes<HTMLDivElement>'.
+src/renderer/components/ui/dialog.tsx(34,3): error TS2339: Property 'className' does not exist on type 'DialogOverlayProps & RefAttributes<HTMLDivElement>'.
+src/renderer/components/ui/dialog.tsx(40,7): error TS2322: Type '{ forceMount?: true; ref?: LegacyRef<HTMLDivElement>; key?: Key; "data-slot": string; className: string; }' is not assignable to type 'IntrinsicAttributes & DialogOverlayProps & RefAttributes<HTMLDivElement>'.
+  Property 'className' does not exist on type 'IntrinsicAttributes & DialogOverlayProps & RefAttributes<HTMLDivElement>'.
+src/renderer/components/ui/dialog.tsx(66,10): error TS2322: Type '{ children: Element[]; className: string; }' is not assignable to type 'IntrinsicAttributes & DialogCloseProps & RefAttributes<HTMLButtonElement>'.
+  Property 'children' does not exist on type 'IntrinsicAttributes & DialogCloseProps & RefAttributes<HTMLButtonElement>'.
+src/renderer/components/ui/dialog.tsx(99,3): error TS2339: Property 'className' does not exist on type 'DialogTitleProps & RefAttributes<HTMLHeadingElement>'.
+src/renderer/components/ui/dialog.tsx(105,7): error TS2322: Type '{ ref?: LegacyRef<HTMLHeadingElement>; key?: Key; "data-slot": string; className: string; }' is not assignable to type 'IntrinsicAttributes & DialogTitleProps & RefAttributes<HTMLHeadingElement>'.
+  Property 'className' does not exist on type 'IntrinsicAttributes & DialogTitleProps & RefAttributes<HTMLHeadingElement>'.
+src/renderer/components/ui/dialog.tsx(112,3): error TS2339: Property 'className' does not exist on type 'DialogDescriptionProps & RefAttributes<HTMLParagraphElement>'.
+src/renderer/components/ui/dialog.tsx(118,7): error TS2322: Type '{ ref?: LegacyRef<HTMLParagraphElement>; key?: Key; "data-slot": string; className: string; }' is not assignable to type 'IntrinsicAttributes & DialogDescriptionProps & RefAttributes<HTMLParagraphElement>'.
+  Property 'className' does not exist on type 'IntrinsicAttributes & DialogDescriptionProps & RefAttributes<HTMLParagraphElement>'.
+src/renderer/components/ui/drawer.tsx(33,3): error TS2339: Property 'className' does not exist on type 'Omit<DialogOverlayProps & RefAttributes<HTMLDivElement>, "ref"> & RefAttributes<HTMLDivElement>'.
+src/renderer/components/ui/drawer.tsx(39,7): error TS2322: Type '{ key?: Key; forceMount?: true; ref?: LegacyRef<HTMLDivElement>; "data-slot": string; className: string; }' is not assignable to type 'IntrinsicAttributes & Omit<DialogOverlayProps & RefAttributes<HTMLDivElement>, "ref"> & RefAttributes<...>'.
+  Property 'className' does not exist on type 'IntrinsicAttributes & Omit<DialogOverlayProps & RefAttributes<HTMLDivElement>, "ref"> & RefAttributes<...>'.
+src/renderer/components/ui/drawer.tsx(96,3): error TS2339: Property 'className' does not exist on type 'DialogTitleProps & RefAttributes<HTMLHeadingElement>'.
+src/renderer/components/ui/drawer.tsx(102,7): error TS2322: Type '{ ref?: LegacyRef<HTMLHeadingElement>; key?: Key; "data-slot": string; className: string; }' is not assignable to type 'IntrinsicAttributes & DialogTitleProps & RefAttributes<HTMLHeadingElement>'.
+  Property 'className' does not exist on type 'IntrinsicAttributes & DialogTitleProps & RefAttributes<HTMLHeadingElement>'.
+src/renderer/components/ui/drawer.tsx(109,3): error TS2339: Property 'className' does not exist on type 'DialogDescriptionProps & RefAttributes<HTMLParagraphElement>'.
+src/renderer/components/ui/drawer.tsx(115,7): error TS2322: Type '{ ref?: LegacyRef<HTMLParagraphElement>; key?: Key; "data-slot": string; className: string; }' is not assignable to type 'IntrinsicAttributes & DialogDescriptionProps & RefAttributes<HTMLParagraphElement>'.
+  Property 'className' does not exist on type 'IntrinsicAttributes & DialogDescriptionProps & RefAttributes<HTMLParagraphElement>'.
+src/renderer/components/ui/dropdown-menu.tsx(63,3): error TS2339: Property 'className' does not exist on type 'DropdownMenuItemProps & RefAttributes<HTMLDivElement> & { inset?: boolean; variant?: "default" | "destructive"; }'.
+src/renderer/components/ui/dropdown-menu.tsx(76,7): error TS2322: Type '{ ref?: LegacyRef<HTMLDivElement>; key?: Key; "data-slot": string; "data-inset": boolean; "data-variant": "default" | "destructive"; className: string; }' is not assignable to type 'IntrinsicAttributes & DropdownMenuItemProps & RefAttributes<HTMLDivElement>'.
+  Property 'className' does not exist on type 'IntrinsicAttributes & DropdownMenuItemProps & RefAttributes<HTMLDivElement>'.
+src/renderer/components/ui/dropdown-menu.tsx(86,3): error TS2339: Property 'className' does not exist on type 'DropdownMenuCheckboxItemProps & RefAttributes<HTMLDivElement>'.
+src/renderer/components/ui/dropdown-menu.tsx(87,3): error TS2339: Property 'children' does not exist on type 'DropdownMenuCheckboxItemProps & RefAttributes<HTMLDivElement>'.
+src/renderer/components/ui/dropdown-menu.tsx(88,3): error TS2339: Property 'checked' does not exist on type 'DropdownMenuCheckboxItemProps & RefAttributes<HTMLDivElement>'.
+src/renderer/components/ui/dropdown-menu.tsx(92,6): error TS2322: Type '{ children: any[]; ref?: LegacyRef<HTMLDivElement>; key?: Key; "data-slot": string; className: string; checked: any; }' is not assignable to type 'IntrinsicAttributes & DropdownMenuCheckboxItemProps & RefAttributes<HTMLDivElement>'.
+  Property 'children' does not exist on type 'IntrinsicAttributes & DropdownMenuCheckboxItemProps & RefAttributes<HTMLDivElement>'.
+src/renderer/components/ui/dropdown-menu.tsx(123,3): error TS2339: Property 'className' does not exist on type 'DropdownMenuRadioItemProps & RefAttributes<HTMLDivElement>'.
+src/renderer/components/ui/dropdown-menu.tsx(124,3): error TS2339: Property 'children' does not exist on type 'DropdownMenuRadioItemProps & RefAttributes<HTMLDivElement>'.
+src/renderer/components/ui/dropdown-menu.tsx(128,6): error TS2322: Type '{ children: any[]; ref?: LegacyRef<HTMLDivElement>; key?: Key; "data-slot": string; className: string; }' is not assignable to type 'IntrinsicAttributes & DropdownMenuRadioItemProps & RefAttributes<HTMLDivElement>'.
+  Property 'children' does not exist on type 'IntrinsicAttributes & DropdownMenuRadioItemProps & RefAttributes<HTMLDivElement>'.
+src/renderer/components/ui/dropdown-menu.tsx(147,3): error TS2339: Property 'className' does not exist on type 'DropdownMenuLabelProps & RefAttributes<HTMLDivElement> & { inset?: boolean; }'.
+src/renderer/components/ui/dropdown-menu.tsx(157,7): error TS2322: Type '{ ref?: LegacyRef<HTMLDivElement>; key?: Key; "data-slot": string; "data-inset": boolean; className: string; }' is not assignable to type 'IntrinsicAttributes & DropdownMenuLabelProps & RefAttributes<HTMLDivElement>'.
+  Property 'className' does not exist on type 'IntrinsicAttributes & DropdownMenuLabelProps & RefAttributes<HTMLDivElement>'.
+src/renderer/components/ui/dropdown-menu.tsx(167,3): error TS2339: Property 'className' does not exist on type 'DropdownMenuSeparatorProps & RefAttributes<HTMLDivElement>'.
+src/renderer/components/ui/dropdown-menu.tsx(173,7): error TS2322: Type '{ ref?: LegacyRef<HTMLDivElement>; key?: Key; "data-slot": string; className: string; }' is not assignable to type 'IntrinsicAttributes & DropdownMenuSeparatorProps & RefAttributes<HTMLDivElement>'.
+  Property 'className' does not exist on type 'IntrinsicAttributes & DropdownMenuSeparatorProps & RefAttributes<HTMLDivElement>'.
+src/renderer/components/ui/dropdown-menu.tsx(202,3): error TS2339: Property 'className' does not exist on type 'DropdownMenuSubTriggerProps & RefAttributes<HTMLDivElement> & { inset?: boolean; }'.
+src/renderer/components/ui/dropdown-menu.tsx(204,3): error TS2339: Property 'children' does not exist on type 'DropdownMenuSubTriggerProps & RefAttributes<HTMLDivElement> & { inset?: boolean; }'.
+src/renderer/components/ui/dropdown-menu.tsx(210,6): error TS2322: Type '{ children: any[]; ref?: LegacyRef<HTMLDivElement>; key?: Key; "data-slot": string; "data-inset": boolean; className: string; }' is not assignable to type 'IntrinsicAttributes & DropdownMenuSubTriggerProps & RefAttributes<HTMLDivElement>'.
+  Property 'children' does not exist on type 'IntrinsicAttributes & DropdownMenuSubTriggerProps & RefAttributes<HTMLDivElement>'.
+src/renderer/components/ui/dropdown-menu.tsx(226,3): error TS2339: Property 'className' does not exist on type 'DropdownMenuSubContentProps & RefAttributes<HTMLDivElement>'.
+src/renderer/components/ui/dropdown-menu.tsx(232,7): error TS2322: Type '{ ref?: LegacyRef<HTMLDivElement>; key?: Key; "data-slot": string; className: string; }' is not assignable to type 'IntrinsicAttributes & DropdownMenuSubContentProps & RefAttributes<HTMLDivElement>'.
+  Property 'className' does not exist on type 'IntrinsicAttributes & DropdownMenuSubContentProps & RefAttributes<HTMLDivElement>'.
+src/renderer/components/ui/form.tsx(91,3): error TS2339: Property 'className' does not exist on type 'LabelProps & RefAttributes<HTMLLabelElement>'.
+src/renderer/components/ui/form.tsx(100,7): error TS2322: Type '{ ref?: LegacyRef<HTMLLabelElement>; key?: Key; "data-slot": string; "data-error": boolean; className: string; htmlFor: string; }' is not assignable to type 'IntrinsicAttributes & LabelProps & RefAttributes<HTMLLabelElement>'.
+  Property 'className' does not exist on type 'IntrinsicAttributes & LabelProps & RefAttributes<HTMLLabelElement>'.
+src/renderer/components/ui/label.tsx(9,3): error TS2339: Property 'className' does not exist on type 'LabelProps & RefAttributes<HTMLLabelElement>'.
+src/renderer/components/ui/label.tsx(15,7): error TS2322: Type '{ ref?: LegacyRef<HTMLLabelElement>; key?: Key; "data-slot": string; className: string; }' is not assignable to type 'IntrinsicAttributes & LabelProps & RefAttributes<HTMLLabelElement>'.
+  Property 'className' does not exist on type 'IntrinsicAttributes & LabelProps & RefAttributes<HTMLLabelElement>'.
+src/renderer/components/ui/menubar.tsx(10,3): error TS2339: Property 'className' does not exist on type 'MenubarProps & RefAttributes<HTMLDivElement>'.
+src/renderer/components/ui/menubar.tsx(16,7): error TS2322: Type '{ value?: string; defaultValue?: string; onValueChange?: (value: string) => void; loop?: any; dir?: any; ref?: LegacyRef<HTMLDivElement>; key?: Key; "data-slot": string; className: string; }' is not assignable to type 'IntrinsicAttributes & MenubarProps & RefAttributes<HTMLDivElement>'.
+  Property 'className' does not exist on type 'IntrinsicAttributes & MenubarProps & RefAttributes<HTMLDivElement>'.
+src/renderer/components/ui/menubar.tsx(52,3): error TS2339: Property 'className' does not exist on type 'MenubarTriggerProps & RefAttributes<HTMLButtonElement>'.
+src/renderer/components/ui/menubar.tsx(58,7): error TS2322: Type '{ ref?: LegacyRef<HTMLButtonElement>; key?: Key; "data-slot": string; className: string; }' is not assignable to type 'IntrinsicAttributes & MenubarTriggerProps & RefAttributes<HTMLButtonElement>'.
+  Property 'className' does not exist on type 'IntrinsicAttributes & MenubarTriggerProps & RefAttributes<HTMLButtonElement>'.
+src/renderer/components/ui/menubar.tsx(92,3): error TS2339: Property 'className' does not exist on type 'MenubarItemProps & RefAttributes<HTMLDivElement> & { inset?: boolean; variant?: "default" | "destructive"; }'.
+src/renderer/components/ui/menubar.tsx(105,7): error TS2322: Type '{ ref?: LegacyRef<HTMLDivElement>; key?: Key; "data-slot": string; "data-inset": boolean; "data-variant": "default" | "destructive"; className: string; }' is not assignable to type 'IntrinsicAttributes & MenubarItemProps & RefAttributes<HTMLDivElement>'.
+  Property 'className' does not exist on type 'IntrinsicAttributes & MenubarItemProps & RefAttributes<HTMLDivElement>'.
+src/renderer/components/ui/menubar.tsx(115,3): error TS2339: Property 'className' does not exist on type 'MenubarCheckboxItemProps & RefAttributes<HTMLDivElement>'.
+src/renderer/components/ui/menubar.tsx(116,3): error TS2339: Property 'children' does not exist on type 'MenubarCheckboxItemProps & RefAttributes<HTMLDivElement>'.
+src/renderer/components/ui/menubar.tsx(117,3): error TS2339: Property 'checked' does not exist on type 'MenubarCheckboxItemProps & RefAttributes<HTMLDivElement>'.
+src/renderer/components/ui/menubar.tsx(121,6): error TS2322: Type '{ children: any[]; ref?: LegacyRef<HTMLDivElement>; key?: Key; "data-slot": string; className: string; checked: any; }' is not assignable to type 'IntrinsicAttributes & MenubarCheckboxItemProps & RefAttributes<HTMLDivElement>'.
+  Property 'children' does not exist on type 'IntrinsicAttributes & MenubarCheckboxItemProps & RefAttributes<HTMLDivElement>'.
+src/renderer/components/ui/menubar.tsx(141,3): error TS2339: Property 'className' does not exist on type 'MenubarRadioItemProps & RefAttributes<HTMLDivElement>'.
+src/renderer/components/ui/menubar.tsx(142,3): error TS2339: Property 'children' does not exist on type 'MenubarRadioItemProps & RefAttributes<HTMLDivElement>'.
+src/renderer/components/ui/menubar.tsx(146,6): error TS2322: Type '{ children: any[]; ref?: LegacyRef<HTMLDivElement>; key?: Key; "data-slot": string; className: string; }' is not assignable to type 'IntrinsicAttributes & MenubarRadioItemProps & RefAttributes<HTMLDivElement>'.
+  Property 'children' does not exist on type 'IntrinsicAttributes & MenubarRadioItemProps & RefAttributes<HTMLDivElement>'.
+src/renderer/components/ui/menubar.tsx(165,3): error TS2339: Property 'className' does not exist on type 'MenubarLabelProps & RefAttributes<HTMLDivElement> & { inset?: boolean; }'.
+src/renderer/components/ui/menubar.tsx(175,7): error TS2322: Type '{ ref?: LegacyRef<HTMLDivElement>; key?: Key; "data-slot": string; "data-inset": boolean; className: string; }' is not assignable to type 'IntrinsicAttributes & MenubarLabelProps & RefAttributes<HTMLDivElement>'.
+  Property 'className' does not exist on type 'IntrinsicAttributes & MenubarLabelProps & RefAttributes<HTMLDivElement>'.
+src/renderer/components/ui/menubar.tsx(185,3): error TS2339: Property 'className' does not exist on type 'MenubarSeparatorProps & RefAttributes<HTMLDivElement>'.
+src/renderer/components/ui/menubar.tsx(191,7): error TS2322: Type '{ ref?: LegacyRef<HTMLDivElement>; key?: Key; "data-slot": string; className: string; }' is not assignable to type 'IntrinsicAttributes & MenubarSeparatorProps & RefAttributes<HTMLDivElement>'.
+  Property 'className' does not exist on type 'IntrinsicAttributes & MenubarSeparatorProps & RefAttributes<HTMLDivElement>'.
+src/renderer/components/ui/menubar.tsx(220,3): error TS2339: Property 'className' does not exist on type 'MenubarSubTriggerProps & RefAttributes<HTMLDivElement> & { inset?: boolean; }'.
+src/renderer/components/ui/menubar.tsx(222,3): error TS2339: Property 'children' does not exist on type 'MenubarSubTriggerProps & RefAttributes<HTMLDivElement> & { inset?: boolean; }'.
+src/renderer/components/ui/menubar.tsx(228,6): error TS2322: Type '{ children: any[]; ref?: LegacyRef<HTMLDivElement>; key?: Key; "data-slot": string; "data-inset": boolean; className: string; }' is not assignable to type 'IntrinsicAttributes & MenubarSubTriggerProps & RefAttributes<HTMLDivElement>'.
+  Property 'children' does not exist on type 'IntrinsicAttributes & MenubarSubTriggerProps & RefAttributes<HTMLDivElement>'.
+src/renderer/components/ui/menubar.tsx(244,3): error TS2339: Property 'className' does not exist on type 'MenubarSubContentProps & RefAttributes<HTMLDivElement>'.
+src/renderer/components/ui/menubar.tsx(250,7): error TS2322: Type '{ ref?: LegacyRef<HTMLDivElement>; key?: Key; "data-slot": string; className: string; }' is not assignable to type 'IntrinsicAttributes & MenubarSubContentProps & RefAttributes<HTMLDivElement>'.
+  Property 'className' does not exist on type 'IntrinsicAttributes & MenubarSubContentProps & RefAttributes<HTMLDivElement>'.
+src/renderer/components/ui/navigation-menu.tsx(9,3): error TS2339: Property 'className' does not exist on type 'NavigationMenuProps & RefAttributes<HTMLElement> & { viewport?: boolean; }'.
+src/renderer/components/ui/navigation-menu.tsx(10,3): error TS2339: Property 'children' does not exist on type 'NavigationMenuProps & RefAttributes<HTMLElement> & { viewport?: boolean; }'.
+src/renderer/components/ui/navigation-menu.tsx(17,6): error TS2322: Type '{ children: any[]; value?: string; defaultValue?: string; onValueChange?: (value: string) => void; dir?: Direction; orientation?: Orientation; delayDuration?: number; skipDelayDuration?: number; ... 4 more ...; className: string; }' is not assignable to type 'IntrinsicAttributes & NavigationMenuProps & RefAttributes<HTMLElement>'.
+  Property 'children' does not exist on type 'IntrinsicAttributes & NavigationMenuProps & RefAttributes<HTMLElement>'.
+src/renderer/components/ui/navigation-menu.tsx(33,3): error TS2339: Property 'className' does not exist on type 'NavigationMenuListProps & RefAttributes<HTMLUListElement>'.
+src/renderer/components/ui/navigation-menu.tsx(39,7): error TS2322: Type '{ ref?: LegacyRef<HTMLUListElement>; key?: Key; "data-slot": string; className: string; }' is not assignable to type 'IntrinsicAttributes & NavigationMenuListProps & RefAttributes<HTMLUListElement>'.
+  Property 'className' does not exist on type 'IntrinsicAttributes & NavigationMenuListProps & RefAttributes<HTMLUListElement>'.
+src/renderer/components/ui/navigation-menu.tsx(49,3): error TS2339: Property 'className' does not exist on type 'NavigationMenuItemProps & RefAttributes<HTMLLIElement>'.
+src/renderer/components/ui/navigation-menu.tsx(55,7): error TS2322: Type '{ value?: string; ref?: LegacyRef<HTMLLIElement>; key?: Key; "data-slot": string; className: string; }' is not assignable to type 'IntrinsicAttributes & NavigationMenuItemProps & RefAttributes<HTMLLIElement>'.
+  Property 'className' does not exist on type 'IntrinsicAttributes & NavigationMenuItemProps & RefAttributes<HTMLLIElement>'.
+src/renderer/components/ui/navigation-menu.tsx(66,3): error TS2339: Property 'className' does not exist on type 'NavigationMenuTriggerProps & RefAttributes<HTMLButtonElement>'.
+src/renderer/components/ui/navigation-menu.tsx(67,3): error TS2339: Property 'children' does not exist on type 'NavigationMenuTriggerProps & RefAttributes<HTMLButtonElement>'.
+src/renderer/components/ui/navigation-menu.tsx(71,6): error TS2322: Type '{ children: any[]; ref?: LegacyRef<HTMLButtonElement>; key?: Key; "data-slot": string; className: string; }' is not assignable to type 'IntrinsicAttributes & NavigationMenuTriggerProps & RefAttributes<HTMLButtonElement>'.
+  Property 'children' does not exist on type 'IntrinsicAttributes & NavigationMenuTriggerProps & RefAttributes<HTMLButtonElement>'.
+src/renderer/components/ui/navigation-menu.tsx(103,3): error TS2339: Property 'className' does not exist on type 'NavigationMenuViewportProps & RefAttributes<HTMLDivElement>'.
+src/renderer/components/ui/navigation-menu.tsx(114,9): error TS2322: Type '{ forceMount?: true; ref?: LegacyRef<HTMLDivElement>; key?: Key; "data-slot": string; className: string; }' is not assignable to type 'IntrinsicAttributes & NavigationMenuViewportProps & RefAttributes<HTMLDivElement>'.
+  Property 'className' does not exist on type 'IntrinsicAttributes & NavigationMenuViewportProps & RefAttributes<HTMLDivElement>'.
+src/renderer/components/ui/navigation-menu.tsx(141,3): error TS2339: Property 'className' does not exist on type 'NavigationMenuIndicatorProps & RefAttributes<HTMLDivElement>'.
+src/renderer/components/ui/navigation-menu.tsx(145,6): error TS2322: Type '{ children: Element; forceMount?: true; ref?: LegacyRef<HTMLDivElement>; key?: Key; "data-slot": string; className: string; }' is not assignable to type 'IntrinsicAttributes & NavigationMenuIndicatorProps & RefAttributes<HTMLDivElement>'.
+  Property 'children' does not exist on type 'IntrinsicAttributes & NavigationMenuIndicatorProps & RefAttributes<HTMLDivElement>'.
+src/renderer/components/ui/progress.tsx(9,3): error TS2339: Property 'className' does not exist on type 'ProgressProps & RefAttributes<HTMLDivElement>'.
+src/renderer/components/ui/progress.tsx(14,6): error TS2322: Type '{ children: Element; max?: number; getValueLabel?(value: number, max: number): string; ref?: LegacyRef<HTMLDivElement>; key?: Key; "data-slot": string; className: string; }' is not assignable to type 'IntrinsicAttributes & ProgressProps & RefAttributes<HTMLDivElement>'.
+  Property 'children' does not exist on type 'IntrinsicAttributes & ProgressProps & RefAttributes<HTMLDivElement>'.
+src/renderer/components/ui/progress.tsx(24,9): error TS2322: Type '{ "data-slot": string; className: string; style: { transform: string; }; }' is not assignable to type 'IntrinsicAttributes & ProgressIndicatorProps & RefAttributes<HTMLDivElement>'.
+  Property 'className' does not exist on type 'IntrinsicAttributes & ProgressIndicatorProps & RefAttributes<HTMLDivElement>'.
+src/renderer/components/ui/radio-group.tsx(10,3): error TS2339: Property 'className' does not exist on type 'RadioGroupProps & RefAttributes<HTMLDivElement>'.
+src/renderer/components/ui/radio-group.tsx(16,7): error TS2322: Type '{ name?: string; required?: boolean; disabled?: any; dir?: any; orientation?: any; loop?: any; defaultValue?: string; value?: string; onValueChange?: (value: string) => void; ref?: LegacyRef<HTMLDivElement>; key?: Key; "data-slot": string; className: string; }' is not assignable to type 'IntrinsicAttributes & RadioGroupProps & RefAttributes<HTMLDivElement>'.
+  Property 'className' does not exist on type 'IntrinsicAttributes & RadioGroupProps & RefAttributes<HTMLDivElement>'.
+src/renderer/components/ui/radio-group.tsx(23,3): error TS2339: Property 'className' does not exist on type 'RadioGroupItemProps & RefAttributes<HTMLButtonElement>'.
+src/renderer/components/ui/radio-group.tsx(27,6): error TS2322: Type '{ children: Element; value: string; key?: Key; required?: boolean; checked?: boolean; ref?: LegacyRef<HTMLButtonElement>; "data-slot": string; className: string; }' is not assignable to type 'IntrinsicAttributes & RadioGroupItemProps & RefAttributes<HTMLButtonElement>'.
+  Property 'children' does not exist on type 'IntrinsicAttributes & RadioGroupItemProps & RefAttributes<HTMLButtonElement>'.
+src/renderer/components/ui/radio-group.tsx(35,8): error TS2322: Type '{ children: Element; "data-slot": string; className: string; }' is not assignable to type 'IntrinsicAttributes & RadioGroupIndicatorProps & RefAttributes<HTMLSpanElement>'.
+  Property 'children' does not exist on type 'IntrinsicAttributes & RadioGroupIndicatorProps & RefAttributes<HTMLSpanElement>'.
+src/renderer/components/ui/resizable.tsx(5,37): error TS2307: Cannot find module 'react-resizable-panels' or its corresponding type declarations.
+src/renderer/components/ui/scroll-area.tsx(9,3): error TS2339: Property 'className' does not exist on type 'ScrollAreaProps & RefAttributes<HTMLDivElement>'.
+src/renderer/components/ui/scroll-area.tsx(10,3): error TS2339: Property 'children' does not exist on type 'ScrollAreaProps & RefAttributes<HTMLDivElement>'.
+src/renderer/components/ui/scroll-area.tsx(14,6): error TS2322: Type '{ children: Element[]; type?: "scroll" | "auto" | "hover" | "always"; dir?: Direction; scrollHideDelay?: number; ref?: LegacyRef<HTMLDivElement>; key?: Key; "data-slot": string; className: string; }' is not assignable to type 'IntrinsicAttributes & ScrollAreaProps & RefAttributes<HTMLDivElement>'.
+  Property 'children' does not exist on type 'IntrinsicAttributes & ScrollAreaProps & RefAttributes<HTMLDivElement>'.
+src/renderer/components/ui/scroll-area.tsx(19,8): error TS2322: Type '{ children: any; "data-slot": string; className: string; }' is not assignable to type 'IntrinsicAttributes & ScrollAreaViewportProps & RefAttributes<HTMLDivElement>'.
+  Property 'children' does not exist on type 'IntrinsicAttributes & ScrollAreaViewportProps & RefAttributes<HTMLDivElement>'.
+src/renderer/components/ui/scroll-area.tsx(52,9): error TS2322: Type '{ "data-slot": string; className: string; }' is not assignable to type 'IntrinsicAttributes & ScrollAreaThumbProps & RefAttributes<HTMLDivElement>'.
+  Property 'className' does not exist on type 'IntrinsicAttributes & ScrollAreaThumbProps & RefAttributes<HTMLDivElement>'.
+src/renderer/components/ui/select.tsx(32,3): error TS2339: Property 'className' does not exist on type 'SelectTriggerProps & RefAttributes<HTMLButtonElement> & { size?: "default" | "sm"; }'.
+src/renderer/components/ui/select.tsx(34,3): error TS2339: Property 'children' does not exist on type 'SelectTriggerProps & RefAttributes<HTMLButtonElement> & { size?: "default" | "sm"; }'.
+src/renderer/components/ui/select.tsx(40,6): error TS2322: Type '{ children: any[]; ref?: LegacyRef<HTMLButtonElement>; key?: Key; "data-slot": string; "data-size": "default" | "sm"; className: string; }' is not assignable to type 'IntrinsicAttributes & SelectTriggerProps & RefAttributes<HTMLButtonElement>'.
+  Property 'children' does not exist on type 'IntrinsicAttributes & SelectTriggerProps & RefAttributes<HTMLButtonElement>'.
+src/renderer/components/ui/select.tsx(50,8): error TS2322: Type '{ children: Element; asChild: true; }' is not assignable to type 'IntrinsicAttributes & SelectIconProps & RefAttributes<HTMLSpanElement>'.
+  Property 'children' does not exist on type 'IntrinsicAttributes & SelectIconProps & RefAttributes<HTMLSpanElement>'.
+src/renderer/components/ui/select.tsx(58,3): error TS2339: Property 'className' does not exist on type 'SelectContentProps & RefAttributes<HTMLDivElement>'.
+src/renderer/components/ui/select.tsx(59,3): error TS2339: Property 'children' does not exist on type 'SelectContentProps & RefAttributes<HTMLDivElement>'.
+src/renderer/components/ui/select.tsx(65,8): error TS2322: Type '{ children: Element[]; onCloseAutoFocus?: any; onEscapeKeyDown?: any; onPointerDownOutside?: any; ref?: LegacyRef<HTMLDivElement>; key?: Key; "data-slot": string; className: string; position: "item-aligned" | "popper"; }' is not assignable to type 'IntrinsicAttributes & SelectContentProps & RefAttributes<HTMLDivElement>'.
+  Property 'children' does not exist on type 'IntrinsicAttributes & SelectContentProps & RefAttributes<HTMLDivElement>'.
+src/renderer/components/ui/select.tsx(77,10): error TS2322: Type '{ children: any; className: string; }' is not assignable to type 'IntrinsicAttributes & SelectViewportProps & RefAttributes<HTMLDivElement>'.
+  Property 'children' does not exist on type 'IntrinsicAttributes & SelectViewportProps & RefAttributes<HTMLDivElement>'.
+src/renderer/components/ui/select.tsx(93,3): error TS2339: Property 'className' does not exist on type 'SelectLabelProps & RefAttributes<HTMLDivElement>'.
+src/renderer/components/ui/select.tsx(99,7): error TS2322: Type '{ ref?: LegacyRef<HTMLDivElement>; key?: Key; "data-slot": string; className: string; }' is not assignable to type 'IntrinsicAttributes & SelectLabelProps & RefAttributes<HTMLDivElement>'.
+  Property 'className' does not exist on type 'IntrinsicAttributes & SelectLabelProps & RefAttributes<HTMLDivElement>'.
+src/renderer/components/ui/select.tsx(106,3): error TS2339: Property 'className' does not exist on type 'SelectItemProps & RefAttributes<HTMLDivElement>'.
+src/renderer/components/ui/select.tsx(107,3): error TS2339: Property 'children' does not exist on type 'SelectItemProps & RefAttributes<HTMLDivElement>'.
+src/renderer/components/ui/select.tsx(111,6): error TS2322: Type '{ children: Element[]; value: string; disabled?: boolean; textValue?: string; ref?: LegacyRef<HTMLDivElement>; key?: Key; "data-slot": string; className: string; }' is not assignable to type 'IntrinsicAttributes & SelectItemProps & RefAttributes<HTMLDivElement>'.
+  Property 'children' does not exist on type 'IntrinsicAttributes & SelectItemProps & RefAttributes<HTMLDivElement>'.
+src/renderer/components/ui/select.tsx(130,3): error TS2339: Property 'className' does not exist on type 'SelectSeparatorProps & RefAttributes<HTMLDivElement>'.
+src/renderer/components/ui/select.tsx(136,7): error TS2322: Type '{ ref?: LegacyRef<HTMLDivElement>; key?: Key; "data-slot": string; className: string; }' is not assignable to type 'IntrinsicAttributes & SelectSeparatorProps & RefAttributes<HTMLDivElement>'.
+  Property 'className' does not exist on type 'IntrinsicAttributes & SelectSeparatorProps & RefAttributes<HTMLDivElement>'.
+src/renderer/components/ui/select.tsx(143,3): error TS2339: Property 'className' does not exist on type 'SelectScrollUpButtonProps & RefAttributes<HTMLDivElement>'.
+src/renderer/components/ui/select.tsx(147,6): error TS2322: Type '{ children: Element; ref?: LegacyRef<HTMLDivElement>; key?: Key; "data-slot": string; className: string; }' is not assignable to type 'IntrinsicAttributes & SelectScrollUpButtonProps & RefAttributes<HTMLDivElement>'.
+  Property 'children' does not exist on type 'IntrinsicAttributes & SelectScrollUpButtonProps & RefAttributes<HTMLDivElement>'.
+src/renderer/components/ui/select.tsx(161,3): error TS2339: Property 'className' does not exist on type 'SelectScrollDownButtonProps & RefAttributes<HTMLDivElement>'.
+src/renderer/components/ui/select.tsx(165,6): error TS2322: Type '{ children: Element; ref?: LegacyRef<HTMLDivElement>; key?: Key; "data-slot": string; className: string; }' is not assignable to type 'IntrinsicAttributes & SelectScrollDownButtonProps & RefAttributes<HTMLDivElement>'.
+  Property 'children' does not exist on type 'IntrinsicAttributes & SelectScrollDownButtonProps & RefAttributes<HTMLDivElement>'.
+src/renderer/components/ui/separator.tsx(9,3): error TS2339: Property 'className' does not exist on type 'SeparatorProps & RefAttributes<HTMLDivElement>'.
+src/renderer/components/ui/separator.tsx(19,7): error TS2322: Type '{ ref?: LegacyRef<HTMLDivElement>; key?: Key; "data-slot": string; decorative: boolean; orientation: "horizontal" | "vertical"; className: string; }' is not assignable to type 'IntrinsicAttributes & SeparatorProps & RefAttributes<HTMLDivElement>'.
+  Property 'className' does not exist on type 'IntrinsicAttributes & SeparatorProps & RefAttributes<HTMLDivElement>'.
+src/renderer/components/ui/sheet.tsx(32,3): error TS2339: Property 'className' does not exist on type 'DialogOverlayProps & RefAttributes<HTMLDivElement>'.
+src/renderer/components/ui/sheet.tsx(38,7): error TS2322: Type '{ forceMount?: true; ref?: LegacyRef<HTMLDivElement>; key?: Key; "data-slot": string; className: string; }' is not assignable to type 'IntrinsicAttributes & DialogOverlayProps & RefAttributes<HTMLDivElement>'.
+  Property 'className' does not exist on type 'IntrinsicAttributes & DialogOverlayProps & RefAttributes<HTMLDivElement>'.
+src/renderer/components/ui/sheet.tsx(75,10): error TS2322: Type '{ children: Element[]; className: string; }' is not assignable to type 'IntrinsicAttributes & DialogCloseProps & RefAttributes<HTMLButtonElement>'.
+  Property 'children' does not exist on type 'IntrinsicAttributes & DialogCloseProps & RefAttributes<HTMLButtonElement>'.
+src/renderer/components/ui/sheet.tsx(105,3): error TS2339: Property 'className' does not exist on type 'DialogTitleProps & RefAttributes<HTMLHeadingElement>'.
+src/renderer/components/ui/sheet.tsx(111,7): error TS2322: Type '{ ref?: LegacyRef<HTMLHeadingElement>; key?: Key; "data-slot": string; className: string; }' is not assignable to type 'IntrinsicAttributes & DialogTitleProps & RefAttributes<HTMLHeadingElement>'.
+  Property 'className' does not exist on type 'IntrinsicAttributes & DialogTitleProps & RefAttributes<HTMLHeadingElement>'.
+src/renderer/components/ui/sheet.tsx(118,3): error TS2339: Property 'className' does not exist on type 'DialogDescriptionProps & RefAttributes<HTMLParagraphElement>'.
+src/renderer/components/ui/sheet.tsx(124,7): error TS2322: Type '{ ref?: LegacyRef<HTMLParagraphElement>; key?: Key; "data-slot": string; className: string; }' is not assignable to type 'IntrinsicAttributes & DialogDescriptionProps & RefAttributes<HTMLParagraphElement>'.
+  Property 'className' does not exist on type 'IntrinsicAttributes & DialogDescriptionProps & RefAttributes<HTMLParagraphElement>'.
+src/renderer/components/ui/sidebar.tsx(358,3): error TS2339: Property 'className' does not exist on type 'SeparatorProps & RefAttributes<HTMLDivElement>'.
+src/renderer/components/ui/sidebar.tsx(365,7): error TS2322: Type '{ orientation?: "horizontal" | "vertical"; decorative?: boolean; ref?: LegacyRef<HTMLDivElement>; key?: Key; "data-slot": string; "data-sidebar": string; className: string; }' is not assignable to type 'IntrinsicAttributes & SeparatorProps & RefAttributes<HTMLDivElement>'.
+  Property 'className' does not exist on type 'IntrinsicAttributes & SeparatorProps & RefAttributes<HTMLDivElement>'.
+src/renderer/components/ui/sidebar.tsx(537,8): error TS2322: Type '{ children: Element; asChild: true; }' is not assignable to type 'IntrinsicAttributes & TooltipTriggerProps & RefAttributes<HTMLButtonElement>'.
+  Property 'children' does not exist on type 'IntrinsicAttributes & TooltipTriggerProps & RefAttributes<HTMLButtonElement>'.
+src/renderer/components/ui/slider.tsx(9,3): error TS2339: Property 'className' does not exist on type 'SliderProps & RefAttributes<HTMLSpanElement>'.
+src/renderer/components/ui/slider.tsx(27,6): error TS2322: Type '{ children: (Element | Element[])[]; name?: string; disabled?: boolean; orientation?: "horizontal" | "vertical"; dir?: Direction; step?: number; minStepsBetweenThumbs?: number; ... 11 more ...; className: string; }' is not assignable to type 'IntrinsicAttributes & SliderProps & RefAttributes<HTMLSpanElement>'.
+  Property 'children' does not exist on type 'IntrinsicAttributes & SliderProps & RefAttributes<HTMLSpanElement>'.
+src/renderer/components/ui/slider.tsx(39,8): error TS2322: Type '{ children: Element; "data-slot": string; className: string; }' is not assignable to type 'IntrinsicAttributes & SliderTrackProps & RefAttributes<HTMLSpanElement>'.
+  Property 'children' does not exist on type 'IntrinsicAttributes & SliderTrackProps & RefAttributes<HTMLSpanElement>'.
+src/renderer/components/ui/slider.tsx(47,11): error TS2322: Type '{ "data-slot": string; className: string; }' is not assignable to type 'IntrinsicAttributes & SliderRangeProps & RefAttributes<HTMLSpanElement>'.
+  Property 'className' does not exist on type 'IntrinsicAttributes & SliderRangeProps & RefAttributes<HTMLSpanElement>'.
+src/renderer/components/ui/slider.tsx(56,11): error TS2322: Type '{ "data-slot": string; key: number; className: string; }' is not assignable to type 'IntrinsicAttributes & SliderThumbProps & RefAttributes<HTMLSpanElement>'.
+  Property 'className' does not exist on type 'IntrinsicAttributes & SliderThumbProps & RefAttributes<HTMLSpanElement>'.
+src/renderer/components/ui/sonner.tsx(3,26): error TS2307: Cannot find module 'next-themes' or its corresponding type declarations.
+src/renderer/components/ui/switch.tsx(9,3): error TS2339: Property 'className' does not exist on type 'SwitchProps & RefAttributes<HTMLButtonElement>'.
+src/renderer/components/ui/switch.tsx(13,6): error TS2322: Type '{ children: Element; checked?: boolean; defaultChecked?: boolean; required?: boolean; onCheckedChange?(checked: boolean): void; ref?: LegacyRef<HTMLButtonElement>; key?: Key; "data-slot": string; className: string; }' is not assignable to type 'IntrinsicAttributes & SwitchProps & RefAttributes<HTMLButtonElement>'.
+  Property 'children' does not exist on type 'IntrinsicAttributes & SwitchProps & RefAttributes<HTMLButtonElement>'.
+src/renderer/components/ui/switch.tsx(23,9): error TS2322: Type '{ "data-slot": string; className: string; }' is not assignable to type 'IntrinsicAttributes & SwitchThumbProps & RefAttributes<HTMLSpanElement>'.
+  Property 'className' does not exist on type 'IntrinsicAttributes & SwitchThumbProps & RefAttributes<HTMLSpanElement>'.
+src/renderer/components/ui/tabs.tsx(9,3): error TS2339: Property 'className' does not exist on type 'TabsProps & RefAttributes<HTMLDivElement>'.
+src/renderer/components/ui/tabs.tsx(15,7): error TS2322: Type '{ value?: string; defaultValue?: string; onValueChange?: (value: string) => void; orientation?: any; dir?: any; activationMode?: "automatic" | "manual"; ref?: LegacyRef<HTMLDivElement>; key?: Key; "data-slot": string; className: string; }' is not assignable to type 'IntrinsicAttributes & TabsProps & RefAttributes<HTMLDivElement>'.
+  Property 'className' does not exist on type 'IntrinsicAttributes & TabsProps & RefAttributes<HTMLDivElement>'.
+src/renderer/components/ui/tabs.tsx(22,3): error TS2339: Property 'className' does not exist on type 'TabsListProps & RefAttributes<HTMLDivElement>'.
+src/renderer/components/ui/tabs.tsx(28,7): error TS2322: Type '{ loop?: any; ref?: LegacyRef<HTMLDivElement>; key?: Key; "data-slot": string; className: string; }' is not assignable to type 'IntrinsicAttributes & TabsListProps & RefAttributes<HTMLDivElement>'.
+  Property 'className' does not exist on type 'IntrinsicAttributes & TabsListProps & RefAttributes<HTMLDivElement>'.
+src/renderer/components/ui/tabs.tsx(38,3): error TS2339: Property 'className' does not exist on type 'TabsTriggerProps & RefAttributes<HTMLButtonElement>'.
+src/renderer/components/ui/tabs.tsx(44,7): error TS2322: Type '{ value: string; ref?: LegacyRef<HTMLButtonElement>; key?: Key; "data-slot": string; className: string; }' is not assignable to type 'IntrinsicAttributes & TabsTriggerProps & RefAttributes<HTMLButtonElement>'.
+  Property 'className' does not exist on type 'IntrinsicAttributes & TabsTriggerProps & RefAttributes<HTMLButtonElement>'.
+src/renderer/components/ui/tabs.tsx(54,3): error TS2339: Property 'className' does not exist on type 'TabsContentProps & RefAttributes<HTMLDivElement>'.
+src/renderer/components/ui/tabs.tsx(60,7): error TS2322: Type '{ value: string; forceMount?: true; ref?: LegacyRef<HTMLDivElement>; key?: Key; "data-slot": string; className: string; }' is not assignable to type 'IntrinsicAttributes & TabsContentProps & RefAttributes<HTMLDivElement>'.
+  Property 'className' does not exist on type 'IntrinsicAttributes & TabsContentProps & RefAttributes<HTMLDivElement>'.
+src/renderer/components/ui/toggle-group.tsx(18,3): error TS2339: Property 'className' does not exist on type '((ToggleGroupSingleProps | ToggleGroupMultipleProps) & RefAttributes<HTMLDivElement>) & VariantProps<...>'.
+src/renderer/components/ui/toggle-group.tsx(21,3): error TS2339: Property 'children' does not exist on type '((ToggleGroupSingleProps | ToggleGroupMultipleProps) & RefAttributes<HTMLDivElement>) & VariantProps<...>'.
+src/renderer/components/ui/toggle-group.tsx(26,6): error TS2322: Type '{ children: Element; type: "single"; value?: string; defaultValue?: string; onValueChange?(value: string): void; disabled?: boolean; rovingFocus?: boolean; loop?: any; orientation?: any; ... 6 more ...; className: string; } | { ...; }' is not assignable to type 'IntrinsicAttributes & ((ToggleGroupSingleProps | ToggleGroupMultipleProps) & RefAttributes<HTMLDivElement>)'.
+  Type '{ children: Element; type: "single"; value?: string; defaultValue?: string; onValueChange?(value: string): void; disabled?: boolean; rovingFocus?: boolean; loop?: any; orientation?: any; ... 6 more ...; className: string; }' is not assignable to type 'IntrinsicAttributes & ((ToggleGroupSingleProps | ToggleGroupMultipleProps) & RefAttributes<HTMLDivElement>)'.
+    Property 'children' does not exist on type 'IntrinsicAttributes & ToggleGroupSingleProps & RefAttributes<HTMLDivElement>'.
+src/renderer/components/ui/toggle-group.tsx(44,3): error TS2339: Property 'className' does not exist on type 'ToggleGroupItemProps & RefAttributes<HTMLButtonElement> & VariantProps<(props?: ConfigVariants<{ variant: { default: string; outline: string; }; size: { ...; }; }> & ClassProp) => string>'.
+src/renderer/components/ui/toggle-group.tsx(45,3): error TS2339: Property 'children' does not exist on type 'ToggleGroupItemProps & RefAttributes<HTMLButtonElement> & VariantProps<(props?: ConfigVariants<{ variant: { default: string; outline: string; }; size: { ...; }; }> & ClassProp) => string>'.
+src/renderer/components/ui/toggle-group.tsx(54,6): error TS2322: Type '{ children: any; value: string; key?: Key; ref?: LegacyRef<HTMLButtonElement>; "data-slot": string; "data-variant": "default" | "outline"; "data-size": "default" | "sm" | "lg"; className: string; }' is not assignable to type 'IntrinsicAttributes & ToggleGroupItemProps & RefAttributes<HTMLButtonElement>'.
+  Property 'children' does not exist on type 'IntrinsicAttributes & ToggleGroupItemProps & RefAttributes<HTMLButtonElement>'.
+src/renderer/components/ui/toggle.tsx(32,3): error TS2339: Property 'className' does not exist on type 'ToggleProps & RefAttributes<HTMLButtonElement> & VariantProps<(props?: ConfigVariants<{ variant: { default: string; outline: string; }; size: { default: string; sm: string; lg: string; }; }> & ClassProp) => string>'.
+src/renderer/components/ui/toggle.tsx(41,7): error TS2322: Type '{ pressed?: boolean; defaultPressed?: boolean; onPressedChange?(pressed: boolean): void; ref?: LegacyRef<HTMLButtonElement>; key?: Key; "data-slot": string; className: string; }' is not assignable to type 'IntrinsicAttributes & ToggleProps & RefAttributes<HTMLButtonElement>'.
+  Property 'className' does not exist on type 'IntrinsicAttributes & ToggleProps & RefAttributes<HTMLButtonElement>'.
+src/renderer/components/ui/tooltip.tsx(55,33): error TS2322: Type '{ className: string; }' is not assignable to type 'IntrinsicAttributes & TooltipArrowProps & RefAttributes<SVGSVGElement>'.
+  Property 'className' does not exist on type 'IntrinsicAttributes & TooltipArrowProps & RefAttributes<SVGSVGElement>'.
+src/renderer/hooks/useEntities.ts(2,30): error TS6307: File 'C:/Users/Hp/ellipsa/apps/edge-agent/src/services/api.ts' is not listed within the file list of project 'C:/Users/Hp/ellipsa/apps/edge-agent/tsconfig.renderer.json'. Projects must list all files or use an 'include' pattern.
+  The file is in the program because:
+    Imported via '../../services/api' from file 'C:/Users/Hp/ellipsa/apps/edge-agent/src/renderer/hooks/useEntities.ts'
+    Imported via '../../services/api' from file 'C:/Users/Hp/ellipsa/apps/edge-agent/src/renderer/hooks/useEvents.ts'
+    Imported via '../../services/api' from file 'C:/Users/Hp/ellipsa/apps/edge-agent/src/renderer/hooks/useTasks.ts'
+src/renderer/notificationUI.ts(1,37): error TS6307: File 'C:/Users/Hp/ellipsa/apps/edge-agent/src/services/NotificationService.ts' is not listed within the file list of project 'C:/Users/Hp/ellipsa/apps/edge-agent/tsconfig.renderer.json'. Projects must list all files or use an 'include' pattern.
+src/renderer/notificationUI.ts(2,36): error TS6059: File 'C:/Users/Hp/ellipsa/packages/shared/src/notification/INotificationService.ts' is not under 'rootDir' 'C:/Users/Hp/ellipsa/apps/edge-agent'. 'rootDir' is expected to contain all source files.
+  The file is in the program because:
+    Imported via '@ellipsa/shared/notification/INotificationService' from file 'C:/Users/Hp/ellipsa/apps/edge-agent/src/renderer/notificationUI.ts'
+    Imported via '@ellipsa/shared/notification/INotificationService' from file 'C:/Users/Hp/ellipsa/apps/edge-agent/src/types/notification.d.ts'
+src/renderer/notificationUI.ts(2,36): error TS6307: File 'C:/Users/Hp/ellipsa/packages/shared/src/notification/INotificationService.ts' is not listed within the file list of project 'C:/Users/Hp/ellipsa/apps/edge-agent/tsconfig.renderer.json'. Projects must list all files or use an 'include' pattern.
+  The file is in the program because:
+    Imported via '@ellipsa/shared/notification/INotificationService' from file 'C:/Users/Hp/ellipsa/apps/edge-agent/src/renderer/notificationUI.ts'
+    Imported via '@ellipsa/shared/notification/INotificationService' from file 'C:/Users/Hp/ellipsa/apps/edge-agent/src/types/notification.d.ts'
+src/renderer/notificationUI.ts(7,5): error TS2687: All declarations of 'ellipsa' must have identical modifiers.
+src/services/RealtimeService.ts(2,33): error TS6307: File 'C:/Users/Hp/ellipsa/apps/edge-agent/src/services/WebSocketClient.ts' is not listed within the file list of project 'C:/Users/Hp/ellipsa/apps/edge-agent/tsconfig.renderer.json'. Projects must list all files or use an 'include' pattern.

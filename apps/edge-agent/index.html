@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <meta charset="utf-8" />
   <meta http-equiv="Content-Security-Policy"
-    content="default-src 'self'; connect-src 'self' ws://localhost:4001; img-src 'self' file: data:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; script-src 'self' 'unsafe-inline' 'unsafe-eval'; media-src 'self' blob: data:;">
+    content="default-src 'self'; connect-src 'self' ws://localhost:4001 http://localhost:4001 http://localhost:4004; img-src 'self' file: data:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; script-src 'self' 'unsafe-inline' 'unsafe-eval'; media-src 'self' blob: data:;">
   <title>ellipsa</title>
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap');
@@ -40,9 +40,6 @@
       position: relative;
       width: 100%;
       height: 100%;
-      display: flex;
-      justify-content: center;
-      align-items: center;
     }
 
     .btn {

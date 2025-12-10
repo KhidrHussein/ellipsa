@@ -2,8 +2,6 @@
   "extends": "./tsconfig.json",
   "compilerOptions": {
     "outDir": "./dist/renderer",
-    "rootDir": ".",
-    "composite": true,
     "module": "ESNext",
     "target": "ES2020",
     "jsx": "react-jsx",
@@ -39,8 +37,7 @@
       ]
     },
     "types": [
-      "node",
-      "electron"
+      "node"
     ],
     "typeRoots": [
       "./node_modules/@types",
@@ -50,6 +47,7 @@
   "include": [
     "src/renderer/**/*.ts",
     "src/renderer/**/*.tsx",
+    "src/services/**/*.ts",
     "src/shims-*.d.ts",
     "src/types/**/*.d.ts"
   ],

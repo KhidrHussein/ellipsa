@@ -244,3 +244,89 @@
 2025-12-05 18:58:40 [[32minfo[39m]: 	[32m[MemoryService] Request: POST /events[39m
 2025-12-05 19:02:43 [[32minfo[39m]: 	[32m[MemoryService] Request: POST /events[39m
 2025-12-05 19:38:11 [[32minfo[39m]: 	[32m[MemoryService] Request: POST /events[39m
+2025-12-08 13:04:39 [[32minfo[39m]: 	[32m[MemoryService] Request: POST /events[39m
+2025-12-08 13:08:16 [[32minfo[39m]: 	[32m[MemoryService] Request: POST /events[39m
+2025-12-09 12:40:12 [[32minfo[39m]: 	[32m[MemoryService] Request: POST /events[39m
+2025-12-09 12:41:54 [[32minfo[39m]: 	[32m[MemoryService] Request: POST /events[39m
+2025-12-09 12:49:49 [[32minfo[39m]: 	[32m[MemoryService] Request: POST /events[39m
+2025-12-09 12:51:01 [[32minfo[39m]: 	[32m[MemoryService] Request: POST /events[39m
+2025-12-09 12:53:43 [[32minfo[39m]: 	[32m[MemoryService] Request: POST /events[39m
+2025-12-09 13:49:13 [[32minfo[39m]: 	[32m[MemoryService] Request: POST /events[39m
+2025-12-09 13:54:09 [[32minfo[39m]: 	[32m[MemoryService] Request: POST /events[39m
+2025-12-09 14:00:48 [[32minfo[39m]: 	[32m[MemoryService] Request: POST /events[39m
+2025-12-09 14:00:49 [[33mwarn[39m]: 	[33m[MemoryService] Retry 1/3 for /events[39m
+2025-12-09 14:00:51 [[32minfo[39m]: 	[32m[MemoryService] Request: POST /events[39m
+2025-12-09 14:00:52 [[33mwarn[39m]: 	[33m[MemoryService] Retry 2/3 for /events[39m
+2025-12-09 14:00:56 [[32minfo[39m]: 	[32m[MemoryService] Request: POST /events[39m
+2025-12-09 14:00:56 [[33mwarn[39m]: 	[33m[MemoryService] Retry 3/3 for /events[39m
+2025-12-09 14:01:04 [[32minfo[39m]: 	[32m[MemoryService] Request: POST /events[39m
+2025-12-09 14:01:05 [[31merror[39m]: 	[31m[MemoryService] Request failed:[39m
+{
+  "url": "/events",
+  "method": "POST",
+  "status": 500,
+  "statusText": "Internal Server Error",
+  "data": {
+    "success": false,
+    "error": {
+      "code": "EVENT_CREATION_FAILED",
+      "message": "Failed to create event",
+      "details": "insert into \"events\" (\"embedding\", \"end_time\", \"metadata\", \"participants\", \"source\", \"start_time\", \"summary\", \"title\", \"type\") values ($1, $2, $3, $4, $5, $6, $7, $8, $9) returning * - column \"summary\" of relation \"events\" does not exist"
+    },
+    "meta": {
+      "version": "1.0.0",
+      "timestamp": "2025-12-09T13:01:05.596Z"
+    }
+  }
+}
+2025-12-09 14:01:05 [[32minfo[39m]: 	[32m[MemoryService] Request: POST /events[39m
+2025-12-09 16:25:12 [[32minfo[39m]: 	[32m[MemoryService] Request: POST /events[39m
+2025-12-09 16:41:55 [[32minfo[39m]: 	[32m[MemoryService] Request: POST /events[39m
+2025-12-09 16:42:00 [[33mwarn[39m]: 	[33m[MemoryService] Retry 1/3 for /events[39m
+2025-12-09 16:42:02 [[32minfo[39m]: 	[32m[MemoryService] Request: POST /events[39m
+2025-12-09 16:44:08 [[32minfo[39m]: 	[32m[MemoryService] Request: POST /events[39m
+2025-12-10 13:09:32 [[32minfo[39m]: 	[32m[MemoryService] Request: POST /events[39m
+2025-12-10 13:11:34 [[32minfo[39m]: 	[32m[MemoryService] Request: POST /events[39m
+2025-12-10 13:11:35 [[33mwarn[39m]: 	[33m[MemoryService] Retry 1/3 for /events[39m
+2025-12-10 13:11:37 [[32minfo[39m]: 	[32m[MemoryService] Request: POST /events[39m
+2025-12-10 13:11:38 [[33mwarn[39m]: 	[33m[MemoryService] Retry 2/3 for /events[39m
+2025-12-10 13:11:42 [[32minfo[39m]: 	[32m[MemoryService] Request: POST /events[39m
+2025-12-10 13:11:44 [[33mwarn[39m]: 	[33m[MemoryService] Retry 3/3 for /events[39m
+2025-12-10 13:11:52 [[32minfo[39m]: 	[32m[MemoryService] Request: POST /events[39m
+2025-12-10 13:11:53 [[31merror[39m]: 	[31m[MemoryService] Request failed:[39m
+{
+  "url": "/events",
+  "method": "POST",
+  "status": 500,
+  "statusText": "Internal Server Error",
+  "data": {
+    "success": false,
+    "error": {
+      "code": "EVENT_CREATION_FAILED",
+      "message": "Failed to create event",
+      "details": "insert into \"events\" (\"content\", \"embedding\", \"end_time\", \"metadata\", \"participants\", \"start_time\", \"type\") values ($1, $2, $3, $4, $5, $6, $7) returning * - null value in column \"title\" of relation \"events\" violates not-null constraint"
+    },
+    "meta": {
+      "version": "1.0.0",
+      "timestamp": "2025-12-10T12:11:53.959Z"
+    }
+  }
+}
+2025-12-10 13:11:53 [[32minfo[39m]: 	[32m[MemoryService] Request: POST /events[39m
+2025-12-10 13:13:11 [[32minfo[39m]: 	[32m[MemoryService] Request: POST /events[39m
+2025-12-10 13:13:13 [[31merror[39m]: 	[31m[MemoryService] Circuit breaker opened[39m
+2025-12-10 13:13:13 [[31merror[39m]: 	[31m[MemoryService] Request failed:[39m
+{
+  "url": "/events",
+  "method": "POST"
+}
+2025-12-10 13:13:13 [[32minfo[39m]: 	[32m[MemoryService] Request: POST /events[39m
+2025-12-10 13:14:13 [[32minfo[39m]: 	[32m[MemoryService] Circuit breaker reset[39m
+2025-12-10 13:23:09 [[31merror[39m]: 	[31mUnhandled Rejection at:[39m
+2025-12-10 13:26:46 [[31merror[39m]: 	[31mUnhandled Rejection at:[39m
+2025-12-10 13:31:41 [[31merror[39m]: 	[31mUnhandled Rejection at:[39m
+2025-12-10 13:40:30 [[31merror[39m]: 	[31mUnhandled Rejection at:[39m
+2025-12-10 13:44:45 [[31merror[39m]: 	[31mUnhandled Rejection at:[39m
+2025-12-10 13:47:02 [[31merror[39m]: 	[31mUnhandled Rejection at:[39m
+2025-12-10 15:27:55 [[32minfo[39m]: 	[32m[MemoryService] Request: POST /events[39m
+2025-12-10 15:27:56 [[32minfo[39m]: 	[32m[MemoryService] Request: POST /events[39m

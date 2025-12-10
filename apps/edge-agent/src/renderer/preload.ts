@@ -6,7 +6,7 @@ contextBridge.exposeInMainWorld('electron', {
   ipcRenderer: {
     send: (channel: string, ...args: any[]) => {
       // Whitelist channels that the renderer can send messages to
-      const validChannels = ['toMain'];
+      const validChannels = ['toMain', 'resize-window', 'main-window-loaded'];
       if (validChannels.includes(channel)) {
         ipcRenderer.send(channel, ...args);
       }
@@ -25,6 +25,17 @@ contextBridge.exposeInMainWorld('electron', {
       }
     },
   },
+});
+
+contextBridge.exposeInMainWorld('ellipsa', {
+  resizeWindow: (width: number, height: number) => {
+    ipcRenderer.send('resize-window', { width, height });
+  },
+  toggleChat: () => {
+    ipcRenderer.send('toggle-chat');
+  },
+  startAudioCapture: () => ipcRenderer.invoke('start-audio-capture'),
+  stopAudioCapture: () => ipcRenderer.invoke('stop-audio-capture'),
 });
 
 // Add any other preload scripts here

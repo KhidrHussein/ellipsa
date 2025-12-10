@@ -10,6 +10,50 @@ export function createEventsRouter(
 ): Router {
   const router = Router();
 
+  // List events with optional filtering
+  router.get('/', async (req, res) => {
+    try {
+      const { type, limit } = req.query;
+
+      // Build filter options
+      const filterOptions: any = {};
+      if (type) {
+        filterOptions.type = type as string;
+      }
+
+      const events = await eventModel.findAll(filterOptions, {
+        page: 1,
+        pageSize: limit ? parseInt(limit as string, 10) : 50,
+        sortBy: 'start_time',
+        sortOrder: 'desc',
+      });
+
+      res.json({
+        success: true,
+        data: events.data || events,
+        meta: {
+          version: '1.0.0',
+          timestamp: new Date().toISOString()
+        }
+      });
+    } catch (error: unknown) {
+      console.error('Error listing events:', error);
+      const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
+      res.status(500).json({
+        success: false,
+        error: {
+          code: 'EVENT_LIST_FAILED',
+          message: 'Failed to list events',
+          details: process.env.NODE_ENV === 'development' ? errorMessage : undefined
+        },
+        meta: {
+          version: '1.0.0',
+          timestamp: new Date().toISOString()
+        }
+      });
+    }
+  });
+
   // Store event from processor
   router.post('/', async (req, res) => {
     try {

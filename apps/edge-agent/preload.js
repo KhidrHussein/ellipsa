@@ -14,7 +14,7 @@ process.on('unhandledRejection', (reason, promise) => {
 // Helper function to create a promise-based event listener
 const createListener = (channel) => {
   const listeners = new Set();
-  
+
   ipcRenderer.on(channel, (_, ...args) => {
     listeners.forEach(listener => {
       try {
@@ -24,7 +24,7 @@ const createListener = (channel) => {
       }
     });
   });
-  
+
   return {
     addListener: (callback) => {
       listeners.add(callback);
@@ -77,12 +77,12 @@ const startAudioCapture = async () => {
 
     console.log('Requesting audio permissions...');
     try {
-      audioStream = await navigator.mediaDevices.getUserMedia({ 
+      audioStream = await navigator.mediaDevices.getUserMedia({
         audio: {
           echoCancellation: true,
           noiseSuppression: true,
           sampleRate: 16000
-        } 
+        }
       });
       console.log('Got audio stream:', audioStream);
     } catch (err) {
@@ -170,7 +170,7 @@ contextBridge.exposeInMainWorld('ellipsa', {
     const removeListener = audioLevelListener.addListener(callback);
     return removeListener;
   },
-  
+
   // Existing functions
   toggleObserve: () => ipcRenderer.send('toggle-observe'),
   getObserveStatus: () => ipcRenderer.invoke('get-observe-status'),
@@ -182,15 +182,16 @@ contextBridge.exposeInMainWorld('ellipsa', {
   getIconPath: () => ipcRenderer.invoke('get-icon-path'),
   getIconData: () => ipcRenderer.invoke('get-icon-data'),
   moveWindow: (x, y) => ipcRenderer.send('move-window', { x, y }),
+  resizeWindow: (width, height) => ipcRenderer.send('resize-window', { width, height }),
   getWindowPos: () => ipcRenderer.invoke('get-window-pos'),
-  
+
   // Window management
   // Chat methods
   // Chat window controls
   toggleChat: () => ipcRenderer.send('toggle-chat'),
   closeChat: () => ipcRenderer.send('close-chat'),
   minimizeChat: () => ipcRenderer.send('minimize-chat'),
-  
+
   // Chat messaging
   sendMessage: (message) => ipcRenderer.send('send-message', message),
   onMessage: (callback) => {
@@ -198,10 +199,10 @@ contextBridge.exposeInMainWorld('ellipsa', {
     ipcRenderer.on('message-received', listener);
     return () => ipcRenderer.off('message-received', listener);
   },
-  
+
   // App control
   quitApp: () => ipcRenderer.send('quit-app'),
-  
+
   // Cleanup function
   cleanup: () => {
     audioLevelListener.removeAllListeners();

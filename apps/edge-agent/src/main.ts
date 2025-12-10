@@ -55,7 +55,7 @@ app.whenReady().then(() => {
 });
 
 // For resolving paths in the app
-const appRoot = path.join(__dirname, '..');
+const appRoot = path.join(__dirname, '../../../..');
 
 // Application state
 let mainWindow: BrowserWindow | null = null;
@@ -189,7 +189,7 @@ const getIconPath = (): string => {
 };
 
 function createWindow(): void {
-  const size = debugMode ? 400 : 64;
+  const size = debugMode ? 400 : 96;
 
   const display = screen.getPrimaryDisplay();
   const { width: screenWidth, height: screenHeight } = display.workAreaSize;
@@ -216,7 +216,7 @@ function createWindow(): void {
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
-      preload: path.join(__dirname, 'preload.js'),
+      preload: path.join(__dirname, '../../../preload.js'),
       webSecurity: true,
       webviewTag: false,
       nodeIntegrationInWorker: false,
@@ -302,7 +302,7 @@ function createWindow(): void {
   });
 
   // Load the index.html file
-  mainWindow.loadFile(path.join(__dirname, '../index.html'));
+  mainWindow.loadFile(path.join(__dirname, '../../../../index.html'));
 
   // Initialize FloatingAssistant when the window is ready
   mainWindow.webContents.on('did-finish-load', () => {
@@ -326,7 +326,7 @@ function createWindow(): void {
 }
 
 function createTray(): void {
-  const iconPath = path.join(__dirname, 'assets/icon-black.png');
+  const iconPath = path.join(__dirname, '../../../../src/assets/icon-black.png');
   tray = new Tray(nativeImage.createFromPath(iconPath));
   updateTrayMenu();
 }
@@ -412,7 +412,7 @@ async function toggleChatWindow() {
     webPreferences: {
       nodeIntegration: true, // Match main window settings
       contextIsolation: false, // Required when nodeIntegration is true
-      preload: path.join(__dirname, 'preload.js'), // Fix path to preload script
+      preload: path.join(__dirname, '../../../preload.js'), // Fix path to preload script
       webSecurity: true,
       webviewTag: false,
       nodeIntegrationInWorker: false,
@@ -428,8 +428,8 @@ async function toggleChatWindow() {
     show: false
   });
 
-  // Load the chat interface
-  const chatHtmlPath = path.join(__dirname, '..', 'chat.html');
+  // Load the chat interface (React-based)
+  const chatHtmlPath = path.join(__dirname, '../../../..', 'chat-new.html');
   console.log('Loading chat window from:', chatHtmlPath);
 
   chatWindow.loadFile(chatHtmlPath).catch(err => {
@@ -603,6 +603,30 @@ ipcMain.handle('get-screen-size', () => {
   };
 });
 
+ipcMain.on('resize-window', (event, { width, height }) => {
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    // Get current window bounds
+    const [currentWidth, currentHeight] = mainWindow.getSize();
+    const [currentX, currentY] = mainWindow.getPosition();
+
+    // Calculate the bottom-right corner position (this should stay fixed)
+    const bottomRightX = currentX + currentWidth;
+    const bottomRightY = currentY + currentHeight;
+
+    // Calculate new top-left position to keep bottom-right anchor
+    const newX = bottomRightX - width;
+    const newY = bottomRightY - height;
+
+    // Set new bounds atomically
+    mainWindow.setBounds({
+      x: Math.round(newX),
+      y: Math.round(newY),
+      width: Math.round(width),
+      height: Math.round(height)
+    });
+  }
+});
+
 
 ipcMain.on('move-window', (event, { x, y }) => {
   try {
@@ -741,7 +765,24 @@ ipcMain.on('show-context-menu', (event) => {
     }
   ] as Electron.MenuItemConstructorOptions[];
   const menu = Menu.buildFromTemplate(template);
-  menu.popup({ window: BrowserWindow.fromWebContents(event.sender) });
+
+  // For transparent windows, we need to use the main window directly
+  // and let the menu figure out its own position
+  const targetWindow = mainWindow && !mainWindow.isDestroyed() ? mainWindow : undefined;
+
+  if (targetWindow) {
+    // Get the window bounds to position the menu near the button
+    const bounds = targetWindow.getBounds();
+    // Show menu at the top-left of the window (above the button)
+    menu.popup({
+      window: targetWindow,
+      x: 0,
+      y: 0
+    });
+  } else {
+    // Fallback to default popup
+    menu.popup();
+  }
 });
 
 ipcMain.on('close-chat', () => {

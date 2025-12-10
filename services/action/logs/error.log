@@ -167,3 +167,53 @@
     }
   }
 }
+2025-12-09 14:01:05 [[31merror[39m]: 	[31m[MemoryService] Request failed:[39m
+{
+  "url": "/events",
+  "method": "POST",
+  "status": 500,
+  "statusText": "Internal Server Error",
+  "data": {
+    "success": false,
+    "error": {
+      "code": "EVENT_CREATION_FAILED",
+      "message": "Failed to create event",
+      "details": "insert into \"events\" (\"embedding\", \"end_time\", \"metadata\", \"participants\", \"source\", \"start_time\", \"summary\", \"title\", \"type\") values ($1, $2, $3, $4, $5, $6, $7, $8, $9) returning * - column \"summary\" of relation \"events\" does not exist"
+    },
+    "meta": {
+      "version": "1.0.0",
+      "timestamp": "2025-12-09T13:01:05.596Z"
+    }
+  }
+}
+2025-12-10 13:11:53 [[31merror[39m]: 	[31m[MemoryService] Request failed:[39m
+{
+  "url": "/events",
+  "method": "POST",
+  "status": 500,
+  "statusText": "Internal Server Error",
+  "data": {
+    "success": false,
+    "error": {
+      "code": "EVENT_CREATION_FAILED",
+      "message": "Failed to create event",
+      "details": "insert into \"events\" (\"content\", \"embedding\", \"end_time\", \"metadata\", \"participants\", \"start_time\", \"type\") values ($1, $2, $3, $4, $5, $6, $7) returning * - null value in column \"title\" of relation \"events\" violates not-null constraint"
+    },
+    "meta": {
+      "version": "1.0.0",
+      "timestamp": "2025-12-10T12:11:53.959Z"
+    }
+  }
+}
+2025-12-10 13:13:13 [[31merror[39m]: 	[31m[MemoryService] Circuit breaker opened[39m
+2025-12-10 13:13:13 [[31merror[39m]: 	[31m[MemoryService] Request failed:[39m
+{
+  "url": "/events",
+  "method": "POST"
+}
+2025-12-10 13:23:09 [[31merror[39m]: 	[31mUnhandled Rejection at:[39m
+2025-12-10 13:26:46 [[31merror[39m]: 	[31mUnhandled Rejection at:[39m
+2025-12-10 13:31:41 [[31merror[39m]: 	[31mUnhandled Rejection at:[39m
+2025-12-10 13:40:30 [[31merror[39m]: 	[31mUnhandled Rejection at:[39m
+2025-12-10 13:44:45 [[31merror[39m]: 	[31mUnhandled Rejection at:[39m
+2025-12-10 13:47:02 [[31merror[39m]: 	[31mUnhandled Rejection at:[39m

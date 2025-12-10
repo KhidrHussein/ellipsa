@@ -12,7 +12,7 @@ let isCapturing = false;
 
 function createWindow() {
   const size = debugMode ? 400 : 64;
-  
+
   mainWindow = new BrowserWindow({
     width: size,
     height: size,
@@ -37,17 +37,17 @@ function createWindow() {
   mainWindow.setIgnoreMouseEvents(false);
   mainWindow.setMenuBarVisibility(false);
   mainWindow.loadFile(path.join(__dirname, 'index.html'));
-  
+
   // Open DevTools in debug mode
   if (debugMode) {
     mainWindow.webContents.openDevTools();
   }
-  
+
   // Log when page finishes loading
   mainWindow.webContents.on('did-finish-load', () => {
     console.log('[edge-agent] Page loaded successfully');
   });
-  
+
   mainWindow.webContents.on('console-message', (event, level, message, line, sourceId) => {
     console.log(`[renderer] ${message}`);
   });
@@ -58,7 +58,7 @@ function createWindow() {
   const x = Math.max(0, width - size - 16);
   const y = Math.max(0, height - size - 16);
   mainWindow.setPosition(x, y);
-  
+
   console.log('[edge-agent] Window created. Debug mode:', debugMode);
   console.log('[edge-agent] Window position:', x, y);
 }
@@ -71,26 +71,26 @@ function createTray() {
 
 function updateTrayMenu() {
   const contextMenu = Menu.buildFromTemplate([
-    { 
-      label: observeMode ? 'Stop Observing' : 'Start Observing', 
+    {
+      label: observeMode ? 'Stop Observing' : 'Start Observing',
       click: () => toggleObserve(),
       type: 'checkbox',
       checked: observeMode
     },
-    { 
-      label: 'Debug Mode', 
+    {
+      label: 'Debug Mode',
       click: () => toggleDebugMode(),
       type: 'checkbox',
       checked: debugMode
     },
-    { 
-      label: 'Show DevTools', 
-      click: () => mainWindow?.webContents.openDevTools({ mode: 'detach' }) 
+    {
+      label: 'Show DevTools',
+      click: () => mainWindow?.webContents.openDevTools({ mode: 'detach' })
     },
     { type: 'separator' },
     { label: 'Quit', role: 'quit' }
   ]);
-  
+
   tray.setToolTip('ellipsa - ' + (observeMode ? 'Observing' : 'Idle'));
   tray.setContextMenu(contextMenu);
 }
@@ -106,7 +106,7 @@ function toggleDebugMode() {
 
 async function toggleObserve() {
   observeMode = !observeMode;
-  
+
   if (observeMode) {
     try {
       // Start both audio and screen capture
@@ -114,7 +114,7 @@ async function toggleObserve() {
         startAudioCapture(mainWindow),
         screenCapture.startCapture(5000, mainWindow) // Capture every 5 seconds
       ]);
-      
+
       if (!audioStarted || !screenCaptureStarted) {
         console.error('Failed to start audio or screen capture');
         observeMode = false;
@@ -135,7 +135,7 @@ async function toggleObserve() {
     screenCapture.stopCapture();
     isCapturing = false;
   }
-  
+
   // Update tray icon and menu
   updateTrayMenu();
   return { success: true, timestamp: new Date().toISOString() };
@@ -150,28 +150,71 @@ app.whenReady().then(() => {
     debug: debugMode,
     timestamp: new Date().toISOString()
   }));
-  
+
   ipcMain.on('toggle-observe', () => toggleObserve());
-  
+
   // Update tray menu when observe status changes
   ipcMain.on('observe-status', (_, status) => {
     observeMode = status.observing;
     updateTrayMenu();
   });
+
+  ipcMain.on('resize-window', (_e, { width, height }) => {
+    console.log(`[main] resize-window requested: ${width}x${height}`);
+    if (mainWindow) {
+      const { x, y, width: currentW, height: currentH } = mainWindow.getBounds();
+      const { workArea } = screen.getPrimaryDisplay();
+
+      console.log(`[main] Current bounds: x=${x}, y=${y}, w=${currentW}, h=${currentH}`);
+      console.log(`[main] Work area: x=${workArea.x}, y=${workArea.y}, w=${workArea.width}, h=${workArea.height}`);
+
+      // Calculate new position to keep the BOTTOM-RIGHT corner fixed
+      // Right edge = x + currentW
+      // Bottom edge = y + currentH
+      const right = x + currentW;
+      const bottom = y + currentH;
+
+      let newX = right - width;
+      let newY = bottom - height;
+
+      console.log(`[main] Calculated unclamped: x=${newX}, y=${newY}`);
+
+      // Clamp to screen edges
+      if (newX < workArea.x) {
+        newX = workArea.x;
+        console.log('[main] Clamped Left');
+      }
+      if (newY < workArea.y) {
+        newY = workArea.y;
+        console.log('[main] Clamped Top');
+      }
+      if (newX + width > workArea.x + workArea.width) {
+        newX = workArea.x + workArea.width - width;
+        console.log('[main] Clamped Right');
+      }
+      if (newY + height > workArea.y + workArea.height) {
+        newY = workArea.y + workArea.height - height;
+        console.log('[main] Clamped Bottom');
+      }
+
+      console.log(`[main] Final applying: x=${newX}, y=${newY}, w=${width}, h=${height}`);
+      mainWindow.setBounds({ x: newX, y: newY, width, height });
+    }
+  });
   ipcMain.on('move-window', (_e, pos) => {
     if (!mainWindow) return;
     // Destructure the x and y from the 'pos' object
-    const { x, y } = pos; 
-    
+    const { x, y } = pos;
+
     // Get work area size
     const { workAreaSize } = screen.getPrimaryDisplay();
     // Constants for window size and margin from `main.js`'s logic
-    const W = 64, H = 64, M = 0; 
+    const W = 64, H = 64, M = 0;
 
     // Clamping logic
     const nx = Math.max(M, Math.min(x, workAreaSize.width - W - M));
     const ny = Math.max(M, Math.min(y, workAreaSize.height - H - M));
-    
+
     // Set new position
     mainWindow.setPosition(Math.round(nx), Math.round(ny));
   });
@@ -194,12 +237,12 @@ app.whenReady().then(() => {
         path.join(__dirname, 'assets', 'icon-white.png'),
         path.join(app.getAppPath(), 'assets', 'icon-white.png')
       ];
-      
+
       console.log('[edge-agent] __dirname:', __dirname);
       console.log('[edge-agent] process.cwd():', process.cwd());
       console.log('[edge-agent] app.getAppPath():', app.getAppPath());
       console.log('[edge-agent] Trying paths:');
-      
+
       let p = null;
       for (const testPath of possiblePaths) {
         const exists = fs.existsSync(testPath);
@@ -208,12 +251,12 @@ app.whenReady().then(() => {
           p = testPath;
         }
       }
-      
+
       if (!p) {
         console.error('[edge-agent] ✗ Icon not found in any path');
         return { mime: 'image/png', base64: '' };
       }
-      
+
       console.log('[edge-agent] ✓ Using icon at:', p);
       const b64 = fs.readFileSync(p).toString('base64');
       console.log('[edge-agent] Icon loaded, base64 length:', b64.length);
@@ -231,14 +274,14 @@ app.whenReady().then(() => {
       path.resolve(__dirname, '../../../assets/icon-white.png'),
       path.join(process.cwd(), 'assets', 'icon-white.png')
     ];
-    
+
     for (const iconPath of possiblePaths) {
       if (fs.existsSync(iconPath)) {
         console.log('[edge-agent] icon path resolved to:', iconPath);
         return iconPath;
       }
     }
-    
+
     console.error('[edge-agent] icon path not found');
     return null;
   });

@@ -3,7 +3,7 @@ import { getDriver, closeDriver } from './graph/connection.js';
 import { getChromaClient, getOrCreateCollection } from './vector/chroma';
 import config from '../config';
 import { logger } from '../utils/logger';
-import type { Driver, Session, Transaction } from 'neo4j-driver';
+import type { Driver, Session, ManagedTransaction } from 'neo4j-driver';
 
 /**
  * Initialize all database connections and verify connectivity
@@ -18,23 +18,23 @@ export async function initializeDatabases(): Promise<{
 }> {
   try {
     logger.info('Initializing database connections...');
-    
+
     // 1. Initialize relational database (PostgreSQL/SQLite)
     const knex = getConnection();
-    
+
     // Run migrations
     logger.info('Running database migrations...');
     await knex.migrate.latest();
-    
+
     // 2. Initialize Neo4j graph database
     const neo4jDriver = await getDriver();
-    
+
     // Verify Neo4j connection and constraints
     await verifyNeo4jConstraints(neo4jDriver);
-    
+
     // 3. Initialize ChromaDB vector store
     const chromaClient = getChromaClient();
-    
+
     // Create or get collections
     logger.info('Initializing vector collections...');
     const [entitiesCollection, eventsCollection] = await Promise.all([
@@ -45,9 +45,9 @@ export async function initializeDatabases(): Promise<{
         description: 'Events vector store for semantic search',
       }),
     ]);
-    
+
     logger.info('Database initialization completed successfully');
-    
+
     return {
       knex,
       neo4jDriver,
@@ -68,7 +68,7 @@ export async function initializeDatabases(): Promise<{
  */
 async function verifyNeo4jConstraints(driver: Driver): Promise<void> {
   const session = driver.session();
-  
+
   try {
     // Create constraints for uniqueness
     const constraints = [
@@ -91,7 +91,7 @@ async function verifyNeo4jConstraints(driver: Driver): Promise<void> {
 
     for (const constraint of constraints) {
       try {
-        await session.writeTransaction((tx: Transaction) =>
+        await session.executeWrite((tx: ManagedTransaction) =>
           tx.run(`
             CREATE CONSTRAINT ${constraint.name} IF NOT EXISTS 
             FOR (n:${constraint.label}) REQUIRE n.${constraint.property} IS UNIQUE
@@ -103,7 +103,7 @@ async function verifyNeo4jConstraints(driver: Driver): Promise<void> {
         throw error;
       }
     }
-    
+
     logger.info('Neo4j constraints verified/created');
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
@@ -126,13 +126,13 @@ export async function closeConnections(): Promise<void> {
     // Close relational database connection
     const { closeConnection } = await import('./relational/connection.js');
     await closeConnection();
-    
+
     // Close Neo4j driver
     const { closeDriver } = await import('./graph/connection.js');
     await closeDriver();
-    
+
     // Note: ChromaDB client is stateless, no need to close
-    
+
     logger.info('Database connections closed');
   } catch (error) {
     logger.error('Error closing database connections:', error);

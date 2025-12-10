@@ -1,7 +1,7 @@
 import { Knex } from 'knex';
 import { z, type ZodType } from 'zod';
 import { BaseModel, type PaginationOptions, type PaginatedResult } from './BaseModel';
-import { Session, Transaction } from 'neo4j-driver';
+import { Session, Transaction, ManagedTransaction } from 'neo4j-driver';
 import { getEmbeddingFunction } from '../db/vector/chroma';
 import type { BaseModel as BaseModelType } from './BaseModel';
 
@@ -145,7 +145,7 @@ export class EventModel extends BaseModel<BaseEvent, EventInput, EventUpdate> {
 
       // 2. Store in Neo4j (Graph)
       if (this.neo4jSession) {
-        await this.neo4jSession.writeTransaction((tx: Transaction) =>
+        await this.neo4jSession.executeWrite((tx: ManagedTransaction) =>
           tx.run(
             `CREATE (e:Event {
               id: $id,
@@ -304,7 +304,7 @@ export class EventModel extends BaseModel<BaseEvent, EventInput, EventUpdate> {
           }
 
           if (updateFields.length > 0) {
-            await this.neo4jSession.writeTransaction((tx: Transaction) =>
+            await this.neo4jSession.executeWrite((tx: ManagedTransaction) =>
               tx.run(
                 `MATCH (e:Event {id: $id}) SET ${updateFields.join(', ')}`,
                 params
@@ -336,7 +336,7 @@ export class EventModel extends BaseModel<BaseEvent, EventInput, EventUpdate> {
           }
 
           if (this.neo4jSession) {
-            await this.neo4jSession.writeTransaction((tx: Transaction) =>
+            await this.neo4jSession.executeWrite((tx: ManagedTransaction) =>
               tx.run(`MATCH (e:Event {id: $id}) DETACH DELETE e`, { id })
             );
           }

@@ -653,6 +653,18 @@ async function startServer() {
                 if (services?.emailService) {
                     await services.emailService.connect();
 
+                    // Initialize Calendar Provider with the authenticated OAuth client
+                    try {
+                        const calendarProvider = services.actionRegistry.getProvider('calendar') as CalendarProvider | undefined;
+                        if (calendarProvider) {
+                            const authClient = await services.emailService.getAuthClient();
+                            await calendarProvider.initialize(authClient);
+                            console.log('[Server] Calendar provider initialized with Gmail OAuth');
+                        }
+                    } catch (calError) {
+                        console.warn('[Server] Failed to initialize Calendar provider:', calError);
+                    }
+
                     // Initialize automation if not already running
                     if (!services.emailAutomationService) {
                         const emailAutomationService = await createEmailAutomation({

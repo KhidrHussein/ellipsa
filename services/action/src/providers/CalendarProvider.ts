@@ -8,6 +8,7 @@ import {
     ValidationResult,
     ActionCapability,
 } from '../core/ActionProvider.interface.js';
+import { MemoryClient } from '@ellipsa/shared';
 
 /**
  * CalendarProvider handles Google Calendar integrations
@@ -18,6 +19,15 @@ export class CalendarProvider implements IActionProvider {
     private calendar: calendar_v3.Calendar | null = null;
     private oauth2Client: OAuth2Client | null = null;
     private initialized = false;
+    private memoryClient: MemoryClient | null = null;
+
+    /**
+     * Set the Memory Client for persisting calendar events
+     */
+    setMemoryClient(client: MemoryClient): void {
+        this.memoryClient = client;
+        console.log('[CalendarProvider] MemoryClient configured');
+    }
 
     /**
      * Initialize with OAuth client (shared with Gmail)
@@ -31,6 +41,12 @@ export class CalendarProvider implements IActionProvider {
         this.oauth2Client = oauth2Client;
         this.calendar = google.calendar({ version: 'v3', auth: oauth2Client });
         this.initialized = true;
+
+        // Auto-initialize MemoryClient if not set
+        if (!this.memoryClient) {
+            this.memoryClient = new MemoryClient(process.env.MEMORY_SERVICE_URL || 'http://localhost:4001');
+        }
+
         console.log('[CalendarProvider] Initialized with OAuth');
     }
 
@@ -91,8 +107,8 @@ export class CalendarProvider implements IActionProvider {
     }
 
     async execute(actions: Action[], context: ExecutionContext): Promise<ProviderResult> {
-        if (!this.calendar) {
-            throw new Error('Calendar not initialized');
+        if (!this.calendar || !this.initialized) {
+            throw new Error('Authentication required. Please log in to Google to use Calendar features.');
         }
 
         const results: StepResult[] = [];
@@ -174,17 +190,90 @@ export class CalendarProvider implements IActionProvider {
         const location = 'location' in action.args ? (action.args.location as string) : undefined;
 
         try {
+            // Ensure datetime has timezone. If not, assume local timezone
+            const ensureTimezone = (dt: string): string => {
+                // If already has timezone (ends with Z or +/-HH:MM), return as-is
+                if (/Z$/.test(dt) || /[+-]\d{2}:\d{2}$/.test(dt)) {
+                    return dt;
+                }
+                // Otherwise, append local timezone offset
+                const offset = new Date().getTimezoneOffset();
+                const sign = offset <= 0 ? '+' : '-';
+                const hours = String(Math.abs(Math.floor(offset / 60))).padStart(2, '0');
+                const mins = String(Math.abs(offset % 60)).padStart(2, '0');
+                return `${dt}${sign}${hours}:${mins}`;
+            };
+
+            const startWithTz = ensureTimezone(start);
+            const endWithTz = ensureTimezone(end);
+
             const event = await this.calendar.events.insert({
                 calendarId: 'primary',
                 requestBody: {
                     summary,
                     description,
                     location,
-                    start: { dateTime: start },
-                    end: { dateTime: end },
+                    start: { dateTime: startWithTz },
+                    end: { dateTime: endWithTz },
                     attendees: attendees?.map(email => ({ email })),
                 },
             });
+
+            // Store the meeting in Memory Service so it appears in Briefing/Timeline
+            if (this.memoryClient && event.data.id) {
+                try {
+                    // Build participants list from attendees
+                    const participants = (attendees || []).map((email, index) => ({
+                        entity_id: `attendee_${index}`,
+                        name: email.split('@')[0],  // Use email prefix as name
+                        role: 'attendee',
+                        metadata: { email }
+                    }));
+
+                    // Build the event data object
+                    const eventData = {
+                        type: 'meeting' as const,      // Required - must be 'meeting' for Briefing
+                        title: summary || 'Untitled Meeting',  // Required - fallback to prevent null
+                        description: description || `Calendar event: ${summary || 'Meeting'}`,
+                        start_time: startWithTz,       // Required
+                        end_time: endWithTz,
+                        source: 'google_calendar',
+                        participants,
+                        metadata: {
+                            google_event_id: event.data.id,
+                            htmlLink: event.data.htmlLink,
+                            location: location || null,
+                            created_by: 'ellipsa',
+                            summary: summary || 'Meeting',
+                        }
+                    };
+
+                    // Validate required fields before sending
+                    const requiredFields = ['type', 'title', 'start_time'] as const;
+                    const missingFields = requiredFields.filter(field => !eventData[field]);
+
+                    if (missingFields.length > 0) {
+                        console.error('[CalendarProvider] Missing required fields:', missingFields);
+                        console.error('[CalendarProvider] Event data:', JSON.stringify(eventData, null, 2));
+                        throw new Error(`Missing required fields: ${missingFields.join(', ')}`);
+                    }
+
+                    // Log the data being sent for debugging
+                    console.log('[CalendarProvider] Storing event with data:', {
+                        type: eventData.type,
+                        title: eventData.title,
+                        start_time: eventData.start_time,
+                        end_time: eventData.end_time,
+                        participantCount: participants.length
+                    });
+
+                    await this.memoryClient.storeEvent(eventData);
+                    console.log(`[CalendarProvider] Successfully stored meeting in Memory: ${eventData.title}`);
+                } catch (memoryError) {
+                    // Don't fail the calendar creation if memory storage fails
+                    console.error('[CalendarProvider] Failed to store meeting in Memory:', memoryError);
+                }
+            }
 
             return {
                 op: action.op,

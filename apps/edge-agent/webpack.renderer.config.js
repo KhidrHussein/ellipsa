@@ -6,10 +6,13 @@ module.exports = {
   mode: 'development',
   target: 'web',
   devtool: 'source-map',
-  entry: './src/renderer/index.ts',
+  entry: {
+    renderer: './src/renderer/index.tsx',
+    chat: './src/renderer/chat.tsx',
+  },
   output: {
     path: path.resolve(__dirname, 'dist'),
-    filename: 'renderer.js',
+    filename: '[name].js',
     library: 'EllipsaRenderer',
     libraryTarget: 'window',
     globalObject: 'this',
@@ -38,6 +41,7 @@ module.exports = {
       stream: require.resolve('stream-browserify'),
       buffer: require.resolve('buffer/'),
       events: require.resolve('events/'),
+      process: require.resolve('process/browser'),
       fs: false,
       net: false,
       tls: false,
@@ -61,7 +65,7 @@ module.exports = {
       },
       {
         test: /\.css$/,
-        use: ['style-loader', 'css-loader'],
+        use: ['style-loader', 'css-loader', 'postcss-loader'],
       },
       {
         test: /\.(png|jpe?g|gif|svg)$/i,

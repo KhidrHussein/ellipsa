@@ -217,7 +217,14 @@ if (!window.electron) {
       ipcRenderer.on('audio-level', handler);
       return () => ipcRenderer.removeListener('audio-level', handler);
     },
-    showContextMenu: () => ipcRenderer.send('show-context-menu')
+    showContextMenu: () => ipcRenderer.send('show-context-menu'),
+
+    // Window resizing with proper repositioning
+    resizeWindow: (width: number, height: number) => ipcRenderer.send('resize-window', { width, height }),
+
+    // Chat window control
+    toggleChat: () => ipcRenderer.send('toggle-chat'),
+    closeChat: () => ipcRenderer.send('close-chat')
   };
 
   try {

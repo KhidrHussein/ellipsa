@@ -2,7 +2,7 @@ import { Knex } from 'knex';
 import { z, type ZodType } from 'zod';
 import { BaseModel } from './BaseModel';
 import type { PaginationOptions, PaginatedResult } from './BaseModel';
-import type { Session, Transaction } from 'neo4j-driver';
+import type { Session, Transaction, ManagedTransaction } from 'neo4j-driver';
 
 // Extend PaginationOptions to include status filter
 type TaskPaginationOptions = PaginationOptions & {
@@ -79,7 +79,7 @@ export class TaskModel extends BaseModel<Task, TaskInput, TaskUpdate> {
 
     try {
       // Create in graph DB
-      await this.neo4jSession.writeTransaction((tx: Transaction) =>
+      await this.neo4jSession.executeWrite((tx: ManagedTransaction) =>
         tx.run(
           `CREATE (t:Task {
             id: $id,
@@ -101,7 +101,7 @@ export class TaskModel extends BaseModel<Task, TaskInput, TaskUpdate> {
 
       // Create relationships if assignee or related entities exist
       if (task.assignee_id) {
-        await this.neo4jSession.writeTransaction((tx: Transaction) =>
+        await this.neo4jSession.executeWrite((tx: ManagedTransaction) =>
           tx.run(
             `MATCH (e:Entity {id: $assigneeId}), (t:Task {id: $taskId})
              MERGE (e)-[:ASSIGNED_TO]->(t)`,
@@ -114,7 +114,7 @@ export class TaskModel extends BaseModel<Task, TaskInput, TaskUpdate> {
       }
 
       if (task.related_entity_id) {
-        await this.neo4jSession.writeTransaction((tx: Transaction) =>
+        await this.neo4jSession.executeWrite((tx: ManagedTransaction) =>
           tx.run(
             `MATCH (e:Entity {id: $entityId}), (t:Task {id: $taskId})
              MERGE (t)-[:RELATED_TO]->(e)`,

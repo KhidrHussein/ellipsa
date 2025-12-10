@@ -456,6 +456,27 @@ export class GmailEmailService implements IEmailService {
     }
   }
 
+  /**
+   * Get all pending email drafts awaiting approval
+   */
+  async getPendingDrafts(): Promise<DraftResponse[]> {
+    try {
+      // Access the drafts from memory service
+      const memService = this.memoryService as any;
+      if (memService.drafts && memService.drafts instanceof Map) {
+        return Array.from(memService.drafts.values());
+      }
+      // If memory service has a getDrafts method, use it
+      if (typeof memService.getDrafts === 'function') {
+        return await memService.getDrafts();
+      }
+      return [];
+    } catch (error) {
+      console.error('Error getting pending drafts:', error);
+      return [];
+    }
+  }
+
   async createDraft(draft: DraftResponse): Promise<{ success: boolean; id?: string; message?: EmailMessage }> {
     await this.ensureConnected();
 

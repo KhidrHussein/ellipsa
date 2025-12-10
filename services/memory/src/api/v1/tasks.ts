@@ -4,11 +4,55 @@ import { TaskModel } from '../../models/TaskModel';
 export function createTasksRouter(taskModel: TaskModel): Router {
   const router = Router();
 
+  // List tasks with optional filtering
+  router.get('/', async (req, res) => {
+    try {
+      const { status, limit } = req.query;
+
+      // Build filter options
+      const filterOptions: any = {};
+      if (status && status !== 'all') {
+        filterOptions.status = status as string;
+      }
+
+      const tasks = await taskModel.findAll(filterOptions, {
+        page: 1,
+        pageSize: limit ? parseInt(limit as string, 10) : 50,
+        sortBy: 'created_at',
+        sortOrder: 'desc',
+      });
+
+      res.json({
+        success: true,
+        data: tasks.data || tasks,
+        meta: {
+          version: '1.0.0',
+          timestamp: new Date().toISOString()
+        }
+      });
+    } catch (error: unknown) {
+      console.error('Error listing tasks:', error);
+      const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
+      res.status(500).json({
+        success: false,
+        error: {
+          code: 'TASK_LIST_FAILED',
+          message: 'Failed to list tasks',
+          details: process.env.NODE_ENV === 'development' ? errorMessage : undefined
+        },
+        meta: {
+          version: '1.0.0',
+          timestamp: new Date().toISOString()
+        }
+      });
+    }
+  });
+
   // Create a new task
   router.post('/', async (req, res) => {
     try {
       const taskData = req.body;
-      
+
       const task = await taskModel.create({
         title: taskData.title || taskData.text || 'Untitled task',
         description: taskData.description,
@@ -19,8 +63,8 @@ export function createTasksRouter(taskModel: TaskModel): Router {
         due_date: taskData.due_ts || taskData.due_date,
         metadata: taskData.metadata || {},
       });
-      
-      res.status(201).json({ 
+
+      res.status(201).json({
         success: true,
         data: task,
         meta: {
@@ -31,7 +75,7 @@ export function createTasksRouter(taskModel: TaskModel): Router {
     } catch (error: unknown) {
       console.error('Error creating task:', error);
       const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
-      res.status(500).json({ 
+      res.status(500).json({
         success: false,
         error: {
           code: 'TASK_CREATION_FAILED',
@@ -50,9 +94,9 @@ export function createTasksRouter(taskModel: TaskModel): Router {
   router.patch('/:id/status', async (req, res) => {
     try {
       const { status } = req.body;
-      
+
       if (!['pending', 'in_progress', 'completed', 'failed'].includes(status)) {
-        return res.status(400).json({ 
+        return res.status(400).json({
           success: false,
           error: {
             code: 'INVALID_STATUS',
@@ -64,11 +108,11 @@ export function createTasksRouter(taskModel: TaskModel): Router {
           }
         });
       }
-      
+
       const task = await taskModel.update(req.params.id, { status });
-      
+
       if (!task) {
-        return res.status(404).json({ 
+        return res.status(404).json({
           success: false,
           error: {
             code: 'NOT_FOUND',
@@ -80,8 +124,8 @@ export function createTasksRouter(taskModel: TaskModel): Router {
           }
         });
       }
-      
-      res.json({ 
+
+      res.json({
         success: true,
         data: task,
         meta: {
@@ -92,7 +136,7 @@ export function createTasksRouter(taskModel: TaskModel): Router {
     } catch (error: unknown) {
       console.error('Error updating task status:', error);
       const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
-      res.status(500).json({ 
+      res.status(500).json({
         success: false,
         error: {
           code: 'TASK_UPDATE_FAILED',

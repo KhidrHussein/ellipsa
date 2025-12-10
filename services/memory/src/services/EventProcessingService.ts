@@ -264,7 +264,7 @@ export class EventProcessingService {
         });
 
         if (this.neo4jSession) {
-          await this.neo4jSession.writeTransaction(tx =>
+          await this.neo4jSession.executeWrite(tx =>
             tx.run(
               `MATCH (e:Event {id: $eventId})
                  MERGE (ent:Entity {name: $name, type: $type})
@@ -294,6 +294,7 @@ export class EventProcessingService {
           due_date: item.due_date ? new Date(item.due_date) : undefined,
           priority: (item.priority || 'medium') as any,
           status: 'pending',
+          source: 'system',  // Mark as system-generated task
           metadata: {},
           related_event_id: eventId,
         });
@@ -311,7 +312,7 @@ export class EventProcessingService {
     for (let i = 0; i < entitiesToProcess.length; i++) {
       for (let j = i + 1; j < entitiesToProcess.length; j++) {
         try {
-          await this.neo4jSession.writeTransaction(tx =>
+          await this.neo4jSession.executeWrite(tx =>
             tx.run(
               `MATCH (e1:Entity {name: $name1}), (e2:Entity {name: $name2})
                MERGE (e1)-[r:RELATED_TO]-(e2)
@@ -452,11 +453,12 @@ export class EventProcessingService {
       throw new Error('Invalid action plan: "action" field is missing');
     }
 
+    // Email Actions
     if (action === 'sendEmail' || action === 'send_email') {
       return {
         op: 'send_email',
         args: {
-          to: [parameters.recipient || parameters.to || parameters.recipient_email],
+          to: Array.isArray(parameters.to) ? parameters.to : [parameters.recipient || parameters.to || parameters.recipient_email],
           subject: parameters.subject,
           body: parameters.message || parameters.body
         }
@@ -467,9 +469,217 @@ export class EventProcessingService {
       return {
         op: 'draft_email',
         args: {
-          to: [parameters.recipient || parameters.to || parameters.recipient_email],
+          to: Array.isArray(parameters.to) ? parameters.to : [parameters.recipient || parameters.to || parameters.recipient_email],
           subject: parameters.subject,
           body: parameters.message || parameters.body
+        }
+      };
+    }
+
+    // Calendar Actions
+    if (action === 'createCalendarEvent' || action === 'create_calendar_event') {
+      // Parse time parameters - handle various formats from LLM
+      const startTime = this.parseDateTime(parameters.start_time || parameters.start || parameters.startTime || parameters.event_time);
+      const endTime = this.parseDateTime(parameters.end_time || parameters.end || parameters.endTime, startTime);
+
+      // Ensure attendees is an array of valid email addresses
+      // The LLM might return names instead of emails, so we filter those out
+      let attendees: string[] | undefined;
+      if (parameters.attendees) {
+        const rawAttendees = Array.isArray(parameters.attendees)
+          ? parameters.attendees
+          : [parameters.attendees];
+
+        // Filter to only valid email addresses
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        const validEmails = rawAttendees.filter((a: string) => emailRegex.test(a));
+
+        if (validEmails.length > 0) {
+          attendees = validEmails;
+        } else {
+          // No valid emails found - calendar event will be created without invites
+          console.log('[EventProcessing] No valid email addresses in attendees, creating event without invites');
+        }
+      }
+
+      return {
+        op: 'create_calendar_event',
+        args: {
+          summary: parameters.summary || parameters.title || parameters.event_title || parameters.description || 'Meeting',
+          start: startTime,
+          end: endTime,
+          attendees,
+          description: parameters.description || parameters.notes,
+          location: parameters.location
+        }
+      };
+    }
+
+    if (action === 'listCalendarEvents' || action === 'list_calendar_events') {
+      return {
+        op: 'list_calendar_events',
+        args: {
+          timeMin: parameters.timeMin || parameters.start,
+          timeMax: parameters.timeMax || parameters.end,
+          maxResults: parameters.maxResults || parameters.limit
+        }
+      };
+    }
+
+    if (action === 'updateCalendarEvent' || action === 'update_calendar_event') {
+      return {
+        op: 'update_calendar_event',
+        args: {
+          eventId: parameters.eventId || parameters.event_id,
+          summary: parameters.summary || parameters.title,
+          start: parameters.start ? this.parseDateTime(parameters.start) : undefined,
+          end: parameters.end ? this.parseDateTime(parameters.end) : undefined,
+          description: parameters.description
+        }
+      };
+    }
+
+    if (action === 'deleteCalendarEvent' || action === 'delete_calendar_event') {
+      return {
+        op: 'delete_calendar_event',
+        args: {
+          eventId: parameters.eventId || parameters.event_id
+        }
+      };
+    }
+
+    // Slack Actions
+    if (action === 'slackMessage' || action === 'slack_message') {
+      return {
+        op: 'slack_message',
+        args: {
+          channel: parameters.channel,
+          text: parameters.text || parameters.message,
+          threadTs: parameters.threadTs || parameters.thread_ts
+        }
+      };
+    }
+
+    if (action === 'slackReply' || action === 'slack_reply') {
+      return {
+        op: 'slack_reply',
+        args: {
+          channel: parameters.channel,
+          text: parameters.text || parameters.message,
+          threadTs: parameters.threadTs || parameters.thread_ts
+        }
+      };
+    }
+
+    if (action === 'slackDm' || action === 'slack_dm') {
+      return {
+        op: 'slack_dm',
+        args: {
+          userId: parameters.userId || parameters.user_id || parameters.user,
+          text: parameters.text || parameters.message
+        }
+      };
+    }
+
+    // Notion Actions
+    if (action === 'notionCreatePage' || action === 'notion_create_page') {
+      return {
+        op: 'notion_create_page',
+        args: {
+          parentId: parameters.parentId || parameters.parent_id,
+          title: parameters.title,
+          content: parameters.content
+        }
+      };
+    }
+
+    if (action === 'notionUpdatePage' || action === 'notion_update_page') {
+      return {
+        op: 'notion_update_page',
+        args: {
+          pageId: parameters.pageId || parameters.page_id,
+          properties: parameters.properties
+        }
+      };
+    }
+
+    if (action === 'notionQueryDatabase' || action === 'notion_query_database') {
+      return {
+        op: 'notion_query_database',
+        args: {
+          databaseId: parameters.databaseId || parameters.database_id,
+          filter: parameters.filter
+        }
+      };
+    }
+
+    if (action === 'notionCreateDatabaseEntry' || action === 'notion_create_database_entry') {
+      return {
+        op: 'notion_create_database_entry',
+        args: {
+          databaseId: parameters.databaseId || parameters.database_id,
+          properties: parameters.properties
+        }
+      };
+    }
+
+    // GitHub Actions
+    if (action === 'githubCreateIssue' || action === 'github_create_issue') {
+      return {
+        op: 'github_create_issue',
+        args: {
+          owner: parameters.owner,
+          repo: parameters.repo || parameters.repository,
+          title: parameters.title,
+          body: parameters.body || parameters.description,
+          labels: parameters.labels
+        }
+      };
+    }
+
+    if (action === 'githubCreatePr' || action === 'github_create_pr') {
+      return {
+        op: 'github_create_pr',
+        args: {
+          owner: parameters.owner,
+          repo: parameters.repo || parameters.repository,
+          title: parameters.title,
+          head: parameters.head || parameters.sourceBranch,
+          base: parameters.base || parameters.targetBranch,
+          body: parameters.body || parameters.description
+        }
+      };
+    }
+
+    if (action === 'githubCommentIssue' || action === 'github_comment_issue') {
+      return {
+        op: 'github_comment_issue',
+        args: {
+          owner: parameters.owner,
+          repo: parameters.repo || parameters.repository,
+          issueNumber: parameters.issueNumber || parameters.issue_number,
+          body: parameters.body || parameters.comment
+        }
+      };
+    }
+
+    if (action === 'githubCloseIssue' || action === 'github_close_issue') {
+      return {
+        op: 'github_close_issue',
+        args: {
+          owner: parameters.owner,
+          repo: parameters.repo || parameters.repository,
+          issueNumber: parameters.issueNumber || parameters.issue_number
+        }
+      };
+    }
+
+    // Browser Actions (mostly pass-through but with validation)
+    if (action === 'openUrl' || action === 'open_url') {
+      return {
+        op: 'open_url',
+        args: {
+          url: parameters.url
         }
       };
     }
@@ -477,9 +687,76 @@ export class EventProcessingService {
     // Default mapping for other actions (assuming simple snake_case conversion if needed)
     // This might need more specific mappings for other actions
     return {
-      op: action.replace(/([A-Z])/g, "_$1").toLowerCase(), // camelCase to snake_case
+      op: action.replace(/([A-Z])/g, "_$1").toLowerCase().replace(/^_/, ''), // camelCase to snake_case
       args: parameters
     };
+  }
+
+  /**
+   * Parse a datetime string to ISO 8601 format.
+   * Handles various formats like "today 2pm", "tomorrow 3pm", "2024-01-15T14:00:00", etc.
+   */
+  private parseDateTime(input: string | undefined, referenceTime?: string): string {
+    if (!input) {
+      // If we have a reference time (for end_time), default to 1 hour after it
+      if (referenceTime) {
+        const endDate = new Date(referenceTime);
+        endDate.setHours(endDate.getHours() + 1);
+        return endDate.toISOString();
+      }
+      // Otherwise default to 1 hour from now
+      const now = new Date();
+      now.setHours(now.getHours() + 1);
+      now.setMinutes(0, 0, 0);
+      return now.toISOString();
+    }
+
+    // If already in ISO format, return as is
+    if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/.test(input)) {
+      return input;
+    }
+
+    const now = new Date();
+    let targetDate = new Date(now);
+    let hours = 9; // default to 9am
+    let minutes = 0;
+
+    const inputLower = input.toLowerCase();
+
+    // Parse day
+    if (inputLower.includes('tomorrow')) {
+      targetDate.setDate(targetDate.getDate() + 1);
+    } else if (inputLower.includes('next week')) {
+      targetDate.setDate(targetDate.getDate() + 7);
+    }
+    // "today" or no day specified keeps current date
+
+    // Parse time
+    const timeMatch = inputLower.match(/(\d{1,2})(?::(\d{2}))?\s*(am|pm)?/);
+    if (timeMatch) {
+      hours = parseInt(timeMatch[1], 10);
+      minutes = timeMatch[2] ? parseInt(timeMatch[2], 10) : 0;
+
+      if (timeMatch[3] === 'pm' && hours < 12) {
+        hours += 12;
+      } else if (timeMatch[3] === 'am' && hours === 12) {
+        hours = 0;
+      }
+    }
+
+    targetDate.setHours(hours, minutes, 0, 0);
+
+    // If this is an end time and we have a reference, ensure it's after the start
+    if (referenceTime) {
+      const startDate = new Date(referenceTime);
+      if (targetDate <= startDate) {
+        // Default to 1 hour after start
+        targetDate = new Date(startDate);
+        targetDate.setHours(targetDate.getHours() + 1);
+      }
+    }
+
+    return targetDate.toISOString();
   }
 
   private async executeActionPlan(actionPlan: any): Promise<void> {

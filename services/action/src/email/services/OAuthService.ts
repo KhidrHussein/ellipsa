@@ -88,12 +88,13 @@ export class OAuthService {
   }
 
   async getAuthUrl(): Promise<string> {
-    // Full Gmail API access scope
+    // Full Gmail API and Calendar access scopes
     const scopes = [
       'https://mail.google.com/', // Full access to the account, including email content and settings
       'https://www.googleapis.com/auth/gmail.modify', // Modify threads and labels
       'https://www.googleapis.com/auth/gmail.compose', // Compose and send emails
-      'https://www.googleapis.com/auth/gmail.labels' // Manage labels
+      'https://www.googleapis.com/auth/gmail.labels', // Manage labels
+      'https://www.googleapis.com/auth/calendar' // Full access to Google Calendar
     ];
 
     if (!this.oauth2Client._clientId) {
@@ -121,7 +122,7 @@ export class OAuthService {
         refresh_token: tokens.refresh_token ? '***' : 'missing',
         expiry_date: tokens.expiry_date ? new Date(tokens.expiry_date).toISOString() : 'missing'
       });
-      
+
       this.oauth2Client.setCredentials(tokens);
       await this.saveTokens(tokens);
       return tokens;
@@ -187,7 +188,7 @@ export class OAuthService {
       this.oauth2Client.setCredentials({
         refresh_token: refreshToken
       });
-      
+
       const { credentials } = await this.oauth2Client.refreshAccessToken();
       this.oauth2Client.setCredentials(credentials);
       this.saveTokens(credentials);

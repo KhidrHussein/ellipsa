@@ -19,6 +19,8 @@ class FloatingAssistantUI {
   private container!: HTMLElement;
   private button!: HTMLElement;
   private notificationPanel!: HTMLElement;
+  private contextMenu!: HTMLElement;
+  private isContextMenuOpen = false;
   private isDragging = false;
   private dragStartX = 0;
   private dragStartY = 0;
@@ -247,6 +249,94 @@ class FloatingAssistantUI {
     // Assemble the UI
     this.container.appendChild(this.button);
     this.container.appendChild(this.notificationPanel);
+
+    // Create custom context menu - matches edge-agent-2 design
+    this.contextMenu = document.createElement('div');
+    this.contextMenu.id = 'assistant-context-menu';
+    this.contextMenu.className = 'custom-context-menu';
+    this.contextMenu.innerHTML = `
+      <div class="context-menu-item" data-action="briefing">
+        <span class="menu-icon">🕒</span>
+        <span class="menu-text">Briefing</span>
+      </div>
+      <div class="context-menu-item" data-action="timeline">
+        <span class="menu-icon">📅</span>
+        <span class="menu-text">Timeline</span>
+      </div>
+      <div class="context-menu-item" data-action="actions">
+        <span class="menu-icon">⚡</span>
+        <span class="menu-text">Pending Actions</span>
+      </div>
+      <div class="context-menu-divider"></div>
+      <div class="context-menu-item" data-action="observe">
+        <span class="menu-icon">👁️</span>
+        <span class="menu-text">Start Observing</span>
+      </div>
+      <div class="context-menu-item" data-action="settings">
+        <span class="menu-icon">⚙️</span>
+        <span class="menu-text">Settings</span>
+      </div>
+      <div class="context-menu-item" data-action="home">
+        <span class="menu-icon">🏠</span>
+        <span class="menu-text">Home</span>
+      </div>
+      <div class="context-menu-divider"></div>
+      <div class="context-menu-item" data-action="quit">
+        <span class="menu-icon">🚪</span>
+        <span class="menu-text">Quit</span>
+      </div>
+    `;
+    this.contextMenu.style.cssText = `
+      position: absolute;
+      bottom: 72px;
+      right: 0;
+      background: white;
+      border: 1px solid #e5e7eb;
+      border-radius: 16px;
+      padding: 8px 0;
+      width: 192px;
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
+      pointer-events: auto;
+      display: none;
+      z-index: 10000;
+      overflow: hidden;
+    `;
+    this.container.appendChild(this.contextMenu);
+
+    // Add context menu styles - matches edge-agent-2 design
+    const contextMenuStyle = document.createElement('style');
+    contextMenuStyle.textContent = `
+      .custom-context-menu .context-menu-item {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 12px 16px;
+        cursor: pointer;
+        user-select: none;
+        transition: background 0.2s ease;
+        color: #1f2937;
+      }
+      .custom-context-menu .context-menu-item:hover {
+        background: #f9fafb;
+      }
+      .custom-context-menu .menu-icon {
+        font-size: 16px;
+        width: 20px;
+        text-align: center;
+      }
+      .custom-context-menu .menu-text {
+        flex: 1;
+        font-size: 14px;
+        font-weight: 400;
+      }
+      .custom-context-menu .context-menu-divider {
+        height: 1px;
+        background: #e5e7eb;
+        margin: 8px 0;
+      }
+    `;
+    document.head.appendChild(contextMenuStyle);
+
     document.body.appendChild(this.container);
   }
 
@@ -282,9 +372,7 @@ class FloatingAssistantUI {
     this.button.addEventListener('contextmenu', (e) => {
       e.preventDefault();
       e.stopPropagation();
-      if (window.ellipsa?.showContextMenu) {
-        window.ellipsa.showContextMenu();
-      }
+      this.toggleContextMenu();
     });
 
     // Panel close button
@@ -297,10 +385,13 @@ class FloatingAssistantUI {
     this.button.addEventListener('mousedown', this.startDrag.bind(this));
     // mousemove and mouseup are now attached dynamically in startDrag
 
-    // Close panel when clicking outside
+    // Close panel and context menu when clicking outside
     document.addEventListener('click', (e) => {
       if (this.isPanelOpen && !this.container.contains(e.target as Node)) {
         this.closePanel();
+      }
+      if (this.isContextMenuOpen && !this.contextMenu.contains(e.target as Node) && e.target !== this.button) {
+        this.closeContextMenu();
       }
     });
 
@@ -355,7 +446,8 @@ class FloatingAssistantUI {
 
     // Handle observe mode status changes
     if (window.ellipsa?.onObserveStatus) {
-      window.ellipsa.onObserveStatus((isObserving: boolean) => {
+      window.ellipsa.onObserveStatus((status: { observing: boolean }) => {
+        const isObserving = status.observing;
         this.showNotification(isObserving ? 'Observe mode activated' : 'Observe mode deactivated');
         // Update UI to reflect observe mode status
         const button = document.getElementById('assistant-button');
@@ -467,6 +559,94 @@ class FloatingAssistantUI {
     // Remove drag listeners
     document.removeEventListener('mousemove', this.onDragBound);
     document.removeEventListener('mouseup', this.stopDragBound);
+  }
+
+  // Context menu methods
+  private toggleContextMenu(): void {
+    if (this.isContextMenuOpen) {
+      this.closeContextMenu();
+    } else {
+      this.openContextMenu();
+    }
+  }
+
+  private async openContextMenu(): Promise<void> {
+    // Close panel if open
+    if (this.isPanelOpen) {
+      await this.closePanel();
+    }
+
+    // Update observe mode label
+    const observeItem = this.contextMenu.querySelector('[data-action="observe"]');
+    if (observeItem && window.ellipsa?.getObserveStatus) {
+      try {
+        const status = await window.ellipsa.getObserveStatus();
+        const textSpan = observeItem.querySelector('.menu-text');
+        if (textSpan) {
+          textSpan.textContent = status.observing ? 'Stop Observing' : 'Start Observing';
+        }
+      } catch (e) {
+        // Ignore errors if getObserveStatus is not available
+      }
+    }
+
+    // Use resizeWindow which keeps bottom-right corner fixed
+    // Size needs to accommodate: button (64px) + gap (8px) + menu (~380px tall with all items)
+    if (window.ellipsa?.resizeWindow) {
+      window.ellipsa.resizeWindow(256, 480);
+    }
+
+    // Wait for window resize to complete before showing menu
+    await new Promise(resolve => setTimeout(resolve, 150));
+
+    // Show context menu
+    this.contextMenu.style.display = 'block';
+    this.isContextMenuOpen = true;
+
+    // Add click handlers for menu items
+    this.contextMenu.querySelectorAll('.context-menu-item').forEach(item => {
+      item.addEventListener('click', this.handleContextMenuClick.bind(this), { once: true });
+    });
+  }
+
+  private async closeContextMenu(): Promise<void> {
+    this.contextMenu.style.display = 'none';
+    this.isContextMenuOpen = false;
+
+    // Resize window back to button size
+    if (window.ellipsa?.resizeWindow) {
+      window.ellipsa.resizeWindow(96, 96);
+    }
+  }
+
+  private async handleContextMenuClick(e: Event): Promise<void> {
+    const target = e.currentTarget as HTMLElement;
+    const action = target.dataset.action;
+
+    await this.closeContextMenu();
+
+    switch (action) {
+      case 'observe':
+        this.toggleObserveMode();
+        break;
+      case 'briefing':
+      case 'timeline':
+      case 'actions':
+      case 'settings':
+      case 'home':
+        // These actions navigate to different views - dispatch custom event
+        // The React app will listen for this and update the view
+        window.dispatchEvent(new CustomEvent('ellipsa-menu-action', { detail: { action } }));
+        break;
+      case 'quit':
+        // Send quit command to main process
+        if ((window.ellipsa as any)?.quitApp) {
+          (window.ellipsa as any).quitApp();
+        } else {
+          window.close();
+        }
+        break;
+    }
   }
 
   // Position management removed as we now rely on window position
@@ -767,9 +947,9 @@ class FloatingAssistantUI {
 
   private async toggleObserveMode(): Promise<void> {
     try {
-      if (window.ellipsa?.getObserveStatus && window.ellipsa?.setObserveStatus) {
-        const status = await window.ellipsa.getObserveStatus();
-        await window.ellipsa.setObserveStatus(!status.observing);
+      // Use toggleObserve which is exposed by preload.js
+      if (window.ellipsa?.toggleObserve) {
+        window.ellipsa.toggleObserve();
       }
     } catch (error) {
       console.error('[FloatingAssistantUI] Error toggling observe mode:', error);

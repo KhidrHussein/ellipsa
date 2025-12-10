@@ -10,7 +10,7 @@ class ServiceClient {
   protected client: any; // Will be initialized in constructor
   protected serviceName: string;
   protected baseUrl: string;
-  
+
   // Public method that can be called from anywhere
   public makeRequest(options: RequestOptions) {
     return this.request(options);
@@ -45,9 +45,9 @@ class ServiceClient {
     };
   }
 
-  protected async request(options: { 
-    method: string; 
-    url: string; 
+  protected async request(options: {
+    method: string;
+    url: string;
     data?: any;
     headers?: Record<string, string>;
   }) {
@@ -58,7 +58,7 @@ class ServiceClient {
         ...(options.headers || {}),
       },
     };
-    
+
     return this.client.request(requestOptions);
   }
 }
@@ -72,7 +72,7 @@ export class MemoryClient extends ServiceClient {
   async storeEvent(event: any) {
     return this.request({
       method: 'POST',
-      url: '/events',
+      url: '/api/v1/events',
       data: event,
     });
   }
@@ -81,6 +81,82 @@ export class MemoryClient extends ServiceClient {
     return this.request({
       method: 'GET',
       url: `/events?query=${encodeURIComponent(query)}`,
+    });
+  }
+
+  // Get events with filtering
+  async getEvents(filters: { type?: string; limit?: number } = {}) {
+    const params = new URLSearchParams();
+    if (filters.type) params.append('type', filters.type);
+    if (filters.limit) params.append('limit', filters.limit.toString());
+
+    const queryString = params.toString();
+    const url = `/api/v1/events${queryString ? `?${queryString}` : ''}`;
+
+    const response = await this.request({
+      method: 'GET',
+      url,
+    });
+
+    // Log event types for debugging
+    const eventTypes = response?.data?.map((e: any) => e.type).filter(Boolean) || [];
+    const typeCounts: Record<string, number> = {};
+    eventTypes.forEach((t: string) => typeCounts[t] = (typeCounts[t] || 0) + 1);
+    console.log('[MemoryClient.getEvents] Fetched:', response?.data?.length || 0, 'events. Types:', JSON.stringify(typeCounts));
+
+    return response;
+  }
+
+  // Get a single event by ID
+  async getEventById(id: string) {
+    return this.request({
+      method: 'GET',
+      url: `/api/v1/events/${id}`,
+    });
+  }
+
+  // Get tasks with filtering
+  async getTasks(filters: { status?: string; limit?: number } = {}) {
+    const params = new URLSearchParams();
+    if (filters.status) params.append('status', filters.status);
+    if (filters.limit) params.append('limit', filters.limit.toString());
+
+    const queryString = params.toString();
+    const url = `/api/v1/tasks${queryString ? `?${queryString}` : ''}`;
+
+    const response = await this.request({
+      method: 'GET',
+      url,
+    });
+
+    console.log('[MemoryClient.getTasks] Fetched:', response?.data?.length || 0, 'tasks');
+
+    return response;
+  }
+
+  // Update task status
+  async updateTaskStatus(taskId: string, status: string) {
+    return this.request({
+      method: 'PATCH',
+      url: `/api/v1/tasks/${taskId}/status`,
+      data: { status },
+    });
+  }
+
+  // Get entity by ID (person, topic, etc.)
+  async getEntity(id: string) {
+    return this.request({
+      method: 'GET',
+      url: `/api/v1/entities/${id}`,
+    });
+  }
+
+  // Semantic memory retrieval
+  async retrieve(query: string, context?: { entities?: string[]; timeWindow?: { start: string; end: string } }) {
+    return this.request({
+      method: 'POST',
+      url: '/retrieve',
+      data: { query, context },
     });
   }
 }
@@ -104,10 +180,10 @@ export class ProcessorClient extends ServiceClient {
   async processAudio(audioData: ArrayBuffer, metadata: any) {
     try {
       console.log(`Processing audio data (${audioData.byteLength} bytes)...`);
-      
+
       // Convert ArrayBuffer to base64 for transmission
       const base64Audio = Buffer.from(audioData).toString('base64');
-      
+
       // Create an ingest object matching the processor service's expected format
       const ingestData = {
         id: `audio_${Date.now()}`,
@@ -138,7 +214,7 @@ export class ProcessorClient extends ServiceClient {
       return response;
     } catch (error: any) {
       console.error('Error in processAudio:', error);
-      
+
       // Log additional error details if available
       if (error.response) {
         console.error('Response status:', error.response.status);
@@ -148,7 +224,7 @@ export class ProcessorClient extends ServiceClient {
       } else {
         console.error('Error setting up request:', error.message);
       }
-      
+
       throw error;
     }
   }
@@ -195,6 +271,26 @@ export class ActionClient extends ServiceClient {
       url: '/actions',
     });
   }
+
+  // Get pending email drafts awaiting approval
+  async getPendingActions() {
+    const response = await this.request({
+      method: 'GET',
+      url: '/api/emails/pending',
+    });
+
+    console.log('[ActionClient.getPendingActions] Fetched:', response?.data?.length || 0, 'pending actions');
+    return response;
+  }
+
+  // Send an approved email
+  async sendEmail(draft: { id: string; to: any[]; subject: string; body: string }) {
+    return this.request({
+      method: 'POST',
+      url: '/api/emails/send',
+      data: draft,
+    });
+  }
 }
 
 export const actionClient = new ActionClient();
@@ -208,7 +304,7 @@ export async function initializeServices() {
   ];
 
   const results = await Promise.allSettled(
-    services.map(({ name, client, url }) => 
+    services.map(({ name, client, url }) =>
       client.makeRequest({ method: 'GET', url: '/health' })
         .then(() => ({ name, url, status: 'fulfilled' }))
         .catch(error => ({ name, url, status: 'rejected', error }))
@@ -216,7 +312,7 @@ export async function initializeServices() {
   );
 
   const failedServices = results.filter(
-    (result): result is PromiseFulfilledResult<{ name: string; url: string; status: string; error?: Error }> => 
+    (result): result is PromiseFulfilledResult<{ name: string; url: string; status: string; error?: Error }> =>
       result.status === 'fulfilled' && result.value.status === 'rejected'
   );
 
@@ -225,7 +321,7 @@ export async function initializeServices() {
     failedServices.forEach(({ value }) => {
       console.error(`- ${value.name} (${value.url}):`, value.error?.message || 'Unknown error');
     });
-    
+
     // Don't block the app if some services are down
     console.warn('Some services are unavailable, but the application will continue to run with limited functionality.');
   }

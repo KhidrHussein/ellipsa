@@ -1,5 +1,5 @@
-const { contextBridge, ipcRenderer } = window.require('electron');
-const path = window.require('path');
+const { contextBridge, ipcRenderer } = require('electron');
+const path = require('path');
 
 // Expose protected methods that allow the renderer process to use
 // the ipcRenderer without exposing the entire object
@@ -48,6 +48,19 @@ contextBridge.exposeInMainWorld('electron', {
     PLATFORM: process.platform,
     IS_DEV: process.env.NODE_ENV === 'development'
   }
+});
+
+// Expose ellipsa API for window control and audio capture
+contextBridge.exposeInMainWorld('ellipsa', {
+  resizeWindow: (width, height) => {
+    ipcRenderer.send('resize-window', { width, height });
+  },
+  toggleChat: () => {
+    console.log('[Preload] Sending toggle-chat IPC');
+    ipcRenderer.send('toggle-chat');
+  },
+  startAudioCapture: () => ipcRenderer.invoke('start-audio-capture'),
+  stopAudioCapture: () => ipcRenderer.invoke('stop-audio-capture'),
 });
 
 // Add a global error handler for uncaught exceptions in the renderer process

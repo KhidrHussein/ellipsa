@@ -1,6 +1,6 @@
 import { Knex } from 'knex';
 import { z } from 'zod';
-import { Session, Transaction } from 'neo4j-driver';
+import { Session, Transaction, ManagedTransaction } from 'neo4j-driver';
 import { v4 as uuidv4 } from 'uuid';
 import { BaseModel, PaginationOptions, PaginatedResult, DatabaseError, ValidationError } from './BaseModel';
 import { getEmbeddingFunction } from '../db/vector/chroma';
@@ -191,7 +191,7 @@ export class EntityModel extends BaseModel<BaseEntity, EntityInput, EntityUpdate
           documents: [validDocument]
         });
 
-        await this.neo4jSession.writeTransaction((neo4jTx: Transaction) =>
+        await this.neo4jSession.executeWrite((neo4jTx: ManagedTransaction) =>
           neo4jTx.run(
             `CREATE (e:Entity {
               id: $id,
@@ -321,7 +321,7 @@ export class EntityModel extends BaseModel<BaseEntity, EntityInput, EntityUpdate
         })
         .returning('*');
 
-      await this.neo4jSession.writeTransaction((neo4jTx: Transaction) =>
+      await this.neo4jSession.executeWrite((neo4jTx: ManagedTransaction) =>
         neo4jTx.run(
           `MATCH (a:Entity {id: $sourceId}), (b:Entity {id: $targetId})
            MERGE (a)-[r:${type} {id: $id}]->(b)
@@ -418,7 +418,7 @@ export class EntityModel extends BaseModel<BaseEntity, EntityInput, EntityUpdate
    * Remove a relationship between entities
    */
   async removeRelationship(relationshipId: string, trx?: Knex.Transaction): Promise<void> {
-    await this.neo4jSession.writeTransaction((tx: Transaction) =>
+    await this.neo4jSession.executeWrite((tx: ManagedTransaction) =>
       tx.run(
         `MATCH ()-[r {id: $id}]->()
          DELETE r`,
