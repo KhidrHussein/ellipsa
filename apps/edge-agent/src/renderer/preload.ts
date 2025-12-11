@@ -34,6 +34,9 @@ contextBridge.exposeInMainWorld('ellipsa', {
   toggleChat: () => {
     ipcRenderer.send('toggle-chat');
   },
+  setIgnoreMouseEvents: (ignore: boolean) => {
+    ipcRenderer.send('set-ignore-mouse-events', { ignore });
+  },
   startAudioCapture: () => ipcRenderer.invoke('start-audio-capture'),
   stopAudioCapture: () => ipcRenderer.invoke('stop-audio-capture'),
 });

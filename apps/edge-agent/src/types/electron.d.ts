@@ -32,7 +32,7 @@ export interface ElectronAPI {
   toggleObserve?: () => void;
   getObserveStatus: () => Promise<{ observing: boolean }>;
   setObserveStatus?: (observing: boolean) => Promise<void>;
-  onObserveStatus: (callback: (status: { observing: boolean }) => void) => () => void;
+  onObserveStatus: (callback: (status: boolean) => void) => () => void;
 
   // Icon handling
   getIconData?: (path: string) => Promise<string>;
@@ -48,6 +48,9 @@ export interface ElectronAPI {
   toggleChat: () => void;
   closeChat?: () => void;
   minimizeChat?: () => void;
+
+  // Click-through control for draggable floating button
+  setIgnoreMouseEvents?: (ignore: boolean) => void;
 
   // Messaging
   sendMessage?: (message: any) => void;

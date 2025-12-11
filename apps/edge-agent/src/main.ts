@@ -35,6 +35,9 @@ export class MainProcess {
   }
 }
 
+// Disable hardware acceleration to fix transparent window rendering issues on Windows
+app.disableHardwareAcceleration();
+
 // Initialize the main process
 const mainProcess = new MainProcess();
 
@@ -189,30 +192,23 @@ const getIconPath = (): string => {
 };
 
 function createWindow(): void {
-  const size = debugMode ? 400 : 96;
-
   const display = screen.getPrimaryDisplay();
   const { width: screenWidth, height: screenHeight } = display.workAreaSize;
+  const { x: workAreaX, y: workAreaY } = display.workArea;
 
-  // Load saved window position or default to bottom-right
-  const defaultX = screenWidth - size - 20;
-  const defaultY = screenHeight - size - 60; // 60px from bottom
-
-  windowPosition = {
-    x: defaultX,
-    y: defaultY
-  };
-
+  // Create a fullscreen transparent window
   mainWindow = new BrowserWindow({
-    width: size,
-    height: size,
-    x: windowPosition.x,
-    y: windowPosition.y,
+    width: screenWidth,
+    height: screenHeight,
+    x: workAreaX,
+    y: workAreaY,
     frame: false,
     transparent: true,
+    backgroundColor: '#00000000',
     alwaysOnTop: true,
     resizable: false,
     skipTaskbar: true,
+    hasShadow: false,
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
@@ -230,6 +226,19 @@ function createWindow(): void {
     },
     show: false // Don't show until ready
   });
+
+  console.log('[Main] Creating window with bounds:', {
+    screenWidth,
+    screenHeight,
+    workAreaX,
+    workAreaY,
+    displayBounds: display.bounds
+  });
+
+  // Enable click-through for the entire window, but let it receive mouse events
+  // The renderer will handle forwarding when mouse is over the floating button
+  // Start with interaction ENABLED to ensure visibility, renderer will set to ignore
+  mainWindow.setIgnoreMouseEvents(false);
 
   // Set up CSP for the main window
   mainWindow.webContents.session.webRequest.onHeadersReceived((details, callback) => {
@@ -264,6 +273,8 @@ function createWindow(): void {
             height: 100vh; 
             background: transparent;
             overflow: hidden;
+            border: 5px solid red; /* DEBUG: Visual boundary check */
+            box-sizing: border-box;
           }
         </style>
       </head>
@@ -690,6 +701,23 @@ ipcMain.on('set-window-size', (_, { width, height }) => {
     }
   } catch (error) {
     console.error('Error setting window size:', error);
+  }
+});
+
+// Toggle click-through behavior for the floating button
+// When mouse enters the button area, stop ignoring mouse events
+// When mouse leaves, resume ignoring (click-through)
+ipcMain.on('set-ignore-mouse-events', (_, { ignore, options }) => {
+  try {
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      if (ignore) {
+        mainWindow.setIgnoreMouseEvents(true, { forward: true });
+      } else {
+        mainWindow.setIgnoreMouseEvents(false);
+      }
+    }
+  } catch (error) {
+    console.error('Error setting ignore mouse events:', error);
   }
 });
 

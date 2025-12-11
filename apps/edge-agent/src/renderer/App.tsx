@@ -103,31 +103,40 @@ export default function App() {
   }, []);
 
   // Handle window resizing based on view
+  // NOTE: For the floating button to be draggable anywhere, the window must stay fullscreen
+  // when in 'none' state. Only resize for specific content views.
   React.useEffect(() => {
-    // @ts-ignore
-    if (window.ellipsa?.resizeWindow) {
+    const resizeForView = async () => {
+      // Get screen size if possible
+      const ellipsa = (window as any).ellipsa;
+      if (!ellipsa?.resizeWindow) return;
+
+      // For 'none' view (just floating button), keep window fullscreen for free dragging
       if (view === 'none') {
-        if (menuOpen) {
-          // Menu needs space
-          // @ts-ignore
-          window.ellipsa.resizeWindow(250, 400);
-        } else {
-          // Collapsed state (button only)
-          // Button is 64x64 with 32px offset from edges (bottom-8 right-8)
-          // @ts-ignore
-          window.ellipsa.resizeWindow(128, 128);
+        // Don't resize - keep fullscreen transparent window
+        // The floating button needs the full screen area to be draggable
+        if (ellipsa.getScreenSize) {
+          try {
+            const screen = await ellipsa.getScreenSize();
+            ellipsa.resizeWindow(screen.width, screen.height);
+          } catch (e) {
+            console.error('Failed to get screen size:', e);
+          }
         }
-      } else if (view === 'welcome') {
+        return;
+      }
+
+      if (view === 'welcome') {
         // Welcome screen needs space
-        // @ts-ignore
-        window.ellipsa.resizeWindow(1000, 800);
+        ellipsa.resizeWindow(1000, 800);
       } else {
         // Expanded state for other overlays (timeline, briefing, settings)
-        // @ts-ignore
-        window.ellipsa.resizeWindow(400, 600);
+        ellipsa.resizeWindow(400, 600);
       }
-    }
-  }, [view, menuOpen]);
+    };
+
+    resizeForView();
+  }, [view]);
 
   return (
     <ServiceProvider>

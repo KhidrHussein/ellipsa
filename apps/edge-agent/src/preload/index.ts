@@ -224,7 +224,10 @@ if (!window.electron) {
 
     // Chat window control
     toggleChat: () => ipcRenderer.send('toggle-chat'),
-    closeChat: () => ipcRenderer.send('close-chat')
+    closeChat: () => ipcRenderer.send('close-chat'),
+
+    // Click-through control for draggable floating button
+    setIgnoreMouseEvents: (ignore: boolean) => ipcRenderer.send('set-ignore-mouse-events', { ignore })
   };
 
   try {
