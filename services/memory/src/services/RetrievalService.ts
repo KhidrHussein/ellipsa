@@ -56,11 +56,10 @@ export class RetrievalService {
     const queryEmbedding = await this.embeddingFunction.generate([query]);
 
     // 2. Search across all collections (events, entities, tasks)
+    // 2. Search across all collections (events, entities, tasks)
     const [eventResults, entityResults, taskResults] = await Promise.all([
       this.searchEvents(queryEmbedding[0], { timeWindow, limit: limit * 3 }),
-      entityContext.length > 0
-        ? this.searchEntities(queryEmbedding[0], { entityContext, limit: limit * 2 })
-        : Promise.resolve([]),
+      this.searchEntities(queryEmbedding[0], { entityContext, limit: limit * 2 }),
       this.searchTasks(queryEmbedding[0], { limit: limit * 2 }),
     ]);
 
@@ -82,7 +81,7 @@ export class RetrievalService {
 
       // Calculate relationship score (if entity context is provided)
       let relationalScore = 0;
-      if (entityContext.length > 0 && result.metadata.related_entities?.length) {
+      if (entityContext && entityContext.length > 0 && result.metadata.related_entities?.length) {
         const relatedEntities = new Set(result.metadata.related_entities);
         const overlap = entityContext.filter(id => relatedEntities.has(id)).length;
         relationalScore = overlap / entityContext.length;
@@ -122,7 +121,7 @@ export class RetrievalService {
     }
   ) {
     const { timeWindow, limit } = options;
-    
+
     // Get all events with proper pagination options
     const events = await this.eventModel.findAll(
       {
@@ -131,7 +130,7 @@ export class RetrievalService {
           endTime: timeWindow.end,
         }),
       },
-      { 
+      {
         pageSize: 100,
         page: 1
       }
@@ -143,7 +142,7 @@ export class RetrievalService {
         const content = `${event.title}\n${event.description || ''}`;
         const embedding = event.embedding || await this.embeddingFunction.generate([content]);
         const similarity = this.cosineSimilarity(queryEmbedding, Array.isArray(embedding) ? embedding : embedding[0]);
-        
+
         return {
           id: event.id as string,
           content,
@@ -166,33 +165,36 @@ export class RetrievalService {
   private async searchEntities(
     queryEmbedding: number[],
     options: {
-      entityContext: string[];
+      entityContext?: string[];
       limit: number;
     }
   ) {
     const { entityContext, limit } = options;
-    
+
     // Get entities with proper pagination options
     const entities = await this.entityModel.findAll(
       {},
-      { 
+      {
         pageSize: 100,
         page: 1
       }
     );
 
-    // Filter to only include entities in context
-    const contextEntities = entities.data.filter(e => 
-      e.id && entityContext.includes(e.id)
-    );
+    // Filter to only include entities in context IF context is provided and not empty
+    let candidateEntities = entities.data;
+    if (entityContext && entityContext.length > 0) {
+      candidateEntities = entities.data.filter(e =>
+        e.id && entityContext.includes(e.id)
+      );
+    }
 
     // Calculate similarity scores
     const results = await Promise.all(
-      contextEntities.map(async (entity) => {
+      candidateEntities.map(async (entity) => {
         const content = `${entity.name}\n${entity.description || ''}`;
         const embedding = entity.embedding || await this.embeddingFunction.generate([content]);
         const similarity = this.cosineSimilarity(queryEmbedding, Array.isArray(embedding) ? embedding : embedding[0]);
-        
+
         return {
           id: entity.id as string,
           content,
@@ -217,11 +219,11 @@ export class RetrievalService {
     options: { limit: number }
   ) {
     const { limit } = options;
-    
+
     // Get all tasks with proper pagination options
     const tasks = await this.taskModel.findAll(
-      {}, 
-      { 
+      {},
+      {
         pageSize: 100,
         page: 1
       }
@@ -234,7 +236,7 @@ export class RetrievalService {
         // Generate embedding for task content
         const embedding = await this.embeddingFunction.generate([content]);
         const similarity = this.cosineSimilarity(queryEmbedding, Array.isArray(embedding) ? embedding : embedding[0]);
-        
+
         return {
           id: task.id as string,
           content,
@@ -256,17 +258,17 @@ export class RetrievalService {
 
   private cosineSimilarity(a: number[], b: number[]): number {
     if (!a || !b || a.length !== b.length) return 0;
-    
+
     let dotProduct = 0;
     let normA = 0;
     let normB = 0;
-    
+
     for (let i = 0; i < a.length; i++) {
       dotProduct += a[i] * b[i];
       normA += a[i] * a[i];
       normB += b[i] * b[i];
     }
-    
+
     const denominator = Math.sqrt(normA) * Math.sqrt(normB);
     return denominator === 0 ? 0 : dotProduct / denominator;
   }

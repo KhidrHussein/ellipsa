@@ -45,8 +45,8 @@
     ]
   },
   "include": [
-    "src/renderer/**/*.ts",
-    "src/renderer/**/*.tsx",
+    "./src/renderer/**/*.ts",
+    "./src/renderer/**/*.tsx",
     "src/services/**/*.ts",
     "src/shims-*.d.ts",
     "src/types/**/*.d.ts"

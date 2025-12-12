@@ -1,10 +1,12 @@
 import React, { useState, useMemo } from 'react';
 import { motion } from 'motion/react';
-import { Calendar, Users, CheckCircle, Circle, Clock, Loader2 } from 'lucide-react';
+import { Calendar, Users, CheckCircle, Circle, Clock, Loader2, Terminal, Hash, ChevronRight, X } from 'lucide-react';
 import { useEvents, TimelineEvent } from '../hooks/useEvents';
+import { GlassCard } from './ui/GlassCard';
 
 interface TimelineViewProps {
   onPersonClick: (personId: string) => void;
+  onClose?: () => void;
 }
 
 // Helper to format date relative to now
@@ -14,26 +16,26 @@ function formatRelativeDate(dateStr: string): string {
   const diffMs = now.getTime() - date.getTime();
   const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
 
-  if (diffDays === 0) return 'Today';
-  if (diffDays === 1) return 'Yesterday';
-  if (diffDays < 7) return `${diffDays} days ago`;
+  if (diffDays === 0) return 'TODAY';
+  if (diffDays === 1) return 'YESTERDAY';
+  if (diffDays < 7) return `${diffDays} DAYS AGO`;
 
-  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }).toUpperCase();
 }
 
 // Helper to format time range
 function formatTimeRange(startTime: string, endTime?: string): string {
   const start = new Date(startTime);
-  const startStr = start.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+  const startStr = start.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: false });
 
   if (!endTime) return startStr;
 
   const end = new Date(endTime);
-  const endStr = end.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
-  return `${startStr} - ${endStr}`;
+  const endStr = end.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: false });
+  return `${startStr}-${endStr}`;
 }
 
-export function TimelineView({ onPersonClick }: TimelineViewProps) {
+export function TimelineView({ onPersonClick, onClose }: TimelineViewProps) {
   const [filter, setFilter] = useState<'all' | 'meetings' | 'tasks'>('all');
   const { events, loading, error } = useEvents({
     type: filter === 'all' ? undefined : filter === 'meetings' ? 'meeting' : undefined,
@@ -70,23 +72,23 @@ export function TimelineView({ onPersonClick }: TimelineViewProps) {
         id: p.entity_id,
         name: p.name,
         role: p.role,
+        actionItems: event.metadata?.action_items || [],
       })) || [],
       summary: event.summary || '',
       tone: event.metadata?.tone || { label: 'Neutral', confidence: 0.5 },
       actionItems: event.metadata?.action_items || [],
     }));
 
-    console.log('[TimelineView] Filtered events:', transformed.length, 'from', events.length);
     return transformed;
   }, [events]);
 
   // Show loading state
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white flex items-center justify-center">
-        <div className="flex flex-col items-center gap-4">
-          <Loader2 className="w-8 h-8 animate-spin text-gray-400" />
-          <p className="text-gray-500">Loading timeline...</p>
+      <div className="h-full flex items-center justify-center font-mono bg-white border border-gray-200 shadow-xl rounded-xl">
+        <div className="flex flex-col items-center gap-2 text-xs text-black/50">
+          <Loader2 className="w-4 h-4 animate-spin" />
+          <p>LOADING_SYSTEM_LOGS...</p>
         </div>
       </div>
     );
@@ -95,132 +97,126 @@ export function TimelineView({ onPersonClick }: TimelineViewProps) {
   // Show error state
   if (error) {
     return (
-      <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white flex items-center justify-center">
+      <div className="h-full flex items-center justify-center font-mono bg-white border border-gray-200 shadow-xl rounded-xl">
         <div className="text-center max-w-md p-6">
-          <p className="text-red-500 mb-2">Failed to load timeline</p>
-          <p className="text-gray-500 text-sm">{error.message}</p>
+          <p className="text-red-500 mb-2 text-xs">ERROR_LOADING_LOGS</p>
+          <p className="text-black/50 text-[10px]">{error.message}</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white">
+    <div className="h-full overflow-y-auto bg-white font-sans text-sm border border-gray-200 shadow-2xl rounded-xl">
       {/* Header */}
-      <div className="border-b border-gray-200 bg-white/80 backdrop-blur-sm sticky top-0 z-10">
-        <div className="max-w-4xl mx-auto px-6 py-6">
-          <h1 className="font-serif italic text-2xl mb-4">Timeline</h1>
+      <div className="sticky top-0 z-10 px-4 py-3 bg-white border-b border-gray-200 flex items-center justify-between">
+        <div className="flex items-center gap-2 text-black/70">
+          <Terminal className="w-4 h-4" />
+          <span className="font-bold tracking-wider">SYSTEM_LOGS</span>
+        </div>
 
+        <div className="flex items-center gap-2">
           {/* Filter Tabs */}
-          <div className="flex gap-2">
+          <div className="flex gap-1">
             {['all', 'meetings', 'tasks'].map((tab) => (
               <button
                 key={tab}
                 onClick={() => setFilter(tab as typeof filter)}
-                className={`px-4 py-2 rounded-full text-sm transition-colors ${filter === tab
+                className={`px-3 py-1 rounded text-xs transition-colors uppercase tracking-wide ${filter === tab
                   ? 'bg-black text-white'
-                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                  : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
                   }`}
               >
-                {tab.charAt(0).toUpperCase() + tab.slice(1)}
+                {tab}
               </button>
             ))}
           </div>
+
+          {onClose && (
+            <button
+              onClick={onClose}
+              className="p-1 hover:bg-gray-100 rounded text-gray-400 hover:text-gray-600 transition-colors"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          )}
         </div>
       </div>
 
       {/* Timeline Content */}
-      <div className="max-w-4xl mx-auto px-6 py-8">
+      <div className="px-4 py-4 space-y-6">
         {displayEvents.length === 0 ? (
-          <div className="text-center py-12">
-            <p className="text-gray-500">No events yet</p>
-            <p className="text-gray-400 text-sm mt-2">Events will appear here as you use observe mode</p>
+          <div className="text-center py-12 text-black/40">
+            <p>NO_EVENTS_DETECTED</p>
+            <p className="text-[10px] mt-1">WAITING_FOR_INPUT...</p>
           </div>
         ) : (
-          <div className="space-y-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {displayEvents.map((event, index) => (
               <motion.div
                 key={event.id}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: index * 0.1 }}
-                className="relative"
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ delay: index * 0.05 }}
+                className="h-full"
               >
-                {/* Date Label */}
-                <div className="text-xs text-gray-400 mb-3">{event.date}</div>
+                <div className="p-4 rounded-lg bg-gray-50 border border-gray-200 hover:bg-gray-100 transition-colors group h-full flex flex-col">
+                  {/* Date/Time Header */}
+                  <div className="mb-2 flex items-center gap-2 text-xs text-black/50 tracking-wide font-medium">
+                    <span>{event.date}</span>
+                    <span>•</span>
+                    <span className="font-bold text-black/60">{event.time}</span>
+                    <span>•</span>
+                    <span className="uppercase">{event.type}</span>
+                  </div>
 
-                {/* Event Card */}
-                <div className="bg-white border border-gray-200 rounded-2xl p-6 hover:shadow-lg transition-shadow">
-                  {/* Header */}
-                  <div className="flex items-start justify-between mb-4">
-                    <div className="flex-1">
-                      <h3 className="mb-1">{event.title}</h3>
-                      <div className="flex items-center gap-2 text-sm text-gray-500">
-                        <Clock className="w-4 h-4" />
-                        <span>{event.time}</span>
-                      </div>
-                    </div>
-                    <div className="px-3 py-1 bg-gray-50 rounded-full text-xs text-gray-600">
-                      {event.type}
-                    </div>
+                  {/* Title */}
+                  <div className="flex items-start justify-between mb-2">
+                    <h3 className="font-bold text-lg text-black/90 group-hover:text-black transition-colors">
+                      {event.title || 'UNTITLED_EVENT'}
+                    </h3>
                   </div>
 
                   {/* Participants */}
                   {event.participants.length > 0 && (
-                    <div className="mb-4">
-                      <div className="flex items-center gap-2 mb-2">
-                        <Users className="w-4 h-4 text-gray-400" />
-                        <span className="text-xs text-gray-500">Participants</span>
-                      </div>
-                      <div className="flex flex-wrap gap-2">
-                        {event.participants.map((person) => (
-                          <button
-                            key={person.id}
-                            onClick={() => onPersonClick(person.id)}
-                            className="px-3 py-1.5 bg-gray-50 hover:bg-gray-100 rounded-lg text-sm transition-colors"
-                          >
-                            <div>{person.name}</div>
-                            {person.role && <div className="text-xs text-gray-500">{person.role}</div>}
-                          </button>
-                        ))}
-                      </div>
+                    <div className="flex flex-wrap gap-1 mb-3">
+                      {event.participants.map((person) => (
+                        <button
+                          key={person.id}
+                          onClick={() => onPersonClick(person.id)}
+                          className="flex items-center gap-1 px-2.5 py-1 bg-white border border-gray-200 rounded-md text-xs text-gray-700 transition-colors hover:border-gray-300"
+                        >
+                          <Hash className="w-3 h-3 opacity-50" />
+                          <span>{person.name}</span>
+                        </button>
+                      ))}
                     </div>
                   )}
 
                   {/* Summary */}
                   {event.summary && (
-                    <p className="text-gray-700 mb-4 leading-relaxed">{event.summary}</p>
+                    <p className="text-gray-700 leading-relaxed mb-3 text-sm flex-grow">
+                      {event.summary}
+                    </p>
                   )}
-
-                  {/* Tone Indicator */}
-                  <div className="flex items-center gap-2 mb-4 text-sm">
-                    <span className="text-gray-500">Tone:</span>
-                    <span className="italic">{event.tone.label}</span>
-                    <span className="text-gray-400">({Math.round(event.tone.confidence * 100)}% confidence)</span>
-                  </div>
 
                   {/* Action Items */}
                   {event.actionItems.length > 0 && (
-                    <div className="border-t border-gray-100 pt-4">
-                      <div className="text-xs text-gray-500 mb-3">Action Items</div>
-                      <div className="space-y-2">
+                    <div className="border-t border-gray-200 pt-2 mt-auto">
+                      <div className="text-xs text-gray-500 font-semibold uppercase tracking-wider mb-2">Required Actions</div>
+                      <div className="space-y-1">
                         {event.actionItems.map((item: any) => (
                           <div
                             key={item.id}
-                            className="flex items-start gap-3 p-3 bg-gray-50 rounded-lg"
+                            className="flex items-start gap-2 text-sm"
                           >
                             {item.status === 'completed' ? (
-                              <CheckCircle className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
+                              <div className="text-green-600 font-bold">[X]</div>
                             ) : (
-                              <Circle className="w-5 h-5 text-gray-400 flex-shrink-0 mt-0.5" />
+                              <div className="text-gray-300 font-bold">[ ]</div>
                             )}
-                            <div className="flex-1">
-                              <div className={item.status === 'completed' ? 'line-through text-gray-500' : ''}>
-                                {item.text}
-                              </div>
-                              <div className="text-xs text-gray-500 mt-1">
-                                Due: {item.due || 'N/A'} • Owner: {item.owner || 'you'}
-                              </div>
+                            <div className={`flex-1 ${item.status === 'completed' ? 'line-through text-gray-400' : 'text-gray-700'}`}>
+                              {item.text}
                             </div>
                           </div>
                         ))}
@@ -236,3 +232,4 @@ export function TimelineView({ onPersonClick }: TimelineViewProps) {
     </div>
   );
 }
+

@@ -227,6 +227,10 @@ function createWindow(): void {
     show: false // Don't show until ready
   });
 
+  // Force window to be top-most
+  mainWindow.setAlwaysOnTop(true, 'screen-saver');
+  mainWindow.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
+
   console.log('[Main] Creating window with bounds:', {
     screenWidth,
     screenHeight,
@@ -620,6 +624,31 @@ ipcMain.on('resize-window', (event, { width, height }) => {
     const [currentWidth, currentHeight] = mainWindow.getSize();
     const [currentX, currentY] = mainWindow.getPosition();
 
+    console.log(`[Main] resize-window requested: ${width}x${height}`);
+    console.log(`[Main] Current bounds: ${currentX},${currentY} ${currentWidth}x${currentHeight}`);
+
+    const display = screen.getDisplayNearestPoint({ x: currentX, y: currentY });
+    const { width: screenWidth, height: screenHeight } = display.workAreaSize;
+    const { x: workAreaX, y: workAreaY } = display.workArea;
+
+    // Check if this is a request for fullscreen (or close to it)
+    // If so, we should just snap to the top-left of the work area
+    const isFullscreenRequest =
+      Math.abs(width - screenWidth) < 10 &&
+      Math.abs(height - screenHeight) < 10;
+
+    if (isFullscreenRequest) {
+      console.log('[Main] Fullscreen resize detected, snapping to work area origin');
+      mainWindow.setBounds({
+        x: workAreaX,
+        y: workAreaY,
+        width: screenWidth,
+        height: screenHeight
+      });
+      return;
+    }
+
+    // Standard behavior: anchor to bottom-right
     // Calculate the bottom-right corner position (this should stay fixed)
     const bottomRightX = currentX + currentWidth;
     const bottomRightY = currentY + currentHeight;
@@ -627,6 +656,8 @@ ipcMain.on('resize-window', (event, { width, height }) => {
     // Calculate new top-left position to keep bottom-right anchor
     const newX = bottomRightX - width;
     const newY = bottomRightY - height;
+
+    console.log(`[Main] Calculated new bounds: ${newX},${newY} ${width}x${height}`);
 
     // Set new bounds atomically
     mainWindow.setBounds({

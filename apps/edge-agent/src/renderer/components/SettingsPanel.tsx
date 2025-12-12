@@ -104,18 +104,18 @@ export function SettingsPanel({ onClose }: SettingsPanelProps) {
 
   return (
     <motion.div
-      className="fixed inset-0 bg-white z-40 overflow-y-auto"
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
+      className="h-full bg-white rounded-3xl overflow-hidden border border-gray-200 shadow-2xl flex flex-col"
+      initial={{ opacity: 0, scale: 0.95 }}
+      animate={{ opacity: 1, scale: 1 }}
+      exit={{ opacity: 0, scale: 0.95 }}
     >
-      <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white">
+      <div className="flex-1 overflow-y-auto bg-gray-50">
         {/* Header */}
-        <div className="border-b border-gray-200 bg-white/80 backdrop-blur-sm sticky top-0 z-10">
+        <div className="border-b border-gray-200 bg-white sticky top-0 z-10">
           <div className="max-w-4xl mx-auto px-6 py-6">
             <div className="flex items-center justify-between">
               <div>
-                <h1 className="font-serif italic text-2xl mb-1">Settings</h1>
+                <h1 className="font-sans font-bold text-2xl mb-1">Settings</h1>
                 <p className="text-sm text-gray-500">Privacy, storage, and preferences</p>
               </div>
               <button
@@ -147,9 +147,8 @@ export function SettingsPanel({ onClose }: SettingsPanelProps) {
                 {section.items.map((item, itemIndex) => (
                   <div
                     key={item.id}
-                    className={`p-6 ${
-                      itemIndex !== section.items.length - 1 ? 'border-b border-gray-100' : ''
-                    }`}
+                    className={`p-6 ${itemIndex !== section.items.length - 1 ? 'border-b border-gray-100' : ''
+                      }`}
                   >
                     <div className="flex items-start justify-between gap-4">
                       <div className="flex-1">
@@ -159,9 +158,8 @@ export function SettingsPanel({ onClose }: SettingsPanelProps) {
                       <button
                         onClick={() => !item.disabled && toggleSetting(item.id as keyof typeof settings)}
                         disabled={item.disabled}
-                        className={`flex-shrink-0 transition-colors ${
-                          item.disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'
-                        }`}
+                        className={`flex-shrink-0 transition-colors ${item.disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'
+                          }`}
                       >
                         {item.enabled ? (
                           <ToggleRight className="w-12 h-12 text-black" />

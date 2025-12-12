@@ -1,27 +1,39 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { ServiceProvider } from './contexts/ServiceContext';
 import { TooltipProvider } from './components/ui/tooltip';
 
 import { FloatingButton } from './components/FloatingButton';
 import { TimelineView } from './components/TimelineView';
 import { BriefingView } from './components/BriefingView';
-// ChatOverlay is now rendered in a separate window via IPC
 import { SettingsPanel } from './components/SettingsPanel';
 import { ActionApprovalModal } from './components/ActionApprovalModal';
 import { PersonCardModal } from './components/PersonCardModal';
 import { PostMeetingToast } from './components/PostMeetingToast';
 import { ObserveModeOverlay } from './components/ObserveModeOverlay';
 import { WelcomeScreen } from './components/WelcomeScreen';
+import { CalibrationFlow } from './components/CalibrationFlow';
 
 import { useObserveMode } from './hooks/useObserveMode';
 
 export default function App() {
-  const [view, setView] = useState<'welcome' | 'none' | 'timeline' | 'briefing' | 'settings'>('none');
+  const [view, setView] = useState<'welcome' | 'calibration' | 'none' | 'timeline' | 'briefing' | 'settings'>('none');
   const { isObserving, toggleObserveMode } = useObserveMode();
   const [showToast, setShowToast] = useState(false);
   const [actionPending, setActionPending] = useState(true);
   const [selectedPerson, setSelectedPerson] = useState<string | null>(null);
   const [showActionModal, setShowActionModal] = useState(false);
+
+  // Check for existing calibration
+  useEffect(() => {
+    const prefs = localStorage.getItem('ellipsa_preferences');
+    if (!prefs) {
+      setView('calibration');
+    } else {
+      // If already calibrated, we can default to welcome or none
+      // For now, let's stick to 'none' unless user triggers something
+      // But for first load dev, 'welcome' is fine if triggered
+    }
+  }, []);
 
   const handleFloatingButtonClick = () => {
     // Open chat in separate window via IPC
@@ -112,26 +124,28 @@ export default function App() {
       if (!ellipsa?.resizeWindow) return;
 
       // For 'none' view (just floating button), keep window fullscreen for free dragging
-      if (view === 'none') {
-        // Don't resize - keep fullscreen transparent window
-        // The floating button needs the full screen area to be draggable
+      // For 'none', 'welcome', and 'calibration' views, keep window fullscreen for free dragging and overlay
+      // Always keep window fullscreen for these views as they are overlays on the glass
+      // This ensures the 800x500 cards are centered properly and the floating button can move
+      // Settings, Timeline, and Briefing acts as overlays so we need the full canvas
+      const fullScreenViews = ['none', 'welcome', 'calibration', 'timeline', 'briefing', 'settings'];
+
+      if (fullScreenViews.includes(view)) {
         if (ellipsa.getScreenSize) {
           try {
+            // Enforce mouse interaction for full-screen views
+            if (ellipsa.setIgnoreMouseEvents) {
+              ellipsa.setIgnoreMouseEvents(false);
+            }
+
             const screen = await ellipsa.getScreenSize();
+            console.log(`[App] Resizing window for view '${view}' to fullscreen: ${screen.width}x${screen.height}`);
             ellipsa.resizeWindow(screen.width, screen.height);
           } catch (e) {
             console.error('Failed to get screen size:', e);
           }
         }
         return;
-      }
-
-      if (view === 'welcome') {
-        // Welcome screen needs space
-        ellipsa.resizeWindow(1000, 800);
-      } else {
-        // Expanded state for other overlays (timeline, briefing, settings)
-        ellipsa.resizeWindow(400, 600);
       }
     };
 
@@ -148,9 +162,33 @@ export default function App() {
                 but we need to re-enable them for actual content */}
 
             <div className="pointer-events-auto">
-              {view === 'timeline' && <TimelineView onPersonClick={setSelectedPerson} />}
-              {view === 'briefing' && <BriefingView onClose={() => setView('none')} />}
-              {view === 'settings' && <SettingsPanel onClose={() => setView('none')} />}
+              {/* Click-away overlay */}
+              {(view === 'timeline' || view === 'briefing' || view === 'settings') && (
+                <div
+                  className="fixed inset-0 z-20 bg-black/5"
+                  onClick={() => setView('none')}
+                />
+              )}
+
+              {/* View Cards */}
+              {(view === 'timeline' || view === 'briefing' || view === 'settings') && (
+                <div className="fixed inset-0 z-30 flex items-center justify-center pointer-events-none">
+                  <div className="w-[800px] h-[500px] pointer-events-auto relative">
+                    {view === 'timeline' && (
+                      <TimelineView
+                        onPersonClick={setSelectedPerson}
+                        onClose={() => setView('none')}
+                      />
+                    )}
+                    {view === 'briefing' && (
+                      <BriefingView onClose={() => setView('none')} />
+                    )}
+                    {view === 'settings' && (
+                      <SettingsPanel onClose={() => setView('none')} />
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
           </div>
 
@@ -159,24 +197,6 @@ export default function App() {
           {/* Observe Mode Overlay */}
           <ObserveModeOverlay isActive={isObserving} />
 
-          {/* Floating Button */}
-          <FloatingButton
-            isObserving={isObserving}
-            actionPending={actionPending}
-            actionCount={2}
-            onClick={handleFloatingButtonClick}
-            onLongPress={handleLongPress}
-            onSwipeUp={handleSwipeUp}
-            collapsed={view === 'none' && !menuOpen}
-            onMenuOpenChange={setMenuOpen}
-            onMenuSelect={(item) => {
-              if (item === 'timeline') setView('timeline');
-              if (item === 'briefing') setView('briefing');
-              if (item === 'settings') setView('settings');
-              if (item === 'actions') setShowActionModal(true);
-              if (item === 'home') setView('welcome');
-            }}
-          />
 
           {/* Modals & Toasts */}
           {showToast && (
@@ -220,6 +240,32 @@ export default function App() {
               <WelcomeScreen onSelectDemo={handleDemoSelect} />
             </div>
           )}
+
+          {/* Calibration Flow */}
+          {view === 'calibration' && (
+            <div className="pointer-events-auto">
+              <CalibrationFlow onComplete={() => setView('welcome')} />
+            </div>
+          )}
+
+          {/* Floating Button visible always for consistency - Moved to end for stacking order */}
+          <FloatingButton
+            isObserving={isObserving}
+            actionPending={actionPending}
+            actionCount={2}
+            onClick={handleFloatingButtonClick}
+            onLongPress={handleLongPress}
+            onSwipeUp={handleSwipeUp}
+            collapsed={view === 'none' && !menuOpen}
+            onMenuOpenChange={setMenuOpen}
+            onMenuSelect={(item) => {
+              if (item === 'timeline') setView('timeline');
+              if (item === 'briefing') setView('briefing');
+              if (item === 'settings') setView('settings');
+              if (item === 'actions') setShowActionModal(true);
+              if (item === 'home') setView('welcome');
+            }}
+          />
         </div>
       </TooltipProvider>
     </ServiceProvider>

@@ -139,6 +139,39 @@ app.get("/prompt/v1/health", async (req, res) => {
   }
 });
 
+// Memory Service Configuration
+const MEMORY_SERVICE_URL = process.env.MEMORY_SERVICE_URL || 'http://localhost:4001';
+
+async function fetchContext(query: string): Promise<string[]> {
+  if (!query) return [];
+  try {
+    console.log(`[ContextInjector] Fetching context for: "${query.substring(0, 50)}..."`);
+    const response = await fetch(`${MEMORY_SERVICE_URL}/api/v1/search`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ query, limit: 5 })
+    });
+
+    if (!response.ok) {
+      console.warn(`[ContextInjector] Failed to fetch context: ${response.statusText}`);
+      return [];
+    }
+
+    const json = await response.json() as any;
+    const results = json.data?.results || [];
+
+    return results.map((r: any) => {
+      const title = r.metadata?.title || r.metadata?.name || 'Unknown';
+      const type = r.type ? r.type.toUpperCase() : 'INFO';
+      // Format: [EVENT] Meeting with Alice: Summary...
+      return `[${type}] ${title}: ${r.content.substring(0, 150).replace(/\n/g, ' ')}`;
+    });
+  } catch (error) {
+    console.error(`[ContextInjector] Error fetching context:`, error);
+    return [];
+  }
+}
+
 // Intelligent Assistance Endpoint
 app.post("/prompt/v1/assist", async (req, res) => {
   try {
@@ -149,6 +182,15 @@ app.post("/prompt/v1/assist", async (req, res) => {
     }
 
     console.log(`[${new Date().toISOString()}] Generating assistance for activity: ${context.activityType || 'general'}`);
+
+    // Inject Ghost Context
+    const ghostContext = await fetchContext(context.transcript);
+    const combinedMemory = [
+      ...(context.memoryBullets || []),
+      ...ghostContext
+    ];
+    // Deduplicate
+    const uniqueMemory = Array.from(new Set(combinedMemory));
 
     let systemPrompt = GENERAL_ASSISTANT_PROMPT;
     if (context.activityType === 'meeting') {
@@ -162,16 +204,38 @@ app.post("/prompt/v1/assist", async (req, res) => {
       .replace('{transcript}', context.transcript)
       .replace('{screen_context}', context.screenContext || 'No screen context available')
       .replace('{activity_type}', context.activityType || 'general')
-      .replace('{memory_bullets}', (context.memoryBullets || []).join('\n- ') || 'No relevant memory found')
+      .replace('{memory_bullets}', uniqueMemory.join('\n- ') || 'No relevant memory found')
       .replace('{question}', context.transcript) // For QA prompt
       .replace('{context}', context.screenContext || '') // For QA prompt
-      .replace('{memory_context}', (context.memoryBullets || []).join('\n- ') || ''); // For QA prompt
+      .replace('{memory_context}', uniqueMemory.join('\n- ') || ''); // For QA prompt
+
+    // Prepare User Message (Text or Multimodal)
+    let userContent: any = "Analyze the current context and provide assistance.";
+    let activeModel = model;
+
+    if (context.image) {
+      // Ensure we use a vision-capable model
+      if (activeModel.includes('gpt-3.5')) {
+        activeModel = 'gpt-4o';
+      }
+
+      const imageUrl = context.image.startsWith('data:')
+        ? context.image
+        : `data:image/jpeg;base64,${context.image}`;
+
+      userContent = [
+        { type: "text", text: "Analyze the current context and provide assistance." },
+        { type: "image_url", image_url: { url: imageUrl } }
+      ];
+
+      console.log(`[${new Date().toISOString()}] Processing image with model: ${activeModel}`);
+    }
 
     const completion = await openai.chat.completions.create({
-      model,
+      model: activeModel,
       messages: [
         { role: "system", content: filledPrompt },
-        { role: "user", content: "Analyze the current context and provide assistance." }
+        { role: "user", content: userContent }
       ],
       response_format: { type: "json_object" }
     });
@@ -208,13 +272,21 @@ app.post("/prompt/v1/chat", async (req: Request, res: Response) => {
     // Import the template dynamically or ensure it's available
     const { CHAT_ASSISTANT_PROMPT } = require("./lib/assistantPrompts");
 
+    // Inject Ghost Context
+    const ghostContext = await fetchContext(context.message);
+    const combinedMemory = [
+      ...(context.memoryContext || []),
+      ...ghostContext
+    ];
+    const uniqueMemory = Array.from(new Set(combinedMemory));
+
     // Replace placeholders
-    const memoryContext = context.memoryContext ? `Memory:\n${context.memoryContext.join('\n')}` : '';
-    const screenContext = context.screenContext ? `Screen:\n${context.screenContext}` : '';
+    const memoryContextStr = uniqueMemory.length > 0 ? `Memory:\n- ${uniqueMemory.join('\n- ')}` : '';
+    const screenContextStr = context.screenContext ? `Screen:\n${context.screenContext}` : '';
 
     const systemPrompt = CHAT_ASSISTANT_PROMPT
-      .replace('{memory_context}', memoryContext)
-      .replace('{screen_context}', screenContext);
+      .replace('{memory_context}', memoryContextStr)
+      .replace('{screen_context}', screenContextStr);
 
     const messages = [
       { role: "system", content: systemPrompt },

@@ -23,7 +23,11 @@ function getStoredPosition(): { x: number; y: number } | null {
   try {
     const stored = localStorage.getItem(STORAGE_KEY);
     if (stored) {
-      return JSON.parse(stored);
+      const parsed = JSON.parse(stored);
+      // Validate coordinates are numbers
+      if (typeof parsed.x === 'number' && typeof parsed.y === 'number' && !isNaN(parsed.x) && !isNaN(parsed.y)) {
+        return parsed;
+      }
     }
   } catch (e) {
     console.error('Failed to read stored position:', e);
@@ -33,6 +37,7 @@ function getStoredPosition(): { x: number; y: number } | null {
 
 function savePosition(x: number, y: number) {
   try {
+    if (isNaN(x) || isNaN(y)) return;
     localStorage.setItem(STORAGE_KEY, JSON.stringify({ x, y }));
   } catch (e) {
     console.error('Failed to save position:', e);
@@ -41,11 +46,20 @@ function savePosition(x: number, y: number) {
 
 // Clamp position within screen bounds
 function clampPosition(x: number, y: number, screenWidth: number, screenHeight: number): { x: number; y: number } {
-  const maxX = screenWidth - BUTTON_SIZE - PADDING;
-  const maxY = screenHeight - BUTTON_SIZE - PADDING;
+  // Ensure we have valid screen dimensions
+  const safeWidth = screenWidth || window.innerWidth || 1920;
+  const safeHeight = screenHeight || window.innerHeight || 1080;
+
+  const maxX = Math.max(0, safeWidth - BUTTON_SIZE - PADDING);
+  const maxY = Math.max(0, safeHeight - BUTTON_SIZE - PADDING);
+
+  // Handle NaN inputs
+  const safeX = isNaN(x) ? safeWidth - BUTTON_SIZE - PADDING : x;
+  const safeY = isNaN(y) ? safeHeight - BUTTON_SIZE - PADDING : y;
+
   return {
-    x: Math.min(Math.max(PADDING, x), maxX),
-    y: Math.min(Math.max(PADDING, y), maxY),
+    x: Math.min(Math.max(PADDING, safeX), maxX),
+    y: Math.min(Math.max(PADDING, safeY), maxY),
   };
 }
 
@@ -77,6 +91,43 @@ export function FloatingButton({
   const mouseButton = useRef(0);
   const dragStartPos = useRef({ x: 0, y: 0 });
   const constraintsRef = useRef<HTMLDivElement>(null);
+  // Track hover and mouse state to prevent premature click-through
+  const isHovering = useRef(false);
+  const isMouseDown = useRef(false);
+
+  // Consolidate mouse event logic
+  const updateMouseFilter = React.useCallback(() => {
+    try {
+      // If not collapsed (menu open or view active), we need interaction
+      if (!collapsed) {
+        console.log('[FloatingButton] Menu open or expanded, enforcing interaction');
+        (window as any).ellipsa?.setIgnoreMouseEvents(false);
+        return;
+      }
+
+      // If collapsed (button only), we only need interaction if interacting with the button
+      const shouldInteract = isHovering.current || isDragging || isMouseDown.current;
+      // console.log('[FloatingButton] Updating interaction:', { shouldInteract, collapsed });
+      (window as any).ellipsa?.setIgnoreMouseEvents(!shouldInteract);
+    } catch (e) {
+      console.error('[FloatingButton] Error setting mouse events:', e);
+    }
+  }, [collapsed, isDragging]);
+
+  // Update mouse filter when collapsed state changes
+  useEffect(() => {
+    updateMouseFilter();
+  }, [updateMouseFilter]);
+
+  // Global mouse up listener to ensure we reset state even if mouse leaves window
+  useEffect(() => {
+    const handleGlobalMouseUp = () => {
+      isMouseDown.current = false;
+      updateMouseFilter();
+    };
+    window.addEventListener('mouseup', handleGlobalMouseUp);
+    return () => window.removeEventListener('mouseup', handleGlobalMouseUp);
+  }, [updateMouseFilter]);
 
   // Get actual screen size from Electron on mount
   useEffect(() => {
@@ -88,7 +139,7 @@ export function FloatingButton({
 
         if (ellipsa?.getScreenSize) {
           const screen = await ellipsa.getScreenSize();
-          console.log('Screen size from Electron:', screen);
+          console.log('Screen size from Electron: ' + JSON.stringify(screen));
           width = screen.width;
           height = screen.height;
         }
@@ -103,12 +154,12 @@ export function FloatingButton({
           const clamped = clampPosition(stored.x, stored.y, width, height);
           initialX = clamped.x;
           initialY = clamped.y;
-          console.log('Restored position:', { initialX, initialY });
+          console.log('Restored position: ' + JSON.stringify({ initialX, initialY, stored }));
         } else {
           // Default to bottom-right
           initialX = width - BUTTON_SIZE - 48; // 48px margin
           initialY = height - BUTTON_SIZE - 48;
-          console.log('Default position:', { initialX, initialY });
+          console.log('Default position: ' + JSON.stringify({ initialX, initialY }));
         }
 
         x.set(initialX);
@@ -117,6 +168,14 @@ export function FloatingButton({
 
       } catch (e) {
         console.error('Failed to get screen size:', e);
+        // Fallback initialization
+        const width = window.innerWidth;
+        const height = window.innerHeight;
+        const initialX = width - BUTTON_SIZE - 48;
+        const initialY = height - BUTTON_SIZE - 48;
+        x.set(initialX);
+        y.set(initialY);
+        setIsInitialized(true);
       }
     };
     initializeScreenSize();
@@ -136,15 +195,31 @@ export function FloatingButton({
     onMenuOpenChange?.(showMenu);
   }, [showMenu, onMenuOpenChange]);
 
+  // Handle menu state changes
+  useEffect(() => {
+    if (showMenu) {
+      setMenuReady(true);
+      const timer = setTimeout(() => setClickOutsideEnabled(true), 100);
+      return () => clearTimeout(timer);
+    } else {
+      setMenuReady(false);
+      setClickOutsideEnabled(false);
+    }
+  }, [showMenu]);
+
   // Initial mouse state
   useEffect(() => {
+    // Initial sync
     const timer = setTimeout(() => {
-      (window as any).ellipsa?.setIgnoreMouseEvents(true);
+      updateMouseFilter();
     }, 1000);
     return () => clearTimeout(timer);
   }, []);
 
   const handleMouseDown = (e: React.MouseEvent) => {
+    isMouseDown.current = true;
+    updateMouseFilter();
+
     mouseButton.current = e.button;
     startY.current = e.clientY;
     dragStartPos.current = { x: e.clientX, y: e.clientY };
@@ -196,27 +271,20 @@ export function FloatingButton({
 
   const handleDragStart = () => {
     setIsDragging(true);
+    // updateMouseFilter will be called by useEffect on isDragging change
     if (longPressTimer.current) {
       clearTimeout(longPressTimer.current);
     }
   };
 
-  // Track hover state to prevent premature click-through
-  const isHovering = useRef(false);
-
-  // Handle mouse enter/leave for click-through behavior
   const handleMouseEnter = () => {
     isHovering.current = true;
-    // When mouse enters the button, stop ignoring mouse events so we can interact
-    (window as any).ellipsa?.setIgnoreMouseEvents(false);
+    updateMouseFilter();
   };
 
   const handleMouseLeave = () => {
     isHovering.current = false;
-    // When mouse leaves the button (and not dragging), resume click-through
-    if (!isDragging) {
-      (window as any).ellipsa?.setIgnoreMouseEvents(true);
-    }
+    updateMouseFilter();
   };
 
   const handleDragEnd = (event: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) => {
@@ -226,11 +294,10 @@ export function FloatingButton({
     // Verify values are numbers
     if (isNaN(currentX) || isNaN(currentY)) {
       console.error('[FloatingButton] Drag Ended with NaN coordinates!', { currentX, currentY });
-      // Reset to default safe position
       const safeWidth = screenSize?.width || window.innerWidth;
       const safeHeight = screenSize?.height || window.innerHeight;
-      const safeX = safeWidth - BUTTON_SIZE - 48;
-      const safeY = safeHeight - BUTTON_SIZE - 48;
+      const safeX = safeWidth - 64 - 48; // BUTTON_SIZE is 64
+      const safeY = safeHeight - 64 - 48;
       x.set(safeX);
       y.set(safeY);
       savePosition(safeX, safeY);
@@ -238,14 +305,13 @@ export function FloatingButton({
       return;
     }
 
-    // Force a position check using current window dimensions as fallback
     const width = screenSize?.width || window.innerWidth;
     const height = screenSize?.height || window.innerHeight;
 
     const clamped = clampPosition(currentX, currentY, width, height);
 
     if (clamped.x !== currentX || clamped.y !== currentY) {
-      // Clamping position
+      console.log('[FloatingButton] Clamping position:', { from: { x: currentX, y: currentY }, to: clamped });
     }
 
     x.set(clamped.x);
@@ -254,14 +320,12 @@ export function FloatingButton({
 
     setTimeout(() => {
       setIsDragging(false);
-      // Only set ignore mouse events if we are NOT still hovering
-      if (!isHovering.current) {
-        (window as any).ellipsa?.setIgnoreMouseEvents(true);
-      }
+      // isDragging change will trigger useEffect -> updateMouseFilter
     }, 100);
   };
 
   if (!isInitialized) return null;
+
 
   return (
     <>
@@ -272,7 +336,7 @@ export function FloatingButton({
       />
 
       <motion.button
-        className={`fixed z-50 w-16 h-16 rounded-full flex items-center justify-center shadow-lg transition-colors cursor-grab active:cursor-grabbing ${isObserving
+        className={`fixed z-[9999] w-16 h-16 rounded-full flex items-center justify-center shadow-lg transition-colors cursor-grab active:cursor-grabbing ${isObserving
           ? 'bg-black text-white'
           : actionPending
             ? 'bg-gray-800 text-white'

@@ -24,6 +24,7 @@ export interface AssistanceContext {
     activityType?: string;
     memoryBullets?: string[];
     recentHistory?: string[];
+    image?: string; // Base64 image data
 }
 
 export interface AssistanceResponse {

@@ -120,19 +120,19 @@ export function BriefingView({ onClose }: BriefingViewProps) {
 
   return (
     <motion.div
-      className="fixed inset-0 bg-white z-40 overflow-y-auto"
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
+      className="h-full bg-white rounded-3xl overflow-hidden border border-gray-200 shadow-2xl flex flex-col"
+      initial={{ opacity: 0, scale: 0.95, y: 20 }}
+      animate={{ opacity: 1, scale: 1, y: 0 }}
+      exit={{ opacity: 0, scale: 0.95, y: 20 }}
     >
-      <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white">
+      <div className="flex-1 overflow-y-auto">
         {/* Header */}
-        <div className="border-b border-gray-200 bg-white/80 backdrop-blur-sm sticky top-0 z-10">
+        <div className="border-b border-gray-200 bg-white sticky top-0 z-10">
           <div className="max-w-4xl mx-auto px-6 py-6">
             <div className="flex items-center justify-between mb-4">
               <div>
-                <h1 className="font-serif italic text-2xl mb-1">{getGreeting()}</h1>
-                <p className="text-sm text-gray-500">{formatDate()}</p>
+                <h1 className="font-sans font-bold text-3xl mb-1 text-black">{getGreeting()}</h1>
+                <p className="text-lg text-gray-600 font-medium">{formatDate()}</p>
               </div>
               <button
                 onClick={onClose}
@@ -145,137 +145,143 @@ export function BriefingView({ onClose }: BriefingViewProps) {
         </div>
 
         {/* Content */}
-        <div className="max-w-4xl mx-auto px-6 py-8 space-y-8">
-          {/* Top Priorities */}
-          <section>
-            <div className="flex items-center gap-2 mb-4">
-              <Star className="w-5 h-5" />
-              <h2 className="text-lg">Top Priorities</h2>
-            </div>
-            {priorities.length === 0 ? (
-              <p className="text-gray-500 text-sm">No pending tasks</p>
-            ) : (
-              <div className="space-y-3">
-                {priorities.map((priority, index) => (
-                  <motion.div
-                    key={priority.id}
-                    initial={{ opacity: 0, x: -20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: index * 0.1 }}
-                    className={`p-4 rounded-xl border-2 ${priority.importance === 'high'
-                      ? 'bg-red-50 border-red-200'
-                      : 'bg-white border-gray-200'
-                      }`}
-                  >
-                    <div className="flex items-start justify-between mb-2">
-                      <h3>{priority.title}</h3>
-                      <span className="text-xs bg-white px-2 py-1 rounded-full text-gray-600">
-                        {priority.due}
-                      </span>
-                    </div>
-                    {priority.context && (
-                      <p className="text-sm text-gray-600">{priority.context}</p>
-                    )}
-                  </motion.div>
-                ))}
+        {/* Content */}
+        <div className="max-w-5xl mx-auto px-6 py-8 grid grid-cols-1 md:grid-cols-2 gap-6">
+          {/* Left Column */}
+          <div className="space-y-6">
+            {/* Top Priorities */}
+            <section className="bg-gray-50/50 rounded-2xl p-5 border border-gray-100">
+              <div className="flex items-center gap-2 mb-4">
+                <Star className="w-5 h-5" />
+                <h2 className="text-lg font-medium">Top Priorities</h2>
               </div>
-            )}
-          </section>
-
-          {/* Drafted Emails (placeholder) */}
-          <section>
-            <div className="flex items-center gap-2 mb-4">
-              <Mail className="w-5 h-5" />
-              <h2 className="text-lg">Drafted for You</h2>
-            </div>
-            <div className="space-y-3">
-              {draftedEmails.map((email, index) => (
-                <motion.div
-                  key={email.id}
-                  initial={{ opacity: 0, x: -20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: 0.3 + index * 0.1 }}
-                  className="p-4 bg-gray-50 border border-gray-200 rounded-xl"
-                >
-                  <div className="flex items-start justify-between mb-2">
-                    <div className="flex-1">
-                      <div className="text-sm text-gray-500 mb-1">To: {email.to}</div>
-                      <div className="mb-2">{email.subject}</div>
-                      <p className="text-sm text-gray-600">{email.preview}</p>
-                    </div>
-                  </div>
-                </motion.div>
-              ))}
-            </div>
-          </section>
-
-          {/* Upcoming Meetings */}
-          <section>
-            <div className="flex items-center gap-2 mb-4">
-              <Calendar className="w-5 h-5" />
-              <h2 className="text-lg">Today's Meetings</h2>
-            </div>
-            {upcomingMeetings.length === 0 ? (
-              <p className="text-gray-500 text-sm">No meetings scheduled for today</p>
-            ) : (
-              <div className="space-y-3">
-                {upcomingMeetings.map((meeting, index) => (
-                  <motion.div
-                    key={meeting.id}
-                    initial={{ opacity: 0, x: -20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: 0.5 + index * 0.1 }}
-                    className="p-4 bg-white border border-gray-200 rounded-xl"
-                  >
-                    <div className="flex items-start justify-between mb-2">
-                      <h3>{meeting.title}</h3>
-                      <span className="text-sm text-gray-600">{meeting.time}</span>
-                    </div>
-                    {meeting.participants.length > 0 && (
-                      <div className="text-sm text-gray-600 mb-2">
-                        With: {meeting.participants.join(', ')}
-                      </div>
-                    )}
-                    {meeting.context && (
-                      <p className="text-sm text-gray-500 italic">{meeting.context}</p>
-                    )}
-                  </motion.div>
-                ))}
-              </div>
-            )}
-          </section>
-
-          {/* Outstanding Tasks */}
-          <section>
-            <div className="flex items-center gap-2 mb-4">
-              <CheckCircle className="w-5 h-5" />
-              <h2 className="text-lg">Outstanding Tasks</h2>
-            </div>
-            {tasks.filter(t => isUserTask(t)).length === 0 ? (
-              <p className="text-gray-500 text-sm">All caught up!</p>
-            ) : (
-              <div className="bg-white border border-gray-200 rounded-xl p-4">
-                <div className="space-y-2">
-                  {tasks.filter(t => isUserTask(t)).slice(0, 5).map((task, index) => (
+              {priorities.length === 0 ? (
+                <p className="text-gray-500 text-sm">No pending high-priority items</p>
+              ) : (
+                <div className="space-y-3">
+                  {priorities.map((priority, index) => (
                     <motion.div
-                      key={task.id}
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      transition={{ delay: 0.7 + index * 0.05 }}
-                      className="flex items-center justify-between py-2 border-b border-gray-100 last:border-0"
+                      key={priority.id}
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: index * 0.1 }}
+                      className={`p-3 rounded-lg border ${priority.importance === 'high'
+                        ? 'bg-red-50 border-red-100'
+                        : 'bg-white border-gray-200'
+                        }`}
                     >
-                      <span className="text-sm">{task.title}</span>
-                      <span className="text-xs text-gray-500">
-                        {task.due_date
-                          ? new Date(task.due_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
-                          : 'No due date'}
-                      </span>
+                      <div className="text-base font-medium text-gray-900">{priority.title}</div>
+                      {priority.context && (
+                        <div className="text-sm text-gray-600 mt-1">{priority.context}</div>
+                      )}
+                      <div className="mt-2 text-xs text-gray-500 font-medium bg-white/50 inline-block px-2 py-1 rounded border border-gray-200">
+                        {priority.due}
+                      </div>
                     </motion.div>
                   ))}
                 </div>
+              )}
+            </section>
+
+            {/* Outstanding Tasks */}
+            <section className="bg-gray-50/50 rounded-2xl p-5 border border-gray-100">
+              <div className="flex items-center gap-2 mb-4">
+                <CheckCircle className="w-5 h-5" />
+                <h2 className="text-lg font-medium">Quick Tasks</h2>
               </div>
-            )}
-          </section>
+              {tasks.filter(t => isUserTask(t)).length === 0 ? (
+                <p className="text-gray-500 text-sm">All caught up!</p>
+              ) : (
+                <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
+                  <div className="divide-y divide-gray-100">
+                    {tasks.filter(t => isUserTask(t)).slice(0, 5).map((task, index) => (
+                      <motion.div
+                        key={task.id}
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        transition={{ delay: 0.7 + index * 0.05 }}
+                        className="flex items-center justify-between p-3 hover:bg-gray-50 transition-colors"
+                      >
+                        <span className="text-sm font-medium text-gray-700 truncate max-w-[200px]">{task.title}</span>
+                        <span className="text-xs text-gray-400 whitespace-nowrap">
+                          {task.due_date
+                            ? new Date(task.due_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+                            : ''}
+                        </span>
+                      </motion.div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </section>
+          </div>
+
+          {/* Right Column */}
+          <div className="space-y-6">
+            {/* Upcoming Meetings */}
+            <section className="bg-gray-50/50 rounded-2xl p-5 border border-gray-100">
+              <div className="flex items-center gap-2 mb-4">
+                <Calendar className="w-5 h-5" />
+                <h2 className="text-lg font-medium">Schedule</h2>
+              </div>
+              {upcomingMeetings.length === 0 ? (
+                <p className="text-gray-500 text-sm">No meetings today</p>
+              ) : (
+                <div className="space-y-3">
+                  {upcomingMeetings.map((meeting, index) => (
+                    <motion.div
+                      key={meeting.id}
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: 0.5 + index * 0.1 }}
+                      className="p-3 bg-white border border-gray-200 rounded-lg shadow-sm"
+                    >
+                      <div className="flex items-start justify-between mb-1">
+                        <h3 className="font-medium text-base">{meeting.title}</h3>
+                        <span className="text-xs font-mono text-gray-500 bg-gray-50 px-1.5 py-0.5 rounded">{meeting.time}</span>
+                      </div>
+                      {meeting.participants.length > 0 && (
+                        <div className="flex items-center gap-1 text-xs text-gray-500 mb-1">
+                          <Users className="w-3 h-3" />
+                          <span className="truncate">{meeting.participants.join(', ')}</span>
+                        </div>
+                      )}
+                      {meeting.context && (
+                        <p className="text-sm text-gray-500 italic border-l-2 border-gray-100 pl-2 mt-2">{meeting.context}</p>
+                      )}
+                    </motion.div>
+                  ))}
+                </div>
+              )}
+            </section>
+
+            {/* Drafted Emails (placeholder) */}
+            <section className="bg-gray-50/50 rounded-2xl p-5 border border-gray-100">
+              <div className="flex items-center gap-2 mb-4">
+                <Mail className="w-5 h-5" />
+                <h2 className="text-lg font-medium">Drafts</h2>
+              </div>
+              <div className="space-y-3">
+                {draftedEmails.map((email, index) => (
+                  <motion.div
+                    key={email.id}
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.3 + index * 0.1 }}
+                    className="p-3 bg-white border border-gray-200 rounded-lg hover:border-gray-300 transition-colors cursor-pointer group"
+                  >
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-xs bg-blue-50 text-blue-600 px-2 py-0.5 rounded-full font-medium">Email</span>
+                      <span className="text-xs text-gray-400">Draft</span>
+                    </div>
+                    <div className="font-medium text-base mb-0.5 group-hover:text-blue-600 transition-colors">{email.subject}</div>
+                    <div className="text-sm text-gray-500 mb-1">To: {email.to}</div>
+                    <p className="text-xs text-gray-400 line-clamp-1">{email.preview}</p>
+                  </motion.div>
+                ))}
+              </div>
+            </section>
+          </div>
         </div>
       </div>
     </motion.div>
