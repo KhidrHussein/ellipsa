@@ -399,8 +399,8 @@ async function toggleChatWindow() {
     }
   }
 
-  const size = debugMode ? 800 : 350;
-  const height = debugMode ? 600 : 500;
+  const width = 800;
+  const height = 500;
 
   // Get the current window position and display bounds
   const currentWindow = BrowserWindow.getFocusedWindow();
@@ -408,22 +408,19 @@ async function toggleChatWindow() {
   const display = screen.getDisplayNearestPoint({ x: currentX, y: currentY });
   const { workArea } = display;
 
-  // Calculate position to ensure it's within the display bounds
-  let x = currentX - size - 20;
-  let y = currentY;
-
-  // Ensure the window is not off-screen
-  if (x < workArea.x) x = workArea.x + 10;
-  if (y + height > workArea.y + workArea.height) y = workArea.y + workArea.height - height - 10;
+  // Calculate position to center the window
+  let x = Math.round(workArea.x + (workArea.width - width) / 2);
+  let y = Math.round(workArea.y + (workArea.height - height) / 2);
 
   chatWindow = new BrowserWindow({
-    width: size,
+    width: width,
     height: height,
     x: x,
     y: y,
     frame: false,
+    transparent: true,
     alwaysOnTop: true,
-    resizable: debugMode,
+    resizable: true, // Allow resizing similar to other views potentially, or keep it fixed if desired. Let's allow it.
     webPreferences: {
       nodeIntegration: true, // Match main window settings
       contextIsolation: false, // Required when nodeIntegration is true
@@ -439,7 +436,7 @@ async function toggleChatWindow() {
       disableBlinkFeatures: 'OutOfBlinkCors',
       experimentalFeatures: false
     },
-    backgroundColor: '#2b2b2b',
+    backgroundColor: '#00000000', // Transparent background
     show: false
   });
 

@@ -5636,3 +5636,22 @@
 {"level":"info","message":"WebSocket server configured","service":"memory-service","timestamp":"2025-12-12 13:38:21"}
 {"level":"info","message":"Memory Service listening on port 4001","service":"memory-service","timestamp":"2025-12-12 13:38:21"}
 {"level":"info","message":"Memory Service initialized successfully","service":"memory-service","timestamp":"2025-12-12 13:38:21"}
+{"level":"info","message":"Initializing database connections...","service":"memory-service","timestamp":"2025-12-12 16:23:44"}
+{"level":"info","message":"Running database migrations...","service":"memory-service","timestamp":"2025-12-12 16:23:45"}
+{"level":"info","message":"Successfully connected to PostgreSQL database","service":"memory-service","timestamp":"2025-12-12 16:23:45"}
+{"level":"info","message":"PostgreSQL UUID extension is ready","service":"memory-service","timestamp":"2025-12-12 16:23:45"}
+{"level":"info","message":"Connected to Neo4j Neo4j Kernel v5.13.0 (community) in 282ms","service":"memory-service","timestamp":"2025-12-12 16:23:52"}
+{"level":"debug","message":"Neo4j read/write verification successful","service":"memory-service","timestamp":"2025-12-12 16:23:54"}
+{"level":"info","message":"Successfully connected to Neo4j","service":"memory-service","timestamp":"2025-12-12 16:23:54"}
+{"level":"debug","message":"Created constraint entity_id on :Entity(id)","service":"memory-service","timestamp":"2025-12-12 16:23:54"}
+{"level":"debug","message":"Created constraint event_id on :Event(id)","service":"memory-service","timestamp":"2025-12-12 16:23:54"}
+{"level":"debug","message":"Created constraint task_id on :Task(id)","service":"memory-service","timestamp":"2025-12-12 16:23:54"}
+{"level":"info","message":"Neo4j constraints verified/created","service":"memory-service","timestamp":"2025-12-12 16:23:54"}
+{"level":"info","message":"Initializing vector collections...","service":"memory-service","timestamp":"2025-12-12 16:23:54"}
+{"level":"info","message":"Database initialization completed successfully","service":"memory-service","timestamp":"2025-12-12 16:23:55"}
+{"level":"info","message":"All database connections established","service":"memory-service","timestamp":"2025-12-12 16:23:55"}
+{"level":"info","message":"Connected to Neo4j Neo4j Kernel v5.13.0 (community) in 20ms","service":"memory-service","timestamp":"2025-12-12 16:23:55"}
+{"level":"debug","message":"Neo4j read/write verification successful","service":"memory-service","timestamp":"2025-12-12 16:23:56"}
+{"level":"info","message":"WebSocket server configured","service":"memory-service","timestamp":"2025-12-12 16:23:56"}
+{"level":"info","message":"Memory Service listening on port 4001","service":"memory-service","timestamp":"2025-12-12 16:23:56"}
+{"level":"info","message":"Memory Service initialized successfully","service":"memory-service","timestamp":"2025-12-12 16:23:56"}

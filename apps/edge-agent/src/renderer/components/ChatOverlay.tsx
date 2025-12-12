@@ -80,7 +80,7 @@ export function ChatOverlay({ onClose }: ChatOverlayProps) {
 
   return (
     <motion.div
-      className="fixed inset-0 bg-white z-50 flex flex-col overflow-hidden"
+      className="fixed inset-0 bg-transparent z-50 flex flex-col overflow-hidden"
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
@@ -148,7 +148,7 @@ export function ChatOverlay({ onClose }: ChatOverlayProps) {
         </div>
 
         {/* Suggestions */}
-        {messages.length === 1 && (
+        {messages.length === 0 && (
           <div className="px-6 pb-4">
             <div className="flex items-center gap-2 mb-3">
               <Sparkles className="w-4 h-4 text-gray-400" />
