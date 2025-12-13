@@ -34,6 +34,7 @@ export const TaskSchema = z.object({
   description: z.string().optional(),
   status: TaskStatus.default('pending'),
   priority: TaskPriority.default('medium'),
+  source: z.string().default('user'),
   due_date: z.string().or(z.date()).optional(),
   completed_at: z.string().or(z.date()).optional(),
   assignee_id: z.string().uuid().optional(),
@@ -86,6 +87,7 @@ export class TaskModel extends BaseModel<Task, TaskInput, TaskUpdate> {
             title: $title,
             status: $status,
             priority: $priority,
+            source: $source,
             dueDate: datetime($dueDate),
             createdAt: datetime()
           })`,
@@ -94,6 +96,7 @@ export class TaskModel extends BaseModel<Task, TaskInput, TaskUpdate> {
             title: task.title,
             status: task.status,
             priority: task.priority,
+            source: task.source,
             dueDate: task.due_date ? new Date(task.due_date).toISOString() : null,
           }
         )

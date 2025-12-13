@@ -19,7 +19,7 @@ export default function App() {
   const [view, setView] = useState<'welcome' | 'calibration' | 'none' | 'timeline' | 'briefing' | 'settings'>('none');
   const { isObserving, toggleObserveMode } = useObserveMode();
   const [showToast, setShowToast] = useState(false);
-  const [actionPending, setActionPending] = useState(true);
+  const [actionPending, setActionPending] = useState(false);
   const [selectedPerson, setSelectedPerson] = useState<string | null>(null);
   const [showActionModal, setShowActionModal] = useState(false);
 

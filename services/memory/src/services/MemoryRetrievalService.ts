@@ -95,6 +95,10 @@ export class MemoryRetrievalService {
             return [];
         }
 
+        if (!query || query.trim() === '') {
+            return [];
+        }
+
         try {
             const vectorResults: VectorResult[] = [];
 

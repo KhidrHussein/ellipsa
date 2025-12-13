@@ -13,7 +13,9 @@ import {
   ChevronRight,
   ToggleLeft,
   ToggleRight,
+  Link,
 } from 'lucide-react';
+import { IntegrationsSection } from './IntegrationsSection';
 
 interface SettingsPanelProps {
   onClose: () => void;
@@ -100,6 +102,12 @@ export function SettingsPanel({ onClose }: SettingsPanelProps) {
         },
       ],
     },
+    {
+      title: 'Integrations',
+      icon: Link,
+      items: [], // Handled by custom component
+      customContent: <IntegrationsSection />,
+    },
   ];
 
   return (
@@ -144,6 +152,10 @@ export function SettingsPanel({ onClose }: SettingsPanelProps) {
               </div>
 
               <div className="bg-white border border-gray-200 rounded-2xl overflow-hidden">
+                {/* Custom Content (Integrations) */}
+                {/* @ts-ignore */}
+                {section.customContent && section.customContent}
+
                 {section.items.map((item, itemIndex) => (
                   <div
                     key={item.id}

@@ -93,13 +93,19 @@ export class EventProcessingService {
 
                 // Generate intelligent assistance using transcript + screen + memory + history
                 console.log('[EventProcessing] Generating intelligent assistance...');
-                const assistance = await this.promptService.generateAssistance({
-                  transcript: truncatedTranscript,
-                  screenContext,
-                  activityType: metadata.activityType || 'general',
-                  memoryBullets,
-                  recentHistory: this.recentHistory.map(h => `${h.role}: ${h.content}`)
-                });
+                let assistance: any;
+                if (truncatedTranscript && truncatedTranscript.trim().length > 5) {
+                  assistance = await this.promptService.generateAssistance({
+                    transcript: truncatedTranscript,
+                    screenContext,
+                    activityType: metadata.activityType || 'general',
+                    memoryBullets,
+                    recentHistory: this.recentHistory.map(h => `${h.role}: ${h.content}`)
+                  });
+                } else {
+                  // Skip assistance for empty/short transcripts
+                  assistance = { message: '', confidence: 0, action_items: [] };
+                }
 
                 // Also extract structured data for entities and action items
                 extraction = await this.promptService.extractStructuredData(truncatedTranscript);
@@ -292,7 +298,9 @@ export class EventProcessingService {
           title: item.text?.substring(0, 100) || 'Untitled Task',
           description: item.text || '',
           due_date: item.due_date ? new Date(item.due_date) : undefined,
-          priority: (item.priority || 'medium') as any,
+          priority: (['low', 'medium', 'high', 'urgent'].includes((item.priority || '').toLowerCase())
+            ? (item.priority || '').toLowerCase()
+            : 'medium') as any,
           status: 'pending',
           source: 'system',  // Mark as system-generated task
           metadata: {},

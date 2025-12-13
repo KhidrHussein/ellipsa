@@ -422,19 +422,19 @@ async function toggleChatWindow() {
     alwaysOnTop: true,
     resizable: true, // Allow resizing similar to other views potentially, or keep it fixed if desired. Let's allow it.
     webPreferences: {
-      nodeIntegration: true, // Match main window settings
-      contextIsolation: false, // Required when nodeIntegration is true
-      preload: path.join(__dirname, '../../../preload.js'), // Fix path to preload script
+      nodeIntegration: false,
+      contextIsolation: true,
+      preload: path.join(__dirname, '../../../preload.js'),
       webSecurity: true,
       webviewTag: false,
       nodeIntegrationInWorker: false,
       nodeIntegrationInSubFrames: false,
       allowRunningInsecureContent: false,
       webgl: false,
-      plugins: true,
+      plugins: false,
       backgroundThrottling: false,
-      disableBlinkFeatures: 'OutOfBlinkCors',
-      experimentalFeatures: false
+      experimentalFeatures: false,
+      sandbox: true
     },
     backgroundColor: '#00000000', // Transparent background
     show: false
@@ -796,6 +796,17 @@ ipcMain.handle('set-observe-status', async (_, observing: boolean) => {
 // Chat window controls
 ipcMain.on('toggle-chat', () => {
   toggleChatWindow();
+});
+
+ipcMain.on('close-chat', () => {
+  if (chatWindow && !chatWindow.isDestroyed()) {
+    chatWindow.close();
+  }
+});
+
+// Open external links
+ipcMain.on('open-external', (_, { url }) => {
+  require('electron').shell.openExternal(url);
 });
 
 ipcMain.on('show-context-menu', (event) => {

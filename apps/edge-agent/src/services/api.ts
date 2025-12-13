@@ -252,16 +252,12 @@ export class ActionClient extends ServiceClient {
     super('ActionService', SERVICE_URLS.action);
   }
 
-  async executeAction(actionType: string, params: Record<string, any>) {
-    console.log(`Executing action: ${actionType}`, params);
+  async executeAction(plan: any) {
+    console.log('[ActionClient.executeAction] Executing plan with', plan.plan?.length || 0, 'steps');
     return this.request({
       method: 'POST',
-      url: '/actions/execute',
-      data: {
-        action: actionType,
-        params,
-        timestamp: new Date().toISOString(),
-      },
+      url: '/action/v1/execute', // Note: endpoint changed to match server.new.ts
+      data: plan,
     });
   }
 
@@ -289,6 +285,20 @@ export class ActionClient extends ServiceClient {
       method: 'POST',
       url: '/api/emails/send',
       data: draft,
+    });
+  }
+
+  async getAuthStatus(userId: string) {
+    return this.request({
+      method: 'GET',
+      url: `/auth/status?userId=${userId}`,
+    });
+  }
+
+  async getAuthUrl(provider: string, userId: string) {
+    return this.request({
+      method: 'GET',
+      url: `/auth/${provider}/url?userId=${userId}`,
     });
   }
 }

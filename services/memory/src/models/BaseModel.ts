@@ -79,17 +79,18 @@ export abstract class BaseModel<
     protected schema: ZodType<T, any, TBase>,
     protected db: Knex,
     protected softDelete: boolean = true
-  ) {}
+  ) { }
 
   /**
    * Validate data against the schema
    */
   protected validate(data: unknown, strict: boolean = true): T {
     // For non-strict validation, we'll use passthrough() instead of strict()
-    const result = strict 
-      ? (this.schema as any).strict().safeParse(data)
+    // CHANGE: We now use default behavior (strip) instead of strict() to silently ignore unknown fields
+    const result = strict
+      ? (this.schema as any).safeParse(data)
       : (this.schema as any).passthrough().safeParse(data);
-      
+
     if (!result.success) {
       throw new ValidationError(
         'Validation failed',
@@ -110,11 +111,11 @@ export abstract class BaseModel<
         updated_at: new Date().toISOString(),
         deleted_at: null,
       });
-      
+
       const [result] = await tx(this.tableName)
         .insert(validatedData)
         .returning('*');
-      
+
       return this.toEntity(result);
     };
 
@@ -144,8 +145,8 @@ export abstract class BaseModel<
    */
   protected query(trx?: Knex.Transaction) {
     const query = trx ? trx(this.tableName) : this.db(this.tableName);
-    return this.softDelete 
-      ? query.whereNull('deleted_at') 
+    return this.softDelete
+      ? query.whereNull('deleted_at')
       : query;
   }
 
@@ -169,14 +170,14 @@ export abstract class BaseModel<
    * Update a record by ID
    */
   async update(
-    id: string, 
+    id: string,
     data: TUpdate,
     trx?: Knex.Transaction
   ): Promise<T | null> {
     const updateFn = async (tx: Knex.Transaction) => {
       const existing = await this.findById(id, tx);
       if (!existing) return null;
-      
+
       const validatedData = this.validate(
         {
           ...existing,
@@ -185,12 +186,12 @@ export abstract class BaseModel<
         },
         false // Use non-strict validation to allow partial updates
       );
-      
+
       const [result] = await tx(this.tableName)
         .where({ id })
         .update(validatedData)
         .returning('*');
-      
+
       return this.toEntity(result);
     };
 
@@ -208,9 +209,9 @@ export abstract class BaseModel<
     const deleteFn = async (tx: Knex.Transaction) => {
       const result = await tx(this.tableName)
         .where({ id })
-        .update({ 
+        .update({
           deleted_at: new Date().toISOString(),
-          updated_at: new Date().toISOString() 
+          updated_at: new Date().toISOString()
         });
       return result > 0;
     };
@@ -255,10 +256,10 @@ export abstract class BaseModel<
     } = options;
 
     const offset = (page - 1) * pageSize;
-    
+
     // Build base query
     let query = this.query(trx).where(filters);
-    
+
     // Get total count
     const countResult = await query.clone().count('* as count').first();
     const totalItems = countResult ? Number(countResult.count) : 0;
@@ -323,15 +324,15 @@ export abstract class BaseModel<
     options: { limit?: number; offset?: number } = {}
   ): Promise<T[]> {
     const query = this.db(this.tableName).where(where);
-    
+
     if (options.limit) {
       query.limit(options.limit);
     }
-    
+
     if (options.offset) {
       query.offset(options.offset);
     }
-    
+
     const results = await query;
     return results.map(result => this.validate(result));
   }

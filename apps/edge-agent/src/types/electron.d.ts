@@ -2,6 +2,9 @@ import { IpcRendererEvent } from 'electron';
 
 // Main Electron API interface - matches preload.js exports
 export interface ElectronAPI {
+  // External links
+  openExternal(url: string): Promise<void>;
+
   // Window management
   window?: {
     move: (x: number, y: number) => void;

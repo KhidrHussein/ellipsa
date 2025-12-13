@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { X, CheckCircle, AlertCircle, ChevronRight, Loader2, Mail, Calendar } from 'lucide-react';
 import { usePendingActions, PendingAction } from '../hooks/usePendingActions';
+import { PlanViewer } from './PlanViewer';
 
 interface ActionApprovalModalProps {
   onClose: () => void;
@@ -172,7 +173,7 @@ export function ActionApprovalModal({ onClose, onApprove }: ActionApprovalModalP
                     <p className="text-gray-600 mb-4">{selectedActionData.description}</p>
 
                     {/* Email Preview */}
-                    {selectedActionData.type === 'email' && selectedActionData.metadata && (
+                    {selectedActionData.type === 'email' && selectedActionData.metadata ? (
                       <div className="bg-white rounded-lg p-4 border border-gray-200">
                         <div className="text-sm text-gray-500 mb-2">
                           To: {selectedActionData.metadata.to?.map((t: any) => t.email || t).join(', ')}
@@ -183,6 +184,12 @@ export function ActionApprovalModal({ onClose, onApprove }: ActionApprovalModalP
                         <div className="whitespace-pre-wrap text-sm text-gray-700">
                           {selectedActionData.preview}
                         </div>
+                      </div>
+                    ) : selectedActionData.plan ? (
+                      <PlanViewer plan={selectedActionData.plan} />
+                    ) : (
+                      <div className="bg-white rounded-lg p-4 border border-gray-200 text-gray-500 italic">
+                        No preview available.
                       </div>
                     )}
                   </div>

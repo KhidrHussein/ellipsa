@@ -1,4 +1,4 @@
-import { contextBridge, ipcRenderer, IpcRendererEvent } from 'electron';
+import { contextBridge, ipcRenderer, IpcRendererEvent, shell } from 'electron';
 import type { ElectronAPI } from '../types/electron';
 
 // Audio capture state
@@ -227,7 +227,10 @@ if (!window.electron) {
     closeChat: () => ipcRenderer.send('close-chat'),
 
     // Click-through control for draggable floating button
-    setIgnoreMouseEvents: (ignore: boolean) => ipcRenderer.send('set-ignore-mouse-events', { ignore })
+    setIgnoreMouseEvents: (ignore: boolean) => ipcRenderer.send('set-ignore-mouse-events', { ignore }),
+
+    // External links
+    openExternal: async (url: string) => { ipcRenderer.send('open-external', { url }); }
   };
 
   try {

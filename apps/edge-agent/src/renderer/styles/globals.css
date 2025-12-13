@@ -95,6 +95,24 @@
     .font-serif {
         font-family: 'Crimson Text', Georgia, serif;
     }
+    
+    /* Custom Scrollbar */
+    ::-webkit-scrollbar {
+        width: 6px;
+        height: 6px;
+    }
+
+    ::-webkit-scrollbar-track {
+        background: transparent;
+    }
+
+    ::-webkit-scrollbar-thumb {
+        @apply bg-gray-200 rounded-full hover:bg-gray-300 transition-colors;
+    }
+
+    .dark ::-webkit-scrollbar-thumb {
+        @apply bg-gray-800 hover:bg-gray-700;
+    }
 }
 
 /**

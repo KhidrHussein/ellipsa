@@ -543,6 +543,14 @@ function setupActionRoutes(app: express.Express, services: Services) {
                 return res.status(400).json({ error: 'userId required' });
             }
             const providers = await services.tokenService.getConnectedProviders(userId);
+
+            // Check legacy Gmail service status
+            if (services.emailService && await services.emailService.isConnected()) {
+                if (!providers.includes('google')) {
+                    providers.push('google');
+                }
+            }
+
             res.json({ connected: providers });
         } catch (error) {
             console.error('[Auth API] Error getting status:', error);
