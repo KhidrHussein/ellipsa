@@ -99,7 +99,7 @@ export function BriefingView({ onClose }: BriefingViewProps) {
     .slice(0, 3)
     .map(action => ({
       id: action.id,
-      to: action.metadata?.to?.map((t: any) => t.email || t).join(', ') || 'Unknown',
+      to: action.metadata?.to?.map((t: any) => t.email || t.name || t.address || (typeof t === 'string' ? t : 'Unknown Recipient')).join(', ') || 'Unknown',
       subject: action.metadata?.subject || action.description,
       preview: action.preview || '',
     }));
@@ -276,6 +276,9 @@ export function BriefingView({ onClose }: BriefingViewProps) {
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 0.3 + index * 0.1 }}
                     className="p-3 bg-white border border-gray-200 rounded-lg hover:border-gray-300 transition-colors cursor-pointer group"
+                    onClick={() => {
+                      window.dispatchEvent(new CustomEvent('ellipsa-menu-action', { detail: { action: 'actions' } }));
+                    }}
                   >
                     <div className="flex items-center justify-between mb-1">
                       <span className="text-xs bg-blue-50 text-blue-600 px-2 py-0.5 rounded-full font-medium">Email</span>

@@ -133,7 +133,11 @@ export function ActionApprovalModal({ onClose, onApprove }: ActionApprovalModalP
                           )}
                         </div>
                         <div className="flex-1 min-w-0">
-                          <h3 className="text-base mb-1">{action.title}</h3>
+                          <h3 className="text-base mb-1">
+                            {action.title.includes('[object Object]') && action.type === 'email' && action.metadata?.to
+                              ? `Email to ${action.metadata.to.map((t: any) => t.email || t.name || t.address || (typeof t === 'string' ? t : 'Recipient')).join(', ')}`
+                              : action.title}
+                          </h3>
                           <p className="text-sm text-gray-600 truncate">{action.description}</p>
                           {action.preview && (
                             <p className="text-xs text-gray-400 mt-2 line-clamp-2">{action.preview}</p>
@@ -176,7 +180,7 @@ export function ActionApprovalModal({ onClose, onApprove }: ActionApprovalModalP
                     {selectedActionData.type === 'email' && selectedActionData.metadata ? (
                       <div className="bg-white rounded-lg p-4 border border-gray-200">
                         <div className="text-sm text-gray-500 mb-2">
-                          To: {selectedActionData.metadata.to?.map((t: any) => t.email || t).join(', ')}
+                          To: {selectedActionData.metadata.to?.map((t: any) => t.email || t.name || t.address || (typeof t === 'string' ? t : 'Unknown Recipient')).join(', ')}
                         </div>
                         <div className="text-sm text-gray-500 mb-3">
                           Subject: {selectedActionData.metadata.subject}

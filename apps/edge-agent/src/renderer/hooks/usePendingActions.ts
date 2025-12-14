@@ -63,9 +63,9 @@ export function usePendingActions(): UsePendingActionsResult {
             if (action.type === 'email') {
                 const response = await actionClient.sendEmail({
                     id: actionId,
-                    to: action.metadata?.to || [],
-                    subject: action.metadata?.subject || '',
-                    body: action.preview || '',
+                    to: action.metadata?.to?.map(t => t.email || t) || [],
+                    subject: action.metadata?.subject || 'No Subject',
+                    body: action.preview || ' ',
                 });
 
                 if (response.success) {

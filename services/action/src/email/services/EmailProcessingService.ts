@@ -118,12 +118,16 @@ export class EmailProcessingService {
         recommendation = aiEvaluation;
 
         // Merge AI recommendations types
-        if (aiEvaluation.action === 'REPLY') {
+        const isAutomated = ['notification', 'social', 'newsletter', 'purchase'].some(cat =>
+          summary.categories.includes(cat)
+        );
+
+        if (aiEvaluation.action === 'REPLY' && !isAutomated) {
           if (!suggestedActions.includes('REPLY')) suggestedActions.push('REPLY');
           // Auto-draft if reply recommended
           this.draftResponse(email, { additionalContext: aiEvaluation.draftIntent })
             .catch(err => console.error('Background draft generation failed:', err));
-        } else if (aiEvaluation.action === 'ARCHIVE') {
+        } else if (aiEvaluation.action === 'ARCHIVE' || isAutomated) {
           if (!suggestedActions.includes('ARCHIVE')) suggestedActions.push('ARCHIVE');
         }
       }

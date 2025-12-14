@@ -14,14 +14,20 @@ import { WelcomeScreen } from './components/WelcomeScreen';
 import { CalibrationFlow } from './components/CalibrationFlow';
 
 import { useObserveMode } from './hooks/useObserveMode';
+import { usePendingActions } from './hooks/usePendingActions';
 
 export default function App() {
   const [view, setView] = useState<'welcome' | 'calibration' | 'none' | 'timeline' | 'briefing' | 'settings'>('none');
   const { isObserving, toggleObserveMode } = useObserveMode();
   const [showToast, setShowToast] = useState(false);
-  const [actionPending, setActionPending] = useState(false);
   const [selectedPerson, setSelectedPerson] = useState<string | null>(null);
   const [showActionModal, setShowActionModal] = useState(false);
+
+  // Hook up pending actions
+  const { actions: pendingActions } = usePendingActions();
+  const actionCount = pendingActions.length;
+  // actionPending is true if there are actions waiting
+  const actionPending = actionCount > 0;
 
   // Check for existing calibration
   // Check for existing calibration
@@ -230,7 +236,7 @@ export default function App() {
                 onClose={() => setShowActionModal(false)}
                 onApprove={() => {
                   setShowActionModal(false);
-                  setActionPending(false);
+                  // actionPending is automatically updated via hook
                 }}
               />
             </div>
@@ -254,11 +260,11 @@ export default function App() {
           <FloatingButton
             isObserving={isObserving}
             actionPending={actionPending}
-            actionCount={2}
+            actionCount={actionCount}
             onClick={handleFloatingButtonClick}
             onLongPress={handleLongPress}
             onSwipeUp={handleSwipeUp}
-            collapsed={view === 'none' && !menuOpen}
+            collapsed={view === 'none' && !menuOpen && !showActionModal && !showToast && !selectedPerson}
             onMenuOpenChange={setMenuOpen}
             onMenuSelect={(item) => {
               if (item === 'timeline') setView('timeline');
