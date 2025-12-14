@@ -17,6 +17,8 @@ interface FloatingButtonProps {
 const STORAGE_KEY = 'ellipsa-floating-button-position';
 const BUTTON_SIZE = 64; // 16 * 4 = 64px (w-16 h-16)
 const PADDING = 16;
+const MENU_WIDTH = 192; // w-48 = 12rem = 192px
+const MENU_HEIGHT = 280; // Approximate height of the menu
 
 // Get initial position from localStorage or default to bottom-right
 function getStoredPosition(): { x: number; y: number } | null {
@@ -84,6 +86,7 @@ export function FloatingButton({
   const [clickOutsideEnabled, setClickOutsideEnabled] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   const [screenSize, setScreenSize] = useState<{ width: number; height: number } | null>(null);
+  const [menuPos, setMenuPos] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
 
   // Refs for drag and click handling
   const longPressTimer = useRef<NodeJS.Timeout | null>(null);
@@ -165,7 +168,6 @@ export function FloatingButton({
         x.set(initialX);
         y.set(initialY);
         setIsInitialized(true);
-
       } catch (e) {
         console.error('Failed to get screen size:', e);
         // Fallback initialization
@@ -181,10 +183,10 @@ export function FloatingButton({
     initializeScreenSize();
   }, []);
 
-  // Handle window resize
+  // Handle updated screen size
   useEffect(() => {
     const handleResize = () => {
-      // Optional: clamp on resize
+      setScreenSize({ width: window.innerWidth, height: window.innerHeight });
     };
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
@@ -271,6 +273,7 @@ export function FloatingButton({
 
   const handleDragStart = () => {
     setIsDragging(true);
+    setShowMenu(false); // Close menu on drag
     // updateMouseFilter will be called by useEffect on isDragging change
     if (longPressTimer.current) {
       clearTimeout(longPressTimer.current);
@@ -285,6 +288,61 @@ export function FloatingButton({
   const handleMouseLeave = () => {
     isHovering.current = false;
     updateMouseFilter();
+  };
+
+  const calculateMenuPosition = () => {
+    const btnX = x.get();
+    const btnY = y.get();
+    const screenW = screenSize?.width || window.innerWidth;
+    const screenH = screenSize?.height || window.innerHeight;
+
+    let targetX = btnX;
+    let targetY = btnY;
+
+    // Horizontal Boundary Check
+    // If the menu would go off the right edge, align it to the left of the safety margin or shift it
+    if (btnX + MENU_WIDTH > screenW - PADDING) {
+      // Shift left to fit
+      // Align right edge of menu with right edge of button (approx) or just shift
+      targetX = Math.max(PADDING, screenW - MENU_WIDTH - PADDING);
+    }
+
+    // Vertical Boundary Check
+    // If there's enough space above, put it above (default preference)
+    // Default "above" position means top of menu is at btnY - MENU_HEIGHT
+    // If btnY - MENU_HEIGHT < PADDING, we don't have space above.
+    const spaceAbove = btnY - PADDING;
+    const spaceBelow = screenH - (btnY + BUTTON_SIZE) - PADDING;
+
+    if (spaceAbove >= MENU_HEIGHT) {
+      // Position above
+      // We want the bottom of the menu to be slightly above the button
+      targetY = btnY - MENU_HEIGHT; // + marginTop adjustment if we still used it, but we won't
+    } else if (spaceBelow >= MENU_HEIGHT) {
+      // Position below
+      targetY = btnY + BUTTON_SIZE + 10;
+    } else {
+      // Not enough space either way? Center it or pick the larger side
+      if (spaceAbove > spaceBelow) {
+        targetY = PADDING; // Stick to top
+      } else {
+        targetY = screenH - MENU_HEIGHT - PADDING; // Stick to bottom
+      }
+    }
+
+    return { x: targetX, y: targetY };
+  };
+
+  const handleContextMenu = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    if (showMenu) {
+      setShowMenu(false);
+    } else {
+      setMenuPos(calculateMenuPosition());
+      setShowMenu(true);
+    }
   };
 
   const handleDragEnd = (event: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) => {
@@ -359,11 +417,7 @@ export function FloatingButton({
         onMouseDown={handleMouseDown}
         onMouseUp={handleMouseUp}
         onMouseMove={handleMouseMove}
-        onContextMenu={(e) => {
-          e.preventDefault();
-          e.stopPropagation();
-          setShowMenu(!showMenu);
-        }}
+        onContextMenu={handleContextMenu}
         initial={{ scale: 1 }} /* DEBUG: Start visible */
         animate={isObserving ? { scale: [1, 1.05, 1] } : { scale: 1 }}
         transition={isObserving ? { repeat: Infinity, duration: 2 } : { type: 'spring', stiffness: 260, damping: 20 }}
@@ -407,9 +461,8 @@ export function FloatingButton({
           <motion.div
             className="fixed z-50 bg-white border border-gray-200 rounded-2xl shadow-xl overflow-hidden"
             style={{
-              left: x,
-              top: y, // We'll adjust the transform to move it up
-              marginTop: -240, // Move up by height + spacing
+              left: menuPos.x,
+              top: menuPos.y,
             }}
             initial={{ opacity: 0, y: 10, scale: 0.95 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
@@ -447,6 +500,7 @@ export function FloatingButton({
                 <Zap className="w-4 h-4" />
                 <span className="text-sm">Pending Actions</span>
               </button>
+
               <div className="h-px bg-gray-200 my-2" />
               <button
                 className="w-full px-4 py-3 flex items-center gap-3 hover:bg-gray-50 transition-colors"
