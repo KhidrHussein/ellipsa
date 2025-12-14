@@ -10,8 +10,10 @@ import type {
   DraftResponse,
   EmailSweepOptions,
   EmailSweepResult,
+
   EmailAddress,
-  EmailAttachment
+  EmailAttachment,
+  EmailActionType
 } from '../types';
 import type { IEmailService } from './EmailService.interface';
 import type { EmailProcessingService } from './EmailProcessingService';
@@ -417,6 +419,55 @@ export class GmailEmailService implements IEmailService {
     return this.processingService.draftResponse(email, context);
   }
 
+  async executeActions(emailId: string, actions: EmailActionType[]): Promise<void> {
+    if (!actions.length) return;
+    await this.ensureConnected();
+
+    try {
+      // Prepare batch modification
+      const removeLabelIds: string[] = [];
+      const addLabelIds: string[] = [];
+
+      if (actions.includes('MARK_AS_READ')) {
+        removeLabelIds.push('UNREAD');
+      }
+
+      if (actions.includes('ARCHIVE')) {
+        removeLabelIds.push('INBOX');
+      }
+
+      if (actions.includes('UNSUBSCRIBE')) {
+        // For now, we'll label it for review as automated unsubscribing is complex/risky
+        // In a future better version, we could parse the List-Unsubscribe header
+        addLabelIds.push('UNSUBSCRIBE');
+      }
+
+      if (removeLabelIds.length > 0 || addLabelIds.length > 0) {
+        await this.gmail.users.messages.modify({
+          userId: 'me',
+          id: emailId,
+          requestBody: {
+            removeLabelIds: removeLabelIds.length ? removeLabelIds : undefined,
+            addLabelIds: addLabelIds.length ? addLabelIds : undefined
+          }
+        });
+      }
+
+      if (actions.includes('DELETE')) {
+        await this.gmail.users.messages.trash({
+          userId: 'me',
+          id: emailId
+        });
+      }
+
+      console.log(`Executed actions [${actions.join(', ')}] for email ${emailId}`);
+
+    } catch (error) {
+      console.error(`Error executing actions for email ${emailId}:`, error);
+      throw new Error(`Failed to execute actions: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  }
+
   async sendEmail(draft: DraftResponse): Promise<{ success: boolean; messageId?: string }> {
     await this.ensureConnected();
 
@@ -591,7 +642,7 @@ export class GmailEmailService implements IEmailService {
     }
   }
 
-  private async getEmail(id: string): Promise<EmailMessage> {
+  async getEmail(id: string): Promise<EmailMessage> {
     return this.withRetry(async () => {
       const response = await this.gmail.users.messages.get({
         userId: 'me',

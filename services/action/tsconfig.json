@@ -2,22 +2,31 @@
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
     "outDir": "dist",
-    "rootDir": "src",
+    "rootDir": ".",
     "baseUrl": ".",
     "declaration": true,
     "declarationMap": true,
     "sourceMap": true,
     "composite": true,
     "paths": {
-      "@ellipsa/shared/*": ["../../packages/shared/src/*"],
-      "@ellipsa/action/*": ["./src/*"],
-      "@ellipsa/action-email/*": ["./src/email/*"]
+      "@ellipsa/shared/*": [
+        "../../packages/shared/src/*"
+      ],
+      "@ellipsa/action/*": [
+        "./src/*"
+      ],
+      "@ellipsa/action-email/*": [
+        "./src/email/*"
+      ]
     },
     "typeRoots": [
       "./node_modules/@types",
       "../../node_modules/@types"
     ],
-    "types": ["node"],
+    "types": [
+      "node",
+      "jest"
+    ],
     "module": "NodeNext",
     "moduleResolution": "NodeNext",
     "esModuleInterop": true,
@@ -26,17 +35,30 @@
     "skipLibCheck": true,
     "resolveJsonModule": true,
     "target": "ES2022",
-    "lib": ["ES2020", "DOM"],
+    "lib": [
+      "ES2020",
+      "DOM"
+    ],
     "strict": true,
     "noEmitOnError": false,
     "allowJs": true,
     "checkJs": false,
     "noImplicitAny": false
   },
-  "include": ["src/**/*.ts"],
-  "exclude": ["node_modules", "dist"],
+  "include": [
+    "src/**/*.ts",
+    "tests/**/*.ts"
+  ],
+  "exclude": [
+    "node_modules",
+    "dist"
+  ],
   "references": [
-    { "path": "../../packages/shared" },
-    { "path": "../../packages/prompt" }
+    {
+      "path": "../../packages/shared"
+    },
+    {
+      "path": "../../packages/prompt"
+    }
   ]
 }

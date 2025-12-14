@@ -146,6 +146,12 @@ CRITICAL PARAMETER RESOLUTION:
 - You MUST resolve abstract references using Memory context.
 - If you cannot find the concrete value in Memory, DO NOT generate the action. Ask for it.
 
+RESEARCH/SEARCH GUIDELINES:
+- When asked to research or search, DO NOT just open the homepage.
+- Construct a direct search URL using keywords from the context.
+  - Google: https://www.google.com/search?q=...
+  - Scholar: https://scholar.google.com/scholar?q=...
+
 Context:
 {memory_context}
 {screen_context}
@@ -153,6 +159,11 @@ Context:
 Respond in the following JSON format:
 {
     "message": "Your conversational response to the user",
-    "actionPlan": { "action": "sendEmail", "parameters": { ... } },
+    "actionPlan": { 
+        "steps": [
+            { "action": "open_url", "parameters": { "url": "..." } },
+            { "action": "click", "parameters": { "selector": "..." } }
+        ] 
+    },
     "suggestedActions": ["Action 1", "Action 2"] 
 }`;

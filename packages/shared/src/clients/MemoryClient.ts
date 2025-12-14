@@ -50,7 +50,7 @@ export class MemoryClient extends ServiceClient {
       data: {
         ...event,
         start_time: event.start_time instanceof Date ? event.start_time.toISOString() : event.start_time,
-        end_time: event.end_time 
+        end_time: event.end_time
           ? (event.end_time instanceof Date ? event.end_time.toISOString() : event.end_time)
           : undefined
       },
@@ -79,6 +79,14 @@ export class MemoryClient extends ServiceClient {
     return this.request({
       method: 'GET',
       url: `/events/${id}`,
+    });
+  }
+
+  async createTask(task: Partial<Task>): Promise<{ task_id: string }> {
+    return this.request({
+      method: 'POST',
+      url: '/tasks',
+      data: task,
     });
   }
 }

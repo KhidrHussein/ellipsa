@@ -413,14 +413,21 @@ export class EventProcessingService {
       const response = await (this.promptService as any).generateChatResponse(chatContext);
 
       // 4. Execute action plan if present and valid
-      if (response.actionPlan && Object.keys(response.actionPlan).length > 0 && response.actionPlan.action) {
-        console.log('[EventProcessing] Executing action plan:', response.actionPlan);
-        try {
-          await this.executeActionPlan(response.actionPlan);
-          response.message += "\n\n(Action executed successfully)";
-        } catch (error) {
-          console.error('[EventProcessing] Action execution failed:', error);
-          response.message += `\n\n(Action failed: ${error instanceof Error ? error.message : String(error)})`;
+      if (response.actionPlan && typeof response.actionPlan === 'object') {
+        // Handle both single action (legacy) and multi-step formats
+        const plan = response.actionPlan;
+        const hasLegacyAction = !!plan.action;
+        const hasSteps = Array.isArray(plan.steps) && plan.steps.length > 0;
+
+        if (hasLegacyAction || hasSteps) {
+          console.log('[EventProcessing] Executing action plan:', JSON.stringify(plan, null, 2));
+          try {
+            await this.executeActionPlan(plan);
+            response.message += "\n\n(Actions executed successfully)";
+          } catch (error) {
+            console.error('[EventProcessing] Action execution failed:', error);
+            response.message += `\n\n(Action failed: ${error instanceof Error ? error.message : String(error)})`;
+          }
         }
       }
 
@@ -771,7 +778,20 @@ export class EventProcessingService {
     const actionServiceUrl = process.env.ACTION_SERVICE_URL || 'http://localhost:4004'; // Default to port 4004
     const url = `${actionServiceUrl}/action/v1/execute`;
 
-    const mappedAction = this.mapActionToSchema(actionPlan);
+    // Normalize to array of actions
+    let mappedActions: any[] = [];
+
+    if (Array.isArray(actionPlan.steps)) {
+      // Multi-step format
+      for (const step of actionPlan.steps) {
+        mappedActions.push(this.mapActionToSchema(step));
+      }
+    } else if (actionPlan.action) {
+      // Legacy single-action format
+      mappedActions.push(this.mapActionToSchema(actionPlan));
+    } else {
+      throw new Error('Invalid action plan format: missing "steps" array or "action" field');
+    }
 
     let response;
     try {
@@ -780,7 +800,7 @@ export class EventProcessingService {
         headers: {
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify({ plan: [mappedAction] })
+        body: JSON.stringify({ plan: mappedActions })
       });
     } catch (error) {
       console.error('[EventProcessing] Failed to connect to Action Service:', error);

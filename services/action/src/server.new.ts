@@ -27,6 +27,7 @@ import { loadSafetyConfig, getDevSafetyConfig } from './config/safety.config.js'
 // Existing email services
 import { GmailEmailService } from './email/services/GmailEmailService.js';
 import { EmailProcessingService } from './email/services/EmailProcessingService.js';
+import { EmailLLMService } from './email/services/EmailLLMService.js';
 import { IEmailMemoryService } from './email/services/IEmailMemoryService.js';
 import { PromptService } from '@ellipsa/prompt';
 import { createEmailRouter } from './email/routes.js';
@@ -36,15 +37,17 @@ import { oauthService } from './email/services/OAuthService.js';
 import type { EmailMessage, EmailSummary, DraftResponse, EmailAttachment } from './email/types/email.types.js';
 import { Buffer } from 'buffer';
 import { MemoryClient } from '@ellipsa/shared';
+import { RoutineService } from './routines/RoutineService.js';
 
 // Get directory name in ES modules
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 // Load environment variables
+// Load environment variables
 const envPaths = [
-    path.resolve(__dirname, '../.env'),
-    path.resolve(__dirname, '../../.env')
+    path.resolve(__dirname, '../../../.env'), // Load root .env first
+    path.resolve(__dirname, '../.env')        // Load local .env second (overrides root)
 ];
 
 let envLoaded = false;
@@ -53,7 +56,6 @@ for (const envPath of envPaths) {
         console.log('[Server] Loading environment from:', envPath);
         config({ path: envPath, override: true });
         envLoaded = true;
-        break;
     }
 }
 
@@ -186,7 +188,9 @@ interface Services {
     processingService: EmailProcessingService;
     memoryService: IEmailMemoryService;
     emailAutomationService: any;
+
     metrics: EmailMetrics;
+    routineService: RoutineService;
 }
 
 let services: Services | null = null;
@@ -294,7 +298,10 @@ async function initializeServices(app: express.Express): Promise<Services> {
     });
 
     const memoryService: IEmailMemoryService = new MemoryServiceClient();
-    const processingService = new EmailProcessingService(promptService, memoryService);
+
+    // Initialize EmailLLMService
+    const emailLLMService = new EmailLLMService(process.env.OPENAI_API_KEY || '');
+    const processingService = new EmailProcessingService(promptService, memoryService, emailLLMService);
 
     console.log('[Server] Initializing GmailEmailService...');
     const emailService = GmailEmailService.create(processingService, memoryService);
@@ -321,6 +328,8 @@ async function initializeServices(app: express.Express): Promise<Services> {
         console.warn('[Server] Failed to initialize Calendar provider with Gmail auth:', error);
     }
 
+    const routineService = new RoutineService(emailService, calendarProvider, memoryService, actionExecutor, memoryClient);
+
     const services: Services = {
         actionExecutor,
         actionRegistry,
@@ -333,6 +342,7 @@ async function initializeServices(app: express.Express): Promise<Services> {
         memoryService,
         emailAutomationService: null,
         metrics,
+        routineService
     };
 
     // Set up email routes
@@ -689,6 +699,14 @@ async function startServer() {
                 }
 
                 console.log('[Server] Gmail authenticated and email automation started');
+
+
+                // Start routines
+                if (services?.routineService) {
+                    services.routineService.start();
+                    console.log('[Server] Routine service started');
+                }
+
                 return res.send('Successfully authenticated! You can close this window.');
             } catch (error) {
                 console.error('[Server] OAuth callback error:', error);
@@ -762,6 +780,12 @@ const isMain = process.argv[1] && fileURLToPath(import.meta.url) === path.resolv
 if (isMain) {
     startServer().catch(error => {
         console.error('[Server] Startup failed:', error);
+        try {
+            const fs = require('fs');
+            fs.writeFileSync(path.join(__dirname, '../startup_error.log'), `Startup failed: ${error.stack || error}\n`);
+        } catch (e) {
+            console.error('Failed to write error log:', e);
+        }
         process.exit(1);
     });
 }

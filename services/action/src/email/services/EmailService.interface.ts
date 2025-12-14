@@ -1,10 +1,11 @@
-import type { 
-  EmailMessage, 
-  EmailSummary, 
-  DraftResponse, 
-  EmailSweepOptions, 
-  EmailSweepResult 
-} from '../types/index.js';
+import type {
+  EmailMessage,
+  EmailSummary,
+  DraftResponse,
+  EmailSweepOptions,
+  EmailSweepResult,
+  EmailActionType
+} from '../types/email.types.js';
 
 export interface IEmailService {
   /**
@@ -60,10 +61,9 @@ export interface IEmailService {
   markAsRead(messageId: string): Promise<void>;
 
   /**
-   * Mark an email as read
-   * @param messageId The ID of the email to mark as read
+   * Execute detailed actions on an email
    */
-  markAsRead(messageId: string): Promise<void>;
+  executeActions(emailId: string, actions: EmailActionType[]): Promise<void>;
 
   /**
    * Get the current connection status

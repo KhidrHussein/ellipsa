@@ -1,7 +1,7 @@
-import { EmailProcessingService } from '../../src/email/services/EmailProcessingService';
-import { EmailMemoryService } from '../../src/email/services/EmailMemoryService';
+import { EmailProcessingService } from '../../src/email/services/EmailProcessingService.js';
+import { EmailMemoryService } from '../../src/email/services/EmailMemoryService.js';
 import { PromptService } from '@ellipsa/prompt';
-import { EmailMessage, EmailSummary } from '../../src/email/types';
+import { EmailMessage, EmailSummary } from '../../src/email/types.js';
 
 describe('EmailProcessingService', () => {
   let service: EmailProcessingService;
@@ -105,6 +105,61 @@ describe('EmailProcessingService', () => {
         'Some content'
       );
       expect(result).toContain('important');
+    });
+  });
+  describe('determineSuggestedActions', () => {
+    it('should suggest UNSUBSCRIBE and ARCHIVE for low priority newsletters', () => {
+      // Access private method via any casting or just test via processEmail
+      // Let's test via processEmail
+      const email: EmailMessage = {
+        id: 'news-1',
+        threadId: 't-news',
+        subject: 'Weekly Newsletter',
+        from: { address: 'news@marketing.com' },
+        to: [{ address: 'me@example.com' }],
+        date: new Date(),
+        text: 'Click here to unsubscribe.',
+        isRead: false
+      };
+
+      // Mock extraction to return low priority
+      mockPromptService.extractStructuredData.mockResolvedValue({
+        priority: 'low',
+        categories: ['newsletter']
+      });
+      mockPromptService.summarizeContent.mockResolvedValue('Weekly marketing newsletter with updates.');
+
+      // We need to wait for the promise to resolve
+      return service.processEmail(email).then((result: EmailSummary) => {
+        expect(result.suggestedActions).toContain('UNSUBSCRIBE');
+        expect(result.suggestedActions).toContain('ARCHIVE');
+        expect(result.suggestedActions).toContain('MARK_AS_READ');
+      });
+    });
+
+    it('should suggest ARCHIVE for low priority notifications', () => {
+      const email: EmailMessage = {
+        id: 'notif-1',
+        threadId: 't-notif',
+        subject: 'System Notification',
+        from: { address: 'system@app.com' },
+        to: [{ address: 'me@example.com' }],
+        date: new Date(),
+        text: 'Your backup completed successfully.',
+        isRead: false
+      };
+
+      mockPromptService.extractStructuredData.mockResolvedValue({
+        priority: 'low',
+        categories: ['notification']
+      });
+      mockPromptService.summarizeContent.mockResolvedValue('Backup notification.');
+
+      return service.processEmail(email).then((result: EmailSummary) => {
+        expect(result.suggestedActions).toContain('ARCHIVE');
+        expect(result.suggestedActions).toContain('MARK_AS_READ');
+        expect(result.suggestedActions).not.toContain('UNSUBSCRIBE');
+      });
     });
   });
 });

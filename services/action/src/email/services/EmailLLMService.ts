@@ -1,4 +1,4 @@
-import { EmailMessage, EmailSummary, DraftResponse } from '../types';
+import { EmailMessage, EmailSummary, DraftResponse } from '../types/email.types.js';
 import OpenAI from 'openai';
 
 export class EmailLLMService {
@@ -37,7 +37,7 @@ export class EmailLLMService {
       });
 
       const summary = response.choices[0]?.message?.content || 'No summary available';
-      
+
       // Parse the LLM response into a structured format
       return {
         id: email.id,
@@ -110,7 +110,7 @@ ${msg.text || ''}`)
       });
 
       const draftText = response.choices[0]?.message?.content || 'I am following up on your email...';
-      
+
       return {
         threadId: email.threadId,
         to: [email.from],
@@ -132,10 +132,61 @@ ${msg.text || ''}`)
     }
   }
 
+
+  async evaluateAction(email: EmailSummary, fullContent?: string): Promise<{
+    action: 'REPLY' | 'ARCHIVE' | 'TASK' | 'NONE';
+    reasoning: string;
+    draftIntent?: string;
+    suggestedTask?: {
+      title: string;
+      description: string;
+      priority: 'high' | 'medium' | 'low';
+      dueDate?: string;
+    };
+  }> {
+    try {
+      const response = await this.openai.chat.completions.create({
+        model: 'gpt-3.5-turbo',
+        messages: [
+          {
+            role: 'system',
+            content: `You are an intelligent email assistant. specific task: Decide the single best action for this email.
+            Possible actions:
+            - REPLY: If the email requires a response, asks a question, or is a personal/work communication that warrants a reply.
+            - TASK: If the email contains a task, request, or action item that needs to be tracked but not necessarily replied to immediately.
+            - ARCHIVE: If it's a notification, newsletter, receipt, or "FYI" email that doesn't need action.
+            - NONE: If none of the above apply (e.g., spam, generic noise).
+            
+            Return JSON format: { "action": "...", "reasoning": "...", "draftIntent": "..." (if REPLY), "suggestedTask": {...} (if TASK) }`
+          },
+          {
+            role: 'user',
+            content: `Email Summary: ${email.summary}\n\nSubject: ${email.subject}\nFrom: ${email.from.address}\n\nFull Content Snippet: ${fullContent ? fullContent.substring(0, 500) : 'N/A'}`
+          }
+        ],
+        temperature: 0.1,
+        response_format: { type: "json_object" }
+      });
+
+      const content = response.choices[0]?.message?.content || '{}';
+      const result = JSON.parse(content);
+
+      return {
+        action: result.action || 'NONE',
+        reasoning: result.reasoning || 'No reasoning provided',
+        draftIntent: result.draftIntent,
+        suggestedTask: result.suggestedTask
+      };
+    } catch (error) {
+      console.error('Error evaluating email action:', error);
+      return { action: 'NONE', reasoning: 'Error during AI evaluation' };
+    }
+  }
+
   private determineActionRequired(summary: string): boolean {
     // Simple heuristic to determine if action is required
     const actionKeywords = ['action required', 'please respond', 'urgent', 'asap', 'deadline', 'follow up'];
-    return actionKeywords.some(keyword => 
+    return actionKeywords.some(keyword =>
       summary.toLowerCase().includes(keyword)
     );
   }
@@ -156,7 +207,7 @@ ${msg.text || ''}`)
   private extractCategories(summary: string): string[] {
     // This is a simplified version - in a real app, you might use a more sophisticated approach
     const categories: string[] = [];
-    
+
     const categoryKeywords: Record<string, string[]> = {
       'work': ['meeting', 'project', 'team', 'report', 'presentation'],
       'personal': ['family', 'friend', 'personal', 'birthday', 'holiday'],

@@ -455,4 +455,24 @@ export class CalendarProvider implements IActionProvider {
             },
         ];
     }
+    async getEventsForRange(start: Date, end: Date): Promise<any[]> {
+        if (!this.calendar) {
+            console.warn('[CalendarProvider] Calendar not initialized, returning empty list');
+            return [];
+        }
+
+        try {
+            const response = await this.calendar.events.list({
+                calendarId: 'primary',
+                timeMin: start.toISOString(),
+                timeMax: end.toISOString(),
+                singleEvents: true,
+                orderBy: 'startTime',
+            });
+            return response.data.items || [];
+        } catch (error) {
+            console.error('[CalendarProvider] Error fetching events for range:', error);
+            return [];
+        }
+    }
 }

@@ -1,9 +1,10 @@
 // Import types from the email.types.ts to ensure consistency
-import type { 
-  EmailMessage, 
-  EmailSummary, 
+import type {
+  EmailMessage,
+  EmailSummary,
   DraftResponse,
-  EmailAttachment as EmailAttachmentType 
+  EmailAttachment as EmailAttachmentType,
+  EmailActionType
 } from '../types/email.types.js';
 
 // Import local modules
@@ -12,6 +13,7 @@ import type { IEmailMemoryService } from './IEmailMemoryService.js';
 // Re-export types for consistency
 export type { EmailMessage, EmailSummary, DraftResponse, EmailAttachmentType };
 import { notificationBridge } from './NotificationBridge.js';
+import { EmailLLMService } from './EmailLLMService.js'; // Import EmailLLMService
 
 // Import from shared packages (temporary workaround)
 // TODO: Fix workspace linking for @ellipsa/shared and @ellipsa/prompt
@@ -19,7 +21,7 @@ import type { IPromptService, StructuredData } from '@ellipsa/prompt';
 
 interface PromptService extends IPromptService {
   // Extend with any additional methods not in IPromptService
-  extractEntities?: (content: string) => Promise<Array<{type: string, value: string}>>;
+  extractEntities?: (content: string) => Promise<Array<{ type: string, value: string }>>;
   healthCheck?: () => Promise<boolean>;
   getRequestCount?: () => number;
 }
@@ -37,13 +39,44 @@ declare const console: {
 export class EmailProcessingService {
   constructor(
     private promptService: PromptService,
-    private memoryService: IEmailMemoryService
-  ) {}
+    private memoryService: IEmailMemoryService,
+    private emailLLMService?: EmailLLMService // Optional for backward compatibility/testing
+  ) { }
 
   async processEmail(email: EmailMessage): Promise<EmailSummary> {
     try {
       // 1. Store the raw email in memory
       await this.memoryService.storeEmail(email);
+
+      // Check if email is older than 1 year (365 days)
+      const oneYearAgo = new Date();
+      oneYearAgo.setDate(oneYearAgo.getDate() - 365);
+
+      if (email.date < oneYearAgo) {
+        console.log(`[EmailProcessing] Skipping AI for old email ${email.id} (${email.date.toISOString()})`);
+        const summary: EmailSummary = {
+          id: email.id,
+          threadId: email.threadId,
+          subject: email.subject,
+          from: email.from,
+          date: email.date,
+          summary: 'Auto-processed: Email older than 1 year. Skipped AI processing.',
+          actionRequired: false,
+          priority: 'low',
+          categories: ['old', 'archived'],
+          suggestedActions: ['ARCHIVE', 'MARK_AS_READ'],
+          recommendation: {
+            action: 'ARCHIVE',
+            reasoning: 'Email is older than 1 year'
+          },
+          metadata: {
+            source: 'system_auto_archive',
+            processedAt: new Date().toISOString()
+          }
+        };
+        await this.memoryService.storeEmailSummary(summary);
+        return summary;
+      }
 
       // 2. Extract structured data
       const content = email.text || email.html || '';
@@ -61,7 +94,7 @@ export class EmailProcessingService {
         this.promptService.extractStructuredData(content),
         this.promptService.summarizeContent(content)
       ]);
-      
+
       // Ensure we have the expected structure in extractedData
       const structuredData: {
         summary: string;
@@ -69,7 +102,33 @@ export class EmailProcessingService {
         // Add other expected properties here
       } = extractedData as any;
 
-      // 3. Create email summary
+      // 3. Evaluate action using AI if available
+      let recommendation: any = undefined;
+      let suggestedActions = this.determineSuggestedActions(extractedData, summaryText, email);
+
+      if (this.emailLLMService) {
+        const aiEvaluation = await this.emailLLMService.evaluateAction({
+          ...email,
+          summary: summaryText,
+          actionRequired: false, // Temporary
+          priority: 'medium',
+          categories: []
+        } as any, content);
+
+        recommendation = aiEvaluation;
+
+        // Merge AI recommendations types
+        if (aiEvaluation.action === 'REPLY') {
+          if (!suggestedActions.includes('REPLY')) suggestedActions.push('REPLY');
+          // Auto-draft if reply recommended
+          this.draftResponse(email, { additionalContext: aiEvaluation.draftIntent })
+            .catch(err => console.error('Background draft generation failed:', err));
+        } else if (aiEvaluation.action === 'ARCHIVE') {
+          if (!suggestedActions.includes('ARCHIVE')) suggestedActions.push('ARCHIVE');
+        }
+      }
+
+      // 4. Create email summary
       const summary: EmailSummary = {
         id: email.id,
         threadId: email.threadId,
@@ -80,6 +139,8 @@ export class EmailProcessingService {
         actionRequired: this.determineActionRequired(extractedData, summaryText),
         priority: this.determinePriority(extractedData, summaryText),
         categories: this.extractCategories(extractedData, summaryText),
+        suggestedActions: suggestedActions,
+        recommendation: recommendation, // Add recommendation
         metadata: {
           ...extractedData,
           source: 'email_processing',
@@ -175,28 +236,28 @@ export class EmailProcessingService {
     ];
 
     // Check for direct action keywords
-    const hasActionKeywords = actionKeywords.some(keyword => 
-      summary.toLowerCase().includes(keyword) || 
+    const hasActionKeywords = actionKeywords.some(keyword =>
+      summary.toLowerCase().includes(keyword) ||
       (extractedData && JSON.stringify(extractedData).toLowerCase().includes(keyword))
     );
 
     // Check for questions
-    const hasQuestions = questionPatterns.some(pattern => 
-      pattern.test(summary) || 
+    const hasQuestions = questionPatterns.some(pattern =>
+      pattern.test(summary) ||
       (extractedData?.questions as string[] || []).length > 0
     );
 
     // Check for requests in the extracted data
-    const hasExplicitRequest = extractedData?.requiresAction === true || 
-                             extractedData?.actionItems?.length > 0 ||
-                             extractedData?.nextSteps?.length > 0;
+    const hasExplicitRequest = extractedData?.requiresAction === true ||
+      extractedData?.actionItems?.length > 0 ||
+      extractedData?.nextSteps?.length > 0;
 
     return hasActionKeywords || hasQuestions || hasExplicitRequest;
   }
 
   private determinePriority(extractedData: any, summary: string): 'high' | 'medium' | 'low' {
     const summaryLower = summary.toLowerCase();
-    
+
     // High priority indicators
     const highPriorityKeywords = [
       'urgent', 'asap', 'immediate attention', 'critical', 'important',
@@ -218,13 +279,13 @@ export class EmailProcessingService {
     }
 
     // Check for high priority indicators
-    const hasHighPriority = highPriorityKeywords.some(keyword => 
+    const hasHighPriority = highPriorityKeywords.some(keyword =>
       summaryLower.includes(keyword) ||
       (extractedData && JSON.stringify(extractedData).toLowerCase().includes(keyword))
     );
 
     // Check for low priority indicators
-    const hasLowPriority = lowPriorityKeywords.some(keyword => 
+    const hasLowPriority = lowPriorityKeywords.some(keyword =>
       summaryLower.includes(keyword) ||
       (extractedData && JSON.stringify(extractedData).toLowerCase().includes(keyword))
     );
@@ -232,7 +293,7 @@ export class EmailProcessingService {
     // Determine priority based on indicators
     if (hasHighPriority) return 'high';
     if (hasLowPriority) return 'low';
-    
+
     // Default to medium priority
     return 'medium';
   }
@@ -240,16 +301,16 @@ export class EmailProcessingService {
   private extractCategories(extractedData: any, summary: string): string[] {
     const categories = new Set<string>();
     const summaryLower = summary.toLowerCase();
-    
+
     // Add categories from extracted data if available
     if (extractedData?.categories?.length) {
-      extractedData.categories.forEach((cat: string) => 
+      extractedData.categories.forEach((cat: string) =>
         categories.add(cat.toLowerCase().trim())
       );
     }
 
     // Common email categories and their indicators
-    const categoryPatterns: {[key: string]: (string | RegExp)[]} = {
+    const categoryPatterns: { [key: string]: (string | RegExp)[] } = {
       'meeting': [
         'meeting', 'calendar', 'schedule', 'appointment',
         /(let\'?s|can we|set up|schedule|have) a (meeting|call)/i,
@@ -290,8 +351,8 @@ export class EmailProcessingService {
         if (typeof pattern === 'string') {
           return summaryLower.includes(pattern);
         } else if (pattern instanceof RegExp) {
-          return pattern.test(summary) || 
-                 (extractedData && pattern.test(JSON.stringify(extractedData)));
+          return pattern.test(summary) ||
+            (extractedData && pattern.test(JSON.stringify(extractedData)));
         }
         return false;
       });
@@ -372,5 +433,44 @@ ${additionalContext || 'No additional context provided.'}
 [Write your email response below. Start with an appropriate greeting and end with a professional closing.]
 
 `;
+  }
+  private determineSuggestedActions(extractedData: any, summary: string, email: EmailMessage): EmailActionType[] {
+    const actions: EmailActionType[] = [];
+    const summaryLower = summary.toLowerCase();
+
+    // 1. Unsubscribe Detection
+    const unsubscribeKeywords = ['unsubscribe', 'opt out', 'subscription', 'marketing', 'newsletter'];
+    const isNewsletter = unsubscribeKeywords.some(w => summaryLower.includes(w)) ||
+      email.headers?.['List-Unsubscribe'] !== undefined ||
+      email.text?.toLowerCase().includes('unsubscribe');
+
+    if (isNewsletter) {
+      // If it's a newsletter and low priority, suggest unsubscribing
+      if (this.determinePriority(extractedData, summary) === 'low') {
+        actions.push('UNSUBSCRIBE');
+        actions.push('ARCHIVE'); // Also archive it
+      }
+    }
+
+    // 2. Archive Detection
+    // Archive notifications, receipts, and low priority updates
+    const archiveCategories = ['notification', 'social', 'purchase', 'newsletter'];
+    const categories = this.extractCategories(extractedData, summary);
+    const shouldArchive = categories.some(c => archiveCategories.includes(c)) &&
+      this.determinePriority(extractedData, summary) === 'low' &&
+      !this.determineActionRequired(extractedData, summary);
+
+    if (shouldArchive) {
+      actions.push('ARCHIVE');
+    }
+
+    // 3. Mark as Read
+    // If we're archiving or unsubscribing, we should also mark as read
+    if (actions.includes('ARCHIVE') || actions.includes('UNSUBSCRIBE')) {
+      actions.push('MARK_AS_READ');
+    }
+
+    // Unique actions
+    return Array.from(new Set(actions));
   }
 }

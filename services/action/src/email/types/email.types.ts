@@ -36,6 +36,20 @@ export interface EmailMessage {
   snippet?: string;
 }
 
+export type EmailActionType = 'MARK_AS_READ' | 'ARCHIVE' | 'UNSUBSCRIBE' | 'DELETE' | 'REPLY';
+
+export interface ActionRecommendation {
+  action: 'REPLY' | 'ARCHIVE' | 'TASK' | 'NONE';
+  reasoning: string;
+  draftIntent?: string;
+  suggestedTask?: {
+    title: string;
+    description: string;
+    priority: 'high' | 'medium' | 'low';
+    dueDate?: string;
+  };
+}
+
 export interface EmailSummary {
   id: string;
   threadId: string;
@@ -46,6 +60,8 @@ export interface EmailSummary {
   actionRequired: boolean;
   priority: 'high' | 'medium' | 'low';
   categories: string[];
+  suggestedActions?: EmailActionType[];
+  recommendation?: ActionRecommendation;
   metadata?: Record<string, unknown>;
 }
 
@@ -75,7 +91,7 @@ export interface EmailSweepOptions {
   includeSpamTrash?: boolean;
   includeRead?: boolean;
   minImportance?: 'high' | 'medium' | 'low';
-  
+
   // Additional options specific to this interface
   unreadOnly?: boolean;
   label?: string;
@@ -106,4 +122,5 @@ export interface IEmailService {
       additionalContext?: string;
     }
   ): Promise<DraftResponse>;
+  executeActions(emailId: string, actions: EmailActionType[]): Promise<void>;
 }

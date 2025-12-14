@@ -3,10 +3,10 @@ import { z } from "zod";
 // Export service clients
 export { ServiceClient } from './clients/ServiceClient.js';
 export { MemoryClient } from './clients/MemoryClient.js';
-export type { 
-  MemoryEvent, 
-  RetrieveOptions, 
-  RetrieveResult 
+export type {
+  MemoryEvent,
+  RetrieveOptions,
+  RetrieveResult
 } from './clients/MemoryClient.js';
 
 // Export utilities
@@ -36,6 +36,7 @@ export const TaskSchema = z.object({
   status: z.enum(['pending', 'in_progress', 'completed', 'failed']).default('pending'),
   priority: z.enum(['low', 'medium', 'high']).default('medium'),
   due_date: z.string().optional(),
+  source: z.enum(['user', 'system', 'chat', 'email', 'assistant']).optional(),
   created_at: z.string().optional(),
   updated_at: z.string().optional(),
   metadata: z.record(z.any()).default({})
