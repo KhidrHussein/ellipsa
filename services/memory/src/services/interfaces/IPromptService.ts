@@ -53,8 +53,8 @@ export interface ChatResponse {
 }
 
 export interface IPromptService {
-    extractStructuredData(content: string): Promise<ExtractionResult>;
+    extractStructuredData(content: string, model?: string, systemPrompt?: string): Promise<ExtractionResult>;
     generate(prompt: string, options?: any): Promise<string>;
-    generateAssistance(context: AssistanceContext): Promise<AssistanceResponse>;
+    generateAssistance(context: AssistanceContext, systemPrompt?: string): Promise<AssistanceResponse>;
     generateChatResponse(context: ChatContext): Promise<ChatResponse>;
 }

@@ -63,7 +63,20 @@ export class MemoryConsolidator {
             // So we re-run extraction on the aggregated text to find high-level patterns.
 
             console.log('[MemoryConsolidator] Extracting facts from daily transcript...');
-            const extraction = await this.promptService.extractStructuredData(transcript);
+            // We pass the specialized FACT_EXTRACTION_PROMPT as the system prompt (or context) to guide the extraction
+            // Since we updated PromptService to accept a systemPrompt, we can now pass it.
+            // But wait, FACT_EXTRACTION_PROMPT is exported from assistantPrompts.ts in prompt package.
+            // We need to import it or define it. 
+            // In a real monorepo we'd import { FACT_EXTRACTION_PROMPT } from '@ellipsa/prompt';
+            // Assuming promptService interface allows passing the prompt string if we changed the interface.
+
+            // NOTE: The IPromptService interface in this file's imports needs to be updated or we cast it.
+            // Since we are editing the implementation, let's assume we can pass it if we update the call.
+            // Ideally we should import FACT_EXTRACTION_PROMPT.
+            // For now, let's pass the instruction string directly or rely on the updated service signature.
+
+            const FACT_SYSTEM_PROMPT = `You are a Memory Consolidator. Extract PERMANENT facts (relationships, preferences) from the transcript. Ignore chitchat.`;
+            const extraction = await this.promptService.extractStructuredData(transcript, undefined, FACT_SYSTEM_PROMPT);
 
             if (extraction.entities && extraction.entities.length > 0) {
                 await this.storeFacts(extraction.entities);

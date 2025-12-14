@@ -17,21 +17,21 @@ export function createRouter(
   router.post('/events', async (req, res) => {
     try {
       const eventData = req.body;
-      
+
       // Validate and create event
       const event = await eventModel.create({
         ...eventData,
         start_time: new Date(eventData.start_time),
         end_time: eventData.end_time ? new Date(eventData.end_time) : undefined,
       });
-      
+
       // Process participants - create entities first if they don't exist
       if (eventData.participants?.length) {
         await Promise.all(
           eventData.participants.map(async (participant: any) => {
             // Check if entity exists
             const existingEntity = await entityModel.findById(participant.entity_id);
-            
+
             if (!existingEntity) {
               // Create new entity (without id in input)
               await entityModel.create({
@@ -43,7 +43,7 @@ export function createRouter(
           })
         );
       }
-      
+
       // Create tasks if any
       if (eventData.tasks?.length) {
         await Promise.all(
@@ -57,17 +57,18 @@ export function createRouter(
               assignee_id: task.owner,
               due_date: task.due_ts,
               metadata: task.metadata || {},
+              source: 'event_processor',
             })
           )
         );
       }
-      
+
       res.status(201).json({ event_id: event.id });
     } catch (error) {
       console.error('Error processing event:', error);
-      res.status(500).json({ 
+      res.status(500).json({
         error: 'Failed to process event',
-        details: error instanceof Error ? error.message : 'Unknown error' 
+        details: error instanceof Error ? error.message : 'Unknown error'
       });
     }
   });
@@ -76,23 +77,23 @@ export function createRouter(
   router.post('/retrieve', async (req, res) => {
     try {
       const { query, context, weights } = req.body;
-      
+
       if (!query) {
         return res.status(400).json({ error: 'Query parameter is required' });
       }
-      
+
       const results = await retrievalService.retrieve(query, {
         weights: weights || { semantic: 0.4, temporal: 0.3, relational: 0.3 },
         entityContext: context?.entities,
         timeWindow: context?.timeWindow,
       });
-      
+
       res.json({ results });
     } catch (error) {
       console.error('Error retrieving memories:', error);
-      res.status(500).json({ 
+      res.status(500).json({
         error: 'Failed to retrieve memories',
-        details: error instanceof Error ? error.message : 'Unknown error' 
+        details: error instanceof Error ? error.message : 'Unknown error'
       });
     }
   });
@@ -104,28 +105,28 @@ export function createRouter(
       if (!entity) {
         return res.status(404).json({ error: 'Entity not found' });
       }
-      
+
       // Get related events - use proper pagination
       const events = await eventModel.findAll(
         {
           // Note: Direct participant filtering might need a custom query
           // depending on your schema structure
-        }, 
-        { 
+        },
+        {
           pageSize: 50,
           page: 1
         }
       );
-      
+
       res.json({
         entity,
         recent_events: events.data,
       });
     } catch (error) {
       console.error('Error fetching entity:', error);
-      res.status(500).json({ 
+      res.status(500).json({
         error: 'Failed to fetch entity',
-        details: error instanceof Error ? error.message : 'Unknown error' 
+        details: error instanceof Error ? error.message : 'Unknown error'
       });
     }
   });

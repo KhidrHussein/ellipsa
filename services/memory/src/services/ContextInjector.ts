@@ -27,19 +27,21 @@ export class ContextInjector {
         // Checking PromptService interface... it usually returns ExtractionResult.
 
         try {
-            // We use a simplified extraction or just look for capitalized words to be fast
-            // Ideally we'd call an LLM, but for every message that adds latency. 
-            // The "Poke" protocol implies we should be smart.
-            // Let's call the LLM if the prompt is long enough, otherwise simple regex.
-            if (userPrompt.length > 20) {
-                const extraction = await this.promptService.extractStructuredData(userPrompt);
+            // 1. Extract entities from the prompt using LLM if possible
+            if (userPrompt.length > 10) {
+                // Use a specialized system prompt for entity extraction if needed, or default
+                // We utilize the PromptService's entity extraction capability
+                const extraction = await this.promptService.extractStructuredData(
+                    userPrompt,
+                    undefined,
+                    "You are an Entity Extractor. Extract key people, places, and concepts from the text."
+                );
+
                 if (extraction.entities) {
                     entities = extraction.entities.map(e => e.value);
                 }
-            }
-
-            if (entities.length === 0) {
-                // Fallback: simple capitalized words extraction
+            } else {
+                // Keep regex for very short prompts to save latency
                 const matches = userPrompt.match(/\b[A-Z][a-z]+(?:\s+[A-Z][a-z]+)*\b/g);
                 if (matches) {
                     entities = Array.from(new Set(matches));

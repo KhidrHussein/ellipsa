@@ -10,9 +10,9 @@ export class PromptServiceClient implements IPromptService {
         this.defaultModel = defaultModel;
     }
 
-    async extractStructuredData(content: string): Promise<ExtractionResult> {
+    async extractStructuredData(content: string, model: string = this.defaultModel, systemPrompt?: string): Promise<ExtractionResult> {
         const prompt = `
-      You are the "Ellipsa Edge Agent", an intelligent assistant that observes the user's screen and provides helpful, context-aware feedback.
+      ${systemPrompt ? systemPrompt : 'You are the "Ellipsa Edge Agent", an intelligent assistant that observes the user\'s screen and provides helpful, context-aware feedback.'}
       
       Analyze the following content captured from the user's screen and extract structured data.
       Focus on providing actionable advice, relevant context, and helpful suggestions based on what the user is doing.
@@ -42,7 +42,7 @@ export class PromptServiceClient implements IPromptService {
         try {
             const response = await this.callCompletion({
                 messages: [
-                    { role: 'system', content: 'You are the Ellipsa Edge Agent, a helpful AI assistant that observes user activity and provides intelligent, actionable feedback. You must always respond with valid JSON.' },
+                    { role: 'system', content: systemPrompt || 'You are the Ellipsa Edge Agent, a helpful AI assistant that observes user activity and provides intelligent, actionable feedback. You must always respond with valid JSON.' },
                     { role: 'user', content: prompt }
                 ],
                 response_format: { type: 'json_object' }
@@ -70,7 +70,7 @@ export class PromptServiceClient implements IPromptService {
         }
     }
 
-    async generateAssistance(context: AssistanceContext): Promise<AssistanceResponse> {
+    async generateAssistance(context: AssistanceContext, systemPrompt?: string): Promise<AssistanceResponse> {
         const url = `${this.baseUrl}/prompt/v1/assist`;
 
         try {
@@ -81,7 +81,8 @@ export class PromptServiceClient implements IPromptService {
                 },
                 body: JSON.stringify({
                     context,
-                    model: this.defaultModel
+                    model: this.defaultModel,
+                    systemPrompt // Pass it along if the API supports it, or it will be ignored
                 })
             });
 

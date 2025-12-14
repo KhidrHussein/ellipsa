@@ -37,7 +37,8 @@ export class PromptService {
    */
   async extractStructuredData(
     content: string,
-    model: ModelName = this.defaultModel
+    model: ModelName = this.defaultModel,
+    systemPrompt: string = 'You are a precise information extraction system.'
   ): Promise<ExtractionResult> {
     const prompt = EXTRACTION_PROMPT.replace('{content}', content);
 
@@ -46,7 +47,7 @@ export class PromptService {
         const response = await this.openai.chat.completions.create({
           model,
           messages: [
-            { role: 'system', content: 'You are a precise information extraction system.' },
+            { role: 'system', content: systemPrompt },
             { role: 'user', content: prompt }
           ],
           temperature: this.temperature,
@@ -141,7 +142,7 @@ export class PromptService {
     };
   }
 
-  async generateAssistance(context: AssistanceContext): Promise<AssistanceResponse> {
+  async generateAssistance(context: AssistanceContext, systemPrompt?: string): Promise<AssistanceResponse> {
     const { transcript, screenContext = '', activityType = 'general', memoryBullets = [], recentHistory = [] } = context;
 
     // Detect if there's a question in the transcript
@@ -171,7 +172,7 @@ export class PromptService {
       const response = await this.openai.chat.completions.create({
         model: this.defaultModel,
         messages: [
-          { role: 'system', content: 'You are a helpful, proactive AI assistant. Always respond with valid JSON.' },
+          { role: 'system', content: systemPrompt || 'You are a helpful, proactive AI assistant. Always respond with valid JSON.' },
           { role: 'user', content: promptTemplate }
         ],
         response_format: { type: 'json_object' },

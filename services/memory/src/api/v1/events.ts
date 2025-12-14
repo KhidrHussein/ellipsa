@@ -103,6 +103,7 @@ export function createEventsRouter(
               assignee_id: task.owner,
               due_date: task.due_ts,
               metadata: task.metadata || {},
+              source: 'event_processor',
             })
           )
         );

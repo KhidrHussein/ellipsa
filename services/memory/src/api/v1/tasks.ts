@@ -62,6 +62,7 @@ export function createTasksRouter(taskModel: TaskModel): Router {
         assignee_id: taskData.owner || taskData.assignee_id,
         due_date: taskData.due_ts || taskData.due_date,
         metadata: taskData.metadata || {},
+        source: 'user', // API created tasks default to user source
       });
 
       res.status(201).json({
