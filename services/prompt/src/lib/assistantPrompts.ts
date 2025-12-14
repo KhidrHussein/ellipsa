@@ -166,4 +166,30 @@ Respond in the following JSON format:
         ] 
     },
     "suggestedActions": ["Action 1", "Action 2"] 
+}
+`;
+
+export const FACT_EXTRACTION_PROMPT = `${SYSTEM_IDENTITY_XML}
+
+You are a Memory Consolidator. Your goal is to read a transcript of daily activities and extract PERMANENT facts about the user, their relationships, and their preferences.
+
+TRANSCRIPT:
+{transcript}
+
+INSTRUCTIONS:
+1. Ignore casual chitchat ("Hello", "How are you").
+2. Look for explicit statements of fact ("I like sushi", "My sister Sarah lives in Tokyo").
+3. Look for implicit preferences (User rejected a 9am meeting -> "Prefers meetings after 10am").
+4. Output a JSON object with an array of "facts".
+
+Respond with JSON:
+{
+  "facts": [
+    {
+      "value": "Subject of the fact",
+      "type": "person|location|preference|concept",
+      "context": "The relationship or detail (e.g., 'Sister of User', 'Lives in Tokyo')"
+    }
+  ]
 }`;
+

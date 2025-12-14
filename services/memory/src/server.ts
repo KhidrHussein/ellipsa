@@ -19,6 +19,8 @@ import { getConnection, getKnexClient } from './db/relational/connection';
 import { PromptServiceClient } from './services/PromptServiceClient';
 import { TranscriptionService } from './services/TranscriptionService';
 import { MemoryRetrievalService } from './services/MemoryRetrievalService';
+import { ContextInjector } from './services/ContextInjector';
+import { MemoryConsolidator } from './services/MemoryConsolidator';
 import config from './config';
 
 // Extend the Socket.IO types with our custom properties
@@ -155,6 +157,14 @@ class MemoryServer {
     const memoryRetrievalService = new MemoryRetrievalService(chromaClient, neo4jDriver);
     await memoryRetrievalService.initialize();
 
+    // Initialize Context Injector
+    const contextInjector = new ContextInjector(neo4jDriver, promptService as any);
+
+    // Initialize Memory Consolidator (Start simple interval or just instantiate)
+    const memoryConsolidator = new MemoryConsolidator(neo4jDriver, promptService as any);
+    // Optional: Start a simple consolidation check every 24h?
+    // setInterval(() => memoryConsolidator.consolidateDailyMemories(), 24 * 60 * 60 * 1000);
+
     // Initialize Event Processing Service
     this.eventProcessingService = new EventProcessingService({
       promptService: promptService as any,
@@ -164,6 +174,7 @@ class MemoryServer {
       neo4jSession: this.neo4jSession,
       transcriptionService: transcriptionService,
       memoryRetrievalService: memoryRetrievalService,
+      contextInjector: contextInjector
     });
 
     // Initialize WebSocket Service after HTTP server is started

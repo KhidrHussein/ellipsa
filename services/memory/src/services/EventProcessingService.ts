@@ -12,6 +12,8 @@ const VALID_ENTITY_TYPES = [
   'product', 'tool', 'file', 'concept', 'service', 'other'
 ];
 
+import { ContextInjector } from './ContextInjector';
+
 export interface EventProcessingServiceOptions {
   promptService: IPromptService;
   eventModel: EventModel;
@@ -19,6 +21,7 @@ export interface EventProcessingServiceOptions {
   taskModel: TaskModel;
   neo4jSession: Session;
   memoryRetrievalService?: MemoryRetrievalService;
+  contextInjector?: ContextInjector;
 }
 
 export class EventProcessingService {
@@ -29,6 +32,7 @@ export class EventProcessingService {
   private neo4jSession: Session;
   private transcriptionService?: TranscriptionService;
   private memoryRetrievalService?: MemoryRetrievalService;
+  private contextInjector?: ContextInjector;
   private processingQueue: (() => Promise<void>)[] = [];
   private isProcessing = false;
 
@@ -48,6 +52,7 @@ export class EventProcessingService {
     this.neo4jSession = options.neo4jSession;
     this.transcriptionService = options.transcriptionService;
     this.memoryRetrievalService = options.memoryRetrievalService;
+    this.contextInjector = options.contextInjector;
   }
 
   async processEvent(content: string, metadata: Record<string, any> = {}) {
@@ -357,6 +362,24 @@ export class EventProcessingService {
         const age = Date.now() - this.screenContextCache.timestamp;
         if (age < this.SCREEN_CONTEXT_TTL) {
           screenContext = this.screenContextCache.content;
+        }
+      }
+
+      // [NEW] Ghost Threading / Context Injection
+      // If ContextInjector is available, we inject "active context" from the Graph
+      let activeContext = '';
+      if (this.contextInjector) {
+        try {
+          activeContext = await this.contextInjector.injectContext(text);
+          if (activeContext) {
+            console.log('[EventProcessing] Injected Ghost Context:', activeContext);
+            // We can prepend this to the screenContext or memoryContext.
+            // Since the prompt templates usually put screenContext prominently, let's append it there
+            // marked clearly as Active Context.
+            screenContext = `${screenContext}\n\n${activeContext}`;
+          }
+        } catch (ciError) {
+          console.warn('[EventProcessing] Context injection failed:', ciError);
         }
       }
 
