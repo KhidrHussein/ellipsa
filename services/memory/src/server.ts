@@ -160,10 +160,17 @@ class MemoryServer {
     // Initialize Context Injector
     const contextInjector = new ContextInjector(neo4jDriver, promptService as any);
 
-    // Initialize Memory Consolidator (Start simple interval or just instantiate)
+    // Initialize Memory Consolidator
     const memoryConsolidator = new MemoryConsolidator(neo4jDriver, promptService as any);
-    // Optional: Start a simple consolidation check every 24h?
-    // setInterval(() => memoryConsolidator.consolidateDailyMemories(), 24 * 60 * 60 * 1000);
+
+    // Schedule daily consolidation (24 hours)
+    logger.info('Scheduling daily memory consolidation...');
+    setInterval(() => {
+      memoryConsolidator.consolidateDailyMemories().catch(err => logger.error('Daily consolidation failed:', err));
+    }, 24 * 60 * 60 * 1000);
+
+    // Run once on startup for debugging/verification if needed (optional, maybe behind a flag or just log)
+    // memoryConsolidator.consolidateDailyMemories().catch(console.error);
 
     // Initialize Event Processing Service
     this.eventProcessingService = new EventProcessingService({
