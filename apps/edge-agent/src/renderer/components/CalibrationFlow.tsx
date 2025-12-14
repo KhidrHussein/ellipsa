@@ -21,11 +21,26 @@ export function CalibrationFlow({ onComplete }: CalibrationFlowProps) {
         primaryFocus: '',
     });
 
-    const handleNext = () => {
+    const handleNext = async () => {
         if (step < 2) {
             setStep(step + 1);
         } else {
-            // Save and complete
+            // Save to backend
+            try {
+                const response = await fetch('http://localhost:4001/api/v1/user/preferences', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(preferences)
+                });
+
+                if (!response.ok) {
+                    console.error('Failed to save preferences to backend');
+                }
+            } catch (err) {
+                console.error('Error saving preferences:', err);
+            }
+
+            // Save locally and complete
             localStorage.setItem('ellipsa_preferences', JSON.stringify(preferences));
             onComplete(preferences);
         }
@@ -41,8 +56,10 @@ export function CalibrationFlow({ onComplete }: CalibrationFlowProps) {
         exit: { opacity: 0, x: -20 },
     };
 
+    console.log('[CalibrationFlow] Rendering step:', step);
+
     return (
-        <div className="min-h-screen bg-black/40 flex items-center justify-center p-8 backdrop-blur-3xl">
+        <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-8 backdrop-blur-3xl">
             <div className="w-full max-w-2xl bg-white/80 backdrop-blur-xl rounded-3xl shadow-2xl overflow-hidden border border-white/20 p-8 min-h-[500px] flex flex-col justify-between relative">
 
                 {/* Progress Indicator */}

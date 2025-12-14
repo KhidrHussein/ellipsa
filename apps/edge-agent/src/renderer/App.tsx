@@ -24,14 +24,14 @@ export default function App() {
   const [showActionModal, setShowActionModal] = useState(false);
 
   // Check for existing calibration
+  // Check for existing calibration
   useEffect(() => {
+    // Check local storage first for speed
     const prefs = localStorage.getItem('ellipsa_preferences');
     if (!prefs) {
       setView('calibration');
     } else {
-      // If already calibrated, we can default to welcome or none
-      // For now, let's stick to 'none' unless user triggers something
-      // But for first load dev, 'welcome' is fine if triggered
+      // Logic remains: default to 'none'.
     }
   }, []);
 
@@ -103,7 +103,9 @@ export default function App() {
           setView('settings');
           break;
         case 'home':
-          setView('welcome');
+          // Start fresh or go to calibration if needed.
+          // For now, mapping Home to Calibration so user can reset personality.
+          setView('calibration');
           break;
       }
     };
@@ -263,7 +265,7 @@ export default function App() {
               if (item === 'briefing') setView('briefing');
               if (item === 'settings') setView('settings');
               if (item === 'actions') setShowActionModal(true);
-              if (item === 'home') setView('welcome');
+              if (item === 'home') setView('calibration');
             }}
           />
         </div>

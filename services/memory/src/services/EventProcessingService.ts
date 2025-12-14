@@ -98,13 +98,27 @@ export class EventProcessingService {
 
                 // Generate intelligent assistance using transcript + screen + memory + history
                 console.log('[EventProcessing] Generating intelligent assistance...');
+
+                // Fetch User Entity to get Strategic Focus
+                let strategicFocusContext = '';
+                try {
+                  const userEntity = (await this.entityModel.search('User', { type: 'user', pageSize: 1 })).data[0];
+                  if (userEntity && userEntity.metadata?.strategicFocus) {
+                    strategicFocusContext = `User's Current Strategic Focus: ${userEntity.metadata.strategicFocus}`;
+                    console.log(`[EventProcessing] Injected Strategic Focus: ${userEntity.metadata.strategicFocus}`);
+                  }
+                } catch (err) {
+                  // Silently fail if user not found, strictly optional context
+                  console.warn('[EventProcessing] Failed to fetch User context:', err);
+                }
+
                 let assistance: any;
                 if (truncatedTranscript && truncatedTranscript.trim().length > 5) {
                   assistance = await this.promptService.generateAssistance({
                     transcript: truncatedTranscript,
-                    screenContext,
+                    screenContext: `${screenContext}\n\n${strategicFocusContext}`.trim(), // Inject focus into screen context as it's a strong context signal
                     activityType: metadata.activityType || 'general',
-                    memoryBullets,
+                    memoryBullets: [strategicFocusContext, ...memoryBullets].filter(Boolean), // Also add to memory bullets for redundancy
                     recentHistory: this.recentHistory.map(h => `${h.role}: ${h.content}`)
                   });
                 } else {

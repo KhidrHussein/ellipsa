@@ -12,11 +12,11 @@ async function consolidateMemory() {
     logger.info('Starting memory consolidation...');
 
     try {
-        const { knex, chromaCollections } = await initializeDatabases();
+        const { knex, chromaCollections, neo4jDriver } = await initializeDatabases();
         const neo4jSession = getSession();
 
         const eventModel = new EventModel(knex, neo4jSession, chromaCollections.events);
-        const entityModel = new EntityModel(knex, neo4jSession, chromaCollections.entities);
+        const entityModel = new EntityModel(knex, neo4jDriver, chromaCollections.entities);
         const promptService = new PromptServiceClient(PROMPT_SERVICE_URL);
 
         // 1. Fetch events from last 24 hours

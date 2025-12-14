@@ -1,9 +1,10 @@
 import React from 'react';
 import { motion } from 'motion/react';
-import { X, Star, Mail, Calendar, CheckCircle, Loader2 } from 'lucide-react';
+import { X, Star, Mail, Calendar, CheckCircle, Loader2, Users } from 'lucide-react';
 import { useEvents } from '../hooks/useEvents';
 import { useTasks, Task } from '../hooks/useTasks';
 import { usePendingActions } from '../hooks/usePendingActions';
+import { useUserPreferences } from '../hooks/useUserPreferences';
 
 interface BriefingViewProps {
   onClose: () => void;
@@ -41,8 +42,9 @@ export function BriefingView({ onClose }: BriefingViewProps) {
   const { events, loading: eventsLoading } = useEvents({ type: 'meeting', limit: 20 });
   const { tasks, loading: tasksLoading } = useTasks({ status: 'pending', limit: 10 });
   const { actions: pendingEmails, loading: emailsLoading } = usePendingActions();
+  const { preferences, loading: prefsLoading } = useUserPreferences();
 
-  const loading = eventsLoading || tasksLoading || emailsLoading;
+  const loading = eventsLoading || tasksLoading || emailsLoading || prefsLoading;
 
   // Filter for today's calendar meetings only
   const todayStart = new Date();
@@ -133,6 +135,12 @@ export function BriefingView({ onClose }: BriefingViewProps) {
               <div>
                 <h1 className="font-sans font-bold text-3xl mb-1 text-black">{getGreeting()}</h1>
                 <p className="text-lg text-gray-600 font-medium">{formatDate()}</p>
+                {preferences?.primaryFocus && (
+                  <div className="mt-3 inline-flex items-center px-3 py-1 rounded-full bg-indigo-50 text-indigo-700 text-sm font-medium border border-indigo-100">
+                    <Star className="w-3.5 h-3.5 mr-1.5 fill-indigo-700" />
+                    Focus: {preferences.primaryFocus}
+                  </div>
+                )}
               </div>
               <button
                 onClick={onClose}
@@ -144,7 +152,6 @@ export function BriefingView({ onClose }: BriefingViewProps) {
           </div>
         </div>
 
-        {/* Content */}
         {/* Content */}
         <div className="max-w-5xl mx-auto px-6 py-8 grid grid-cols-1 md:grid-cols-2 gap-6">
           {/* Left Column */}

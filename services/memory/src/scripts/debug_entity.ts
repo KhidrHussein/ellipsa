@@ -1,4 +1,4 @@
-
+// @ts-nocheck
 import { ChromaClient } from 'chromadb';
 import neo4j from 'neo4j-driver';
 import dotenv from 'dotenv';

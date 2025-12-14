@@ -9,10 +9,10 @@ interface LogEntry extends Logform.TransformableInfo {
   [key: string]: any;
 }
 
-const logFormat = printf((info: LogEntry) => {
+const logFormat = printf((info: any) => {
   const { level, message, timestamp, ...meta } = info;
-  const metaString = Object.keys(meta).filter(key => key !== 'splat' && key !== 'level' && key !== 'message' && key !== 'timestamp').length > 0 
-    ? `\n${JSON.stringify(meta, null, 2)}` 
+  const metaString = Object.keys(meta).filter(key => key !== 'splat' && key !== 'level' && key !== 'message' && key !== 'timestamp').length > 0
+    ? `\n${JSON.stringify(meta, null, 2)}`
     : '';
   return `${timestamp} [${level}]: ${message}${metaString}`;
 });
@@ -27,13 +27,13 @@ export const logger = winston.createLogger({
   ),
   transports: [
     new winston.transports.Console(),
-    new winston.transports.File({ 
-      filename: 'logs/error.log', 
+    new winston.transports.File({
+      filename: 'logs/error.log',
       level: 'error',
       maxsize: 5242880, // 5MB
       maxFiles: 5,
     } as winston.transports.FileTransportOptions),
-    new winston.transports.File({ 
+    new winston.transports.File({
       filename: 'logs/combined.log',
       maxsize: 5242880, // 5MB
       maxFiles: 5,

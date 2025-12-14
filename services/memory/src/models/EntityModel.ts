@@ -1,6 +1,6 @@
 import { Knex } from 'knex';
 import { z } from 'zod';
-import { Session, Transaction, ManagedTransaction } from 'neo4j-driver';
+import { Driver, Session, Transaction, ManagedTransaction } from 'neo4j-driver';
 import { v4 as uuidv4 } from 'uuid';
 import { BaseModel, PaginationOptions, PaginatedResult, DatabaseError, ValidationError } from './BaseModel';
 import { getEmbeddingFunction } from '../db/vector/chroma';
@@ -97,7 +97,7 @@ type EntityInput = Omit<BaseEntity, 'id' | 'created_at' | 'updated_at' | 'delete
 type EntityUpdate = Partial<Omit<BaseEntity, 'id' | 'created_at' | 'updated_at' | 'deleted_at'>>;
 
 export class EntityModel extends BaseModel<BaseEntity, EntityInput, EntityUpdate> {
-  private neo4jSession: Session;
+  private neo4jDriver: Driver;
   private collection: any;
   private embeddingFunction: any;
   private readonly SIMILARITY_THRESHOLD = 0.85;
@@ -105,9 +105,9 @@ export class EntityModel extends BaseModel<BaseEntity, EntityInput, EntityUpdate
   private readonly FUZZY_SEARCH_MIN_LENGTH = 3;
   private readonly FUZZY_SEARCH_MAX_DISTANCE = 2;
 
-  constructor(db: Knex, neo4jSession: Session, collection: any) {
+  constructor(db: Knex, neo4jDriver: Driver, collection: any) {
     super('entities', BaseEntitySchema, db, true);
-    this.neo4jSession = neo4jSession;
+    this.neo4jDriver = neo4jDriver;
     this.collection = collection;
     this.embeddingFunction = getEmbeddingFunction();
   }
@@ -191,21 +191,26 @@ export class EntityModel extends BaseModel<BaseEntity, EntityInput, EntityUpdate
           documents: [validDocument]
         });
 
-        await this.neo4jSession.executeWrite((neo4jTx: ManagedTransaction) =>
-          neo4jTx.run(
-            `CREATE (e:Entity {
-              id: $id,
-              name: $name,
-              type: $type,
-              createdAt: datetime()
-            })`,
-            {
-              id: entity.id,
-              name: entity.name,
-              type: entity.type,
-            }
-          )
-        );
+        const session = this.neo4jDriver.session();
+        try {
+          await session.executeWrite((neo4jTx: ManagedTransaction) =>
+            neo4jTx.run(
+              `CREATE (e:Entity {
+                id: $id,
+                name: $name,
+                type: $type,
+                createdAt: datetime()
+              })`,
+              {
+                id: entity.id,
+                name: entity.name,
+                type: entity.type,
+              }
+            )
+          );
+        } finally {
+          await session.close();
+        }
 
         return entity;
       } catch (error) {
@@ -321,24 +326,29 @@ export class EntityModel extends BaseModel<BaseEntity, EntityInput, EntityUpdate
         })
         .returning('*');
 
-      await this.neo4jSession.executeWrite((neo4jTx: ManagedTransaction) =>
-        neo4jTx.run(
-          `MATCH (a:Entity {id: $sourceId}), (b:Entity {id: $targetId})
-           MERGE (a)-[r:${type} {id: $id}]->(b)
-           SET r.metadata = $metadata,
-               r.created_at = $createdAt,
-               r.updated_at = $updatedAt
-           RETURN r`,
-          {
-            sourceId,
-            targetId,
-            id: relationshipId,
-            metadata: JSON.stringify(metadata),
-            createdAt: now,
-            updatedAt: now,
-          }
-        )
-      );
+      const session = this.neo4jDriver.session();
+      try {
+        await session.executeWrite((neo4jTx: ManagedTransaction) =>
+          neo4jTx.run(
+            `MATCH (a:Entity {id: $sourceId}), (b:Entity {id: $targetId})
+             MERGE (a)-[r:${type} {id: $id}]->(b)
+             SET r.metadata = $metadata,
+                 r.created_at = $createdAt,
+                 r.updated_at = $updatedAt
+             RETURN r`,
+            {
+              sourceId,
+              targetId,
+              id: relationshipId,
+              metadata: JSON.stringify(metadata),
+              createdAt: now,
+              updatedAt: now,
+            }
+          )
+        );
+      } finally {
+        await session.close();
+      }
 
       return {
         id: relationshipId,
@@ -365,21 +375,28 @@ export class EntityModel extends BaseModel<BaseEntity, EntityInput, EntityUpdate
 
     const { type, direction = 'both' } = options;
 
-    let directionClause = '';
-    if (direction === 'incoming') directionClause = '<-';
-    else if (direction === 'outgoing') directionClause = '->';
-    else directionClause = '-';
+    let leftArrow = '';
+    let rightArrow = '';
+    if (direction === 'incoming') leftArrow = '<';
+    if (direction === 'outgoing') rightArrow = '>';
+    // If direction is 'both' (default), both arrows match empty strings, resulting in -[r]-
 
     const typeFilter = type ? `:${type}` : '';
 
     try {
-      const result = await this.neo4jSession.readTransaction((tx: Transaction) =>
-        tx.run(
-          `MATCH (a:Entity {id: $entityId})${directionClause}[r${typeFilter}]-${directionClause}(b:Entity)
-           RETURN r, startNode(r).id as sourceId, endNode(r).id as targetId`,
-          { entityId }
-        )
-      );
+      const session = this.neo4jDriver.session();
+      let result;
+      try {
+        result = await session.readTransaction((tx: Transaction) =>
+          tx.run(
+            `MATCH (a:Entity {id: $entityId})${leftArrow}-[r${typeFilter}]-${rightArrow}(b:Entity)
+             RETURN r, startNode(r).id as sourceId, endNode(r).id as targetId`,
+            { entityId }
+          )
+        );
+      } finally {
+        await session.close();
+      }
 
       if (!result.records || !Array.isArray(result.records)) return [];
 
@@ -418,13 +435,18 @@ export class EntityModel extends BaseModel<BaseEntity, EntityInput, EntityUpdate
    * Remove a relationship between entities
    */
   async removeRelationship(relationshipId: string, trx?: Knex.Transaction): Promise<void> {
-    await this.neo4jSession.executeWrite((tx: ManagedTransaction) =>
-      tx.run(
-        `MATCH ()-[r {id: $id}]->()
-         DELETE r`,
-        { id: relationshipId }
-      )
-    );
+    const session = this.neo4jDriver.session();
+    try {
+      await session.executeWrite((tx: ManagedTransaction) =>
+        tx.run(
+          `MATCH ()-[r {id: $id}]->()
+           DELETE r`,
+          { id: relationshipId }
+        )
+      );
+    } finally {
+      await session.close();
+    }
 
     await (trx || this.db)('entity_relationships')
       .where('id', relationshipId)
@@ -684,9 +706,15 @@ export class EntityModel extends BaseModel<BaseEntity, EntityInput, EntityUpdate
         ${limit ? 'LIMIT $limit' : ''}
       `;
 
-      const result = await this.neo4jSession.readTransaction((tx: Transaction) =>
-        tx.run(cypher, { entityId, limit })
-      );
+      const session = this.neo4jDriver.session();
+      let result;
+      try {
+        result = await session.readTransaction((tx: Transaction) =>
+          tx.run(cypher, { entityId, limit })
+        );
+      } finally {
+        await session.close();
+      }
 
       return result.records.map(record => {
         const node = record.get('related');
@@ -815,6 +843,73 @@ export class EntityModel extends BaseModel<BaseEntity, EntityInput, EntityUpdate
         }
       };
     }
+  }
+  /**
+   * Convert a database record to the entity type
+   * Parsing embedding string if necessary
+   */
+  protected override toEntity(data: any): BaseEntity {
+    const entity = { ...data };
+
+    // Parse embedding if it's a string (from vector/json column)
+    if (typeof entity.embedding === 'string') {
+      try {
+        if (entity.embedding.startsWith('[')) {
+          // JSON format
+          entity.embedding = JSON.parse(entity.embedding);
+        } else if (entity.embedding.startsWith('{')) {
+          // Postgres array format e.g. {-0.1, 0.2}
+          // Replace braces with brackets and parse
+          const jsonStr = entity.embedding.replace(/^\{/, '[').replace(/\}$/, ']');
+          entity.embedding = JSON.parse(jsonStr);
+        }
+      } catch (e) {
+        console.warn(`[EntityModel] Failed to parse embedding for entity ${entity.id}`, e);
+        entity.embedding = [];
+      }
+    }
+
+    return entity as BaseEntity;
+  }
+
+  /**
+   * Update a record by ID
+   * Overriding to ensure embedding is stringified before saving
+   */
+  override async update(
+    id: string,
+    data: EntityUpdate,
+    trx?: Knex.Transaction
+  ): Promise<BaseEntity | null> {
+    const updateFn = async (tx: Knex.Transaction) => {
+      const existing = await this.findById(id, tx);
+      if (!existing) return null;
+
+      // Validate merged data
+      const validatedData = this.validate(
+        {
+          ...existing,
+          ...data,
+          updated_at: new Date().toISOString(),
+        },
+        false // Use non-strict validation to allow partial updates
+      );
+
+      // Prepare for DB: stringify embedding if present
+      const dbData: any = { ...validatedData };
+      if (dbData.embedding && Array.isArray(dbData.embedding)) {
+        dbData.embedding = JSON.stringify(dbData.embedding);
+      }
+
+      const [result] = await tx(this.tableName)
+        .where({ id })
+        .update(dbData)
+        .returning('*');
+
+      return this.toEntity(result);
+    };
+
+    return trx ? updateFn(trx) : this.withTransaction(updateFn);
   }
 }
 

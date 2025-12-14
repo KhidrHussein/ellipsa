@@ -1,6 +1,7 @@
 import { Driver as Neo4jDriver, Session } from 'neo4j-driver';
 import { IPromptService } from './interfaces/IPromptService';
 import { Collection } from 'chromadb';
+import { FACT_EXTRACTION_PROMPT } from '../../../../packages/shared/src/prompts.js';
 
 export class MemoryConsolidator {
     private neo4jDriver: Neo4jDriver;
@@ -75,8 +76,7 @@ export class MemoryConsolidator {
             // Ideally we should import FACT_EXTRACTION_PROMPT.
             // For now, let's pass the instruction string directly or rely on the updated service signature.
 
-            const FACT_SYSTEM_PROMPT = `You are a Memory Consolidator. Extract PERMANENT facts (relationships, preferences) from the transcript. Ignore chitchat.`;
-            const extraction = await this.promptService.extractStructuredData(transcript, undefined, FACT_SYSTEM_PROMPT);
+            const extraction = await this.promptService.extractStructuredData(transcript, undefined, FACT_EXTRACTION_PROMPT);
 
             if (extraction.entities && extraction.entities.length > 0) {
                 await this.storeFacts(extraction.entities);

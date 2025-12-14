@@ -6,6 +6,7 @@ import { RetrievalService } from '../../services/RetrievalService';
 import { createEventsRouter } from './events';
 import { createEntitiesRouter } from './entities';
 import { createTasksRouter } from './tasks';
+import { createUserRouter } from './user';
 
 export function createV1Router(
   eventModel: EventModel,
@@ -33,12 +34,13 @@ export function createV1Router(
   router.use('/events', createEventsRouter(eventModel, entityModel, taskModel));
   router.use('/entities', createEntitiesRouter(entityModel, eventModel));
   router.use('/tasks', createTasksRouter(taskModel));
+  router.use('/user', createUserRouter(entityModel));
 
   // Search endpoint
   router.post('/search', async (req, res) => {
     try {
       const { query, limit = 10, context = {} } = req.body;
-      
+
       if (!query) {
         return res.status(400).json({
           success: false,
@@ -53,12 +55,12 @@ export function createV1Router(
         });
       }
 
-      const results = await retrievalService.retrieve(query, { 
-        limit, 
+      const results = await retrievalService.retrieve(query, {
+        limit,
         entityContext: context.entityContext || [],
-        timeWindow: context.timeWindow 
+        timeWindow: context.timeWindow
       });
-      
+
       res.json({
         success: true,
         data: {

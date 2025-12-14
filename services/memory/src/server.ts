@@ -1,6 +1,7 @@
 import express from 'express';
 import cors from 'cors';
 import { Knex } from 'knex';
+import { Driver, Session } from 'neo4j-driver';
 import { Server } from 'http';
 import { createServer } from 'http';
 import { Server as SocketIOServer } from 'socket.io';
@@ -44,7 +45,8 @@ class MemoryServer {
   private server: Server;
   private io: SocketIOServer;
   private knex!: Knex;
-  private neo4jSession: any;
+  private neo4jDriver!: Driver;
+  private neo4jSession: Session | any;
   private chromaCollections: { events: any; entities: any } | any;
   private eventModel!: EventModel;
   private entityModel!: EntityModel;
@@ -105,11 +107,12 @@ class MemoryServer {
 
       // Store connections
       this.knex = knex;
+      this.neo4jDriver = neo4jDriver;
       this.neo4jSession = getSession();
       this.chromaCollections = chromaCollections;
 
       logger.info('All database connections established');
-      return { knex, neo4jSession: this.neo4jSession, chromaCollections: this.chromaCollections };
+      return { knex, neo4jDriver: this.neo4jDriver, neo4jSession: this.neo4jSession, chromaCollections: this.chromaCollections };
     } catch (error) {
       logger.error('Failed to initialize databases:', error);
       throw error;
@@ -126,7 +129,7 @@ class MemoryServer {
 
     this.entityModel = new EntityModel(
       this.knex,
-      this.neo4jSession,
+      this.neo4jDriver,
       this.chromaCollections.entities
     );
 

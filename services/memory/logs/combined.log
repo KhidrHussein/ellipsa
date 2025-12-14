@@ -6152,3 +6152,369 @@
 {"level":"info","message":"Memory Service initialized successfully","service":"memory-service","timestamp":"2025-12-14 06:13:38"}
 {"level":"info","message":"SIGINT received. Closing database connections...","service":"memory-service","timestamp":"2025-12-14 06:16:48"}
 {"level":"info","message":"Shutting down...","service":"memory-service","timestamp":"2025-12-14 06:16:48"}
+{"level":"info","message":"Initializing database connections...","service":"memory-service","timestamp":"2025-12-14 06:17:13"}
+{"level":"info","message":"Running database migrations...","service":"memory-service","timestamp":"2025-12-14 06:17:13"}
+{"level":"info","message":"Successfully connected to PostgreSQL database","service":"memory-service","timestamp":"2025-12-14 06:17:14"}
+{"level":"info","message":"PostgreSQL UUID extension is ready","service":"memory-service","timestamp":"2025-12-14 06:17:14"}
+{"level":"info","message":"Connected to Neo4j Neo4j Kernel v5.13.0 (community) in 130ms","service":"memory-service","timestamp":"2025-12-14 06:17:16"}
+{"level":"debug","message":"Neo4j read/write verification successful","service":"memory-service","timestamp":"2025-12-14 06:17:17"}
+{"level":"info","message":"Successfully connected to Neo4j","service":"memory-service","timestamp":"2025-12-14 06:17:17"}
+{"level":"debug","message":"Created constraint entity_id on :Entity(id)","service":"memory-service","timestamp":"2025-12-14 06:17:17"}
+{"level":"debug","message":"Created constraint event_id on :Event(id)","service":"memory-service","timestamp":"2025-12-14 06:17:17"}
+{"level":"debug","message":"Created constraint task_id on :Task(id)","service":"memory-service","timestamp":"2025-12-14 06:17:17"}
+{"level":"info","message":"Neo4j constraints verified/created","service":"memory-service","timestamp":"2025-12-14 06:17:17"}
+{"level":"info","message":"Initializing vector collections...","service":"memory-service","timestamp":"2025-12-14 06:17:17"}
+{"level":"info","message":"Database initialization completed successfully","service":"memory-service","timestamp":"2025-12-14 06:17:18"}
+{"level":"info","message":"All database connections established","service":"memory-service","timestamp":"2025-12-14 06:17:18"}
+{"level":"info","message":"Connected to Neo4j Neo4j Kernel v5.13.0 (community) in 18ms","service":"memory-service","timestamp":"2025-12-14 06:17:18"}
+{"level":"debug","message":"Neo4j read/write verification successful","service":"memory-service","timestamp":"2025-12-14 06:17:18"}
+{"level":"info","message":"Scheduling daily memory consolidation...","service":"memory-service","timestamp":"2025-12-14 06:17:18"}
+{"level":"info","message":"WebSocket server configured","service":"memory-service","timestamp":"2025-12-14 06:17:18"}
+{"level":"info","message":"Memory Service listening on port 4001","service":"memory-service","timestamp":"2025-12-14 06:17:18"}
+{"level":"info","message":"Memory Service initialized successfully","service":"memory-service","timestamp":"2025-12-14 06:17:18"}
+{"level":"info","message":"Initializing database connections...","service":"memory-service","timestamp":"2025-12-14 06:28:52"}
+{"level":"info","message":"Running database migrations...","service":"memory-service","timestamp":"2025-12-14 06:28:52"}
+{"level":"info","message":"Successfully connected to PostgreSQL database","service":"memory-service","timestamp":"2025-12-14 06:28:52"}
+{"level":"info","message":"PostgreSQL UUID extension is ready","service":"memory-service","timestamp":"2025-12-14 06:28:52"}
+{"level":"info","message":"Connected to Neo4j Neo4j Kernel v5.13.0 (community) in 94ms","service":"memory-service","timestamp":"2025-12-14 06:28:55"}
+{"level":"debug","message":"Neo4j read/write verification successful","service":"memory-service","timestamp":"2025-12-14 06:28:56"}
+{"level":"info","message":"Successfully connected to Neo4j","service":"memory-service","timestamp":"2025-12-14 06:28:56"}
+{"level":"debug","message":"Created constraint entity_id on :Entity(id)","service":"memory-service","timestamp":"2025-12-14 06:28:56"}
+{"level":"debug","message":"Created constraint event_id on :Event(id)","service":"memory-service","timestamp":"2025-12-14 06:28:56"}
+{"level":"debug","message":"Created constraint task_id on :Task(id)","service":"memory-service","timestamp":"2025-12-14 06:28:56"}
+{"level":"info","message":"Neo4j constraints verified/created","service":"memory-service","timestamp":"2025-12-14 06:28:56"}
+{"level":"info","message":"Initializing vector collections...","service":"memory-service","timestamp":"2025-12-14 06:28:56"}
+{"level":"info","message":"Database initialization completed successfully","service":"memory-service","timestamp":"2025-12-14 06:28:56"}
+{"level":"info","message":"All database connections established","service":"memory-service","timestamp":"2025-12-14 06:28:56"}
+{"level":"info","message":"Connected to Neo4j Neo4j Kernel v5.13.0 (community) in 53ms","service":"memory-service","timestamp":"2025-12-14 06:28:56"}
+{"level":"debug","message":"Neo4j read/write verification successful","service":"memory-service","timestamp":"2025-12-14 06:28:56"}
+{"level":"info","message":"Scheduling daily memory consolidation...","service":"memory-service","timestamp":"2025-12-14 06:28:56"}
+{"level":"info","message":"WebSocket server configured","service":"memory-service","timestamp":"2025-12-14 06:28:56"}
+{"level":"info","message":"Memory Service listening on port 4001","service":"memory-service","timestamp":"2025-12-14 06:28:56"}
+{"level":"info","message":"Memory Service initialized successfully","service":"memory-service","timestamp":"2025-12-14 06:28:57"}
+{"level":"info","message":"Initializing database connections...","service":"memory-service","timestamp":"2025-12-14 06:32:01"}
+{"level":"info","message":"Running database migrations...","service":"memory-service","timestamp":"2025-12-14 06:32:01"}
+{"level":"info","message":"Successfully connected to PostgreSQL database","service":"memory-service","timestamp":"2025-12-14 06:32:02"}
+{"level":"info","message":"PostgreSQL UUID extension is ready","service":"memory-service","timestamp":"2025-12-14 06:32:02"}
+{"level":"warn","message":"Neo4j not ready, waiting 2000ms before attempt 1...","service":"memory-service","timestamp":"2025-12-14 06:32:07"}
+{"level":"info","message":"Connected to Neo4j Neo4j Kernel v5.13.0 (community) in 99ms","service":"memory-service","timestamp":"2025-12-14 06:32:11"}
+{"level":"debug","message":"Neo4j read/write verification successful","service":"memory-service","timestamp":"2025-12-14 06:32:11"}
+{"level":"info","message":"Successfully connected to Neo4j","service":"memory-service","timestamp":"2025-12-14 06:32:11"}
+{"level":"debug","message":"Created constraint entity_id on :Entity(id)","service":"memory-service","timestamp":"2025-12-14 06:32:11"}
+{"level":"debug","message":"Created constraint event_id on :Event(id)","service":"memory-service","timestamp":"2025-12-14 06:32:11"}
+{"level":"debug","message":"Created constraint task_id on :Task(id)","service":"memory-service","timestamp":"2025-12-14 06:32:11"}
+{"level":"info","message":"Neo4j constraints verified/created","service":"memory-service","timestamp":"2025-12-14 06:32:11"}
+{"level":"info","message":"Initializing vector collections...","service":"memory-service","timestamp":"2025-12-14 06:32:11"}
+{"level":"info","message":"Database initialization completed successfully","service":"memory-service","timestamp":"2025-12-14 06:32:12"}
+{"level":"info","message":"All database connections established","service":"memory-service","timestamp":"2025-12-14 06:32:12"}
+{"level":"info","message":"Connected to Neo4j Neo4j Kernel v5.13.0 (community) in 14ms","service":"memory-service","timestamp":"2025-12-14 06:32:12"}
+{"level":"debug","message":"Neo4j read/write verification successful","service":"memory-service","timestamp":"2025-12-14 06:32:12"}
+{"level":"info","message":"Scheduling daily memory consolidation...","service":"memory-service","timestamp":"2025-12-14 06:32:12"}
+{"level":"info","message":"WebSocket server configured","service":"memory-service","timestamp":"2025-12-14 06:32:12"}
+{"level":"info","message":"Memory Service listening on port 4001","service":"memory-service","timestamp":"2025-12-14 06:32:12"}
+{"level":"info","message":"Memory Service initialized successfully","service":"memory-service","timestamp":"2025-12-14 06:32:12"}
+{"level":"info","message":"Initializing database connections...","service":"memory-service","timestamp":"2025-12-14 08:24:47"}
+{"level":"info","message":"Running database migrations...","service":"memory-service","timestamp":"2025-12-14 08:24:47"}
+{"level":"info","message":"Successfully connected to PostgreSQL database","service":"memory-service","timestamp":"2025-12-14 08:24:47"}
+{"level":"info","message":"PostgreSQL UUID extension is ready","service":"memory-service","timestamp":"2025-12-14 08:24:47"}
+{"level":"info","message":"Connected to Neo4j Neo4j Kernel v5.13.0 (community) in 155ms","service":"memory-service","timestamp":"2025-12-14 08:24:51"}
+{"level":"debug","message":"Neo4j read/write verification successful","service":"memory-service","timestamp":"2025-12-14 08:24:52"}
+{"level":"info","message":"Successfully connected to Neo4j","service":"memory-service","timestamp":"2025-12-14 08:24:52"}
+{"level":"debug","message":"Created constraint entity_id on :Entity(id)","service":"memory-service","timestamp":"2025-12-14 08:24:52"}
+{"level":"debug","message":"Created constraint event_id on :Event(id)","service":"memory-service","timestamp":"2025-12-14 08:24:52"}
+{"level":"debug","message":"Created constraint task_id on :Task(id)","service":"memory-service","timestamp":"2025-12-14 08:24:52"}
+{"level":"info","message":"Neo4j constraints verified/created","service":"memory-service","timestamp":"2025-12-14 08:24:52"}
+{"level":"info","message":"Initializing vector collections...","service":"memory-service","timestamp":"2025-12-14 08:24:52"}
+{"level":"info","message":"Database initialization completed successfully","service":"memory-service","timestamp":"2025-12-14 08:24:53"}
+{"level":"info","message":"All database connections established","service":"memory-service","timestamp":"2025-12-14 08:24:53"}
+{"level":"info","message":"Connected to Neo4j Neo4j Kernel v5.13.0 (community) in 68ms","service":"memory-service","timestamp":"2025-12-14 08:24:53"}
+{"level":"debug","message":"Neo4j read/write verification successful","service":"memory-service","timestamp":"2025-12-14 08:24:53"}
+{"level":"info","message":"Scheduling daily memory consolidation...","service":"memory-service","timestamp":"2025-12-14 08:24:53"}
+{"level":"info","message":"WebSocket server configured","service":"memory-service","timestamp":"2025-12-14 08:24:53"}
+{"level":"info","message":"Memory Service listening on port 4001","service":"memory-service","timestamp":"2025-12-14 08:24:53"}
+{"level":"info","message":"Memory Service initialized successfully","service":"memory-service","timestamp":"2025-12-14 08:24:53"}
+{"level":"info","message":"Initializing database connections...","service":"memory-service","timestamp":"2025-12-14 08:31:12"}
+{"level":"info","message":"Running database migrations...","service":"memory-service","timestamp":"2025-12-14 08:31:12"}
+{"level":"info","message":"Successfully connected to PostgreSQL database","service":"memory-service","timestamp":"2025-12-14 08:31:12"}
+{"level":"info","message":"PostgreSQL UUID extension is ready","service":"memory-service","timestamp":"2025-12-14 08:31:12"}
+{"level":"info","message":"Connected to Neo4j Neo4j Kernel v5.13.0 (community) in 166ms","service":"memory-service","timestamp":"2025-12-14 08:31:16"}
+{"level":"debug","message":"Neo4j read/write verification successful","service":"memory-service","timestamp":"2025-12-14 08:31:17"}
+{"level":"info","message":"Successfully connected to Neo4j","service":"memory-service","timestamp":"2025-12-14 08:31:17"}
+{"level":"debug","message":"Created constraint entity_id on :Entity(id)","service":"memory-service","timestamp":"2025-12-14 08:31:17"}
+{"level":"debug","message":"Created constraint event_id on :Event(id)","service":"memory-service","timestamp":"2025-12-14 08:31:17"}
+{"level":"debug","message":"Created constraint task_id on :Task(id)","service":"memory-service","timestamp":"2025-12-14 08:31:17"}
+{"level":"info","message":"Neo4j constraints verified/created","service":"memory-service","timestamp":"2025-12-14 08:31:17"}
+{"level":"info","message":"Initializing vector collections...","service":"memory-service","timestamp":"2025-12-14 08:31:17"}
+{"level":"info","message":"Database initialization completed successfully","service":"memory-service","timestamp":"2025-12-14 08:31:18"}
+{"level":"info","message":"All database connections established","service":"memory-service","timestamp":"2025-12-14 08:31:18"}
+{"level":"info","message":"Connected to Neo4j Neo4j Kernel v5.13.0 (community) in 55ms","service":"memory-service","timestamp":"2025-12-14 08:31:18"}
+{"level":"debug","message":"Neo4j read/write verification successful","service":"memory-service","timestamp":"2025-12-14 08:31:18"}
+{"level":"info","message":"Scheduling daily memory consolidation...","service":"memory-service","timestamp":"2025-12-14 08:31:18"}
+{"level":"info","message":"WebSocket server configured","service":"memory-service","timestamp":"2025-12-14 08:31:18"}
+{"level":"info","message":"Memory Service listening on port 4001","service":"memory-service","timestamp":"2025-12-14 08:31:18"}
+{"level":"info","message":"Memory Service initialized successfully","service":"memory-service","timestamp":"2025-12-14 08:31:18"}
+{"level":"info","message":"Initializing database connections...","service":"memory-service","timestamp":"2025-12-14 08:32:37"}
+{"level":"info","message":"Running database migrations...","service":"memory-service","timestamp":"2025-12-14 08:32:37"}
+{"level":"info","message":"Successfully connected to PostgreSQL database","service":"memory-service","timestamp":"2025-12-14 08:32:37"}
+{"level":"info","message":"PostgreSQL UUID extension is ready","service":"memory-service","timestamp":"2025-12-14 08:32:37"}
+{"level":"info","message":"Connected to Neo4j Neo4j Kernel v5.13.0 (community) in 100ms","service":"memory-service","timestamp":"2025-12-14 08:32:39"}
+{"level":"debug","message":"Neo4j read/write verification successful","service":"memory-service","timestamp":"2025-12-14 08:32:39"}
+{"level":"info","message":"Successfully connected to Neo4j","service":"memory-service","timestamp":"2025-12-14 08:32:39"}
+{"level":"debug","message":"Created constraint entity_id on :Entity(id)","service":"memory-service","timestamp":"2025-12-14 08:32:39"}
+{"level":"debug","message":"Created constraint event_id on :Event(id)","service":"memory-service","timestamp":"2025-12-14 08:32:39"}
+{"level":"debug","message":"Created constraint task_id on :Task(id)","service":"memory-service","timestamp":"2025-12-14 08:32:39"}
+{"level":"info","message":"Neo4j constraints verified/created","service":"memory-service","timestamp":"2025-12-14 08:32:39"}
+{"level":"info","message":"Initializing vector collections...","service":"memory-service","timestamp":"2025-12-14 08:32:39"}
+{"level":"info","message":"Database initialization completed successfully","service":"memory-service","timestamp":"2025-12-14 08:32:39"}
+{"level":"info","message":"All database connections established","service":"memory-service","timestamp":"2025-12-14 08:32:39"}
+{"level":"info","message":"Connected to Neo4j Neo4j Kernel v5.13.0 (community) in 15ms","service":"memory-service","timestamp":"2025-12-14 08:32:39"}
+{"level":"debug","message":"Neo4j read/write verification successful","service":"memory-service","timestamp":"2025-12-14 08:32:39"}
+{"level":"info","message":"Scheduling daily memory consolidation...","service":"memory-service","timestamp":"2025-12-14 08:32:39"}
+{"level":"info","message":"WebSocket server configured","service":"memory-service","timestamp":"2025-12-14 08:32:39"}
+{"level":"info","message":"Memory Service listening on port 4001","service":"memory-service","timestamp":"2025-12-14 08:32:40"}
+{"level":"info","message":"Memory Service initialized successfully","service":"memory-service","timestamp":"2025-12-14 08:32:40"}
+{"level":"info","message":"Initializing database connections...","service":"memory-service","timestamp":"2025-12-14 08:32:50"}
+{"level":"info","message":"Running database migrations...","service":"memory-service","timestamp":"2025-12-14 08:32:50"}
+{"level":"info","message":"Successfully connected to PostgreSQL database","service":"memory-service","timestamp":"2025-12-14 08:32:51"}
+{"level":"info","message":"PostgreSQL UUID extension is ready","service":"memory-service","timestamp":"2025-12-14 08:32:51"}
+{"level":"info","message":"Connected to Neo4j Neo4j Kernel v5.13.0 (community) in 460ms","service":"memory-service","timestamp":"2025-12-14 08:32:52"}
+{"level":"debug","message":"Neo4j read/write verification successful","service":"memory-service","timestamp":"2025-12-14 08:32:52"}
+{"level":"info","message":"Successfully connected to Neo4j","service":"memory-service","timestamp":"2025-12-14 08:32:52"}
+{"level":"debug","message":"Created constraint entity_id on :Entity(id)","service":"memory-service","timestamp":"2025-12-14 08:32:52"}
+{"level":"debug","message":"Created constraint event_id on :Event(id)","service":"memory-service","timestamp":"2025-12-14 08:32:52"}
+{"level":"debug","message":"Created constraint task_id on :Task(id)","service":"memory-service","timestamp":"2025-12-14 08:32:52"}
+{"level":"info","message":"Neo4j constraints verified/created","service":"memory-service","timestamp":"2025-12-14 08:32:52"}
+{"level":"info","message":"Initializing vector collections...","service":"memory-service","timestamp":"2025-12-14 08:32:52"}
+{"level":"info","message":"Database initialization completed successfully","service":"memory-service","timestamp":"2025-12-14 08:32:53"}
+{"level":"info","message":"All database connections established","service":"memory-service","timestamp":"2025-12-14 08:32:53"}
+{"level":"info","message":"Connected to Neo4j Neo4j Kernel v5.13.0 (community) in 37ms","service":"memory-service","timestamp":"2025-12-14 08:32:53"}
+{"level":"debug","message":"Neo4j read/write verification successful","service":"memory-service","timestamp":"2025-12-14 08:32:53"}
+{"level":"info","message":"Scheduling daily memory consolidation...","service":"memory-service","timestamp":"2025-12-14 08:32:53"}
+{"level":"info","message":"WebSocket server configured","service":"memory-service","timestamp":"2025-12-14 08:32:53"}
+{"level":"info","message":"Memory Service listening on port 4001","service":"memory-service","timestamp":"2025-12-14 08:32:53"}
+{"level":"info","message":"Memory Service initialized successfully","service":"memory-service","timestamp":"2025-12-14 08:32:53"}
+{"level":"info","message":"Initializing database connections...","service":"memory-service","timestamp":"2025-12-14 08:33:29"}
+{"level":"info","message":"Running database migrations...","service":"memory-service","timestamp":"2025-12-14 08:33:31"}
+{"level":"info","message":"Successfully connected to PostgreSQL database","service":"memory-service","timestamp":"2025-12-14 08:33:31"}
+{"level":"info","message":"PostgreSQL UUID extension is ready","service":"memory-service","timestamp":"2025-12-14 08:33:31"}
+{"level":"info","message":"Connected to Neo4j Neo4j Kernel v5.13.0 (community) in 343ms","service":"memory-service","timestamp":"2025-12-14 08:33:33"}
+{"level":"debug","message":"Neo4j read/write verification successful","service":"memory-service","timestamp":"2025-12-14 08:33:33"}
+{"level":"info","message":"Successfully connected to Neo4j","service":"memory-service","timestamp":"2025-12-14 08:33:33"}
+{"level":"debug","message":"Created constraint entity_id on :Entity(id)","service":"memory-service","timestamp":"2025-12-14 08:33:33"}
+{"level":"debug","message":"Created constraint event_id on :Event(id)","service":"memory-service","timestamp":"2025-12-14 08:33:33"}
+{"level":"debug","message":"Created constraint task_id on :Task(id)","service":"memory-service","timestamp":"2025-12-14 08:33:33"}
+{"level":"info","message":"Neo4j constraints verified/created","service":"memory-service","timestamp":"2025-12-14 08:33:33"}
+{"level":"info","message":"Initializing vector collections...","service":"memory-service","timestamp":"2025-12-14 08:33:33"}
+{"level":"info","message":"Database initialization completed successfully","service":"memory-service","timestamp":"2025-12-14 08:33:34"}
+{"level":"info","message":"All database connections established","service":"memory-service","timestamp":"2025-12-14 08:33:34"}
+{"level":"info","message":"Connected to Neo4j Neo4j Kernel v5.13.0 (community) in 48ms","service":"memory-service","timestamp":"2025-12-14 08:33:34"}
+{"level":"debug","message":"Neo4j read/write verification successful","service":"memory-service","timestamp":"2025-12-14 08:33:35"}
+{"level":"info","message":"Scheduling daily memory consolidation...","service":"memory-service","timestamp":"2025-12-14 08:33:35"}
+{"level":"info","message":"Initializing database connections...","service":"memory-service","timestamp":"2025-12-14 08:34:14"}
+{"level":"info","message":"Running database migrations...","service":"memory-service","timestamp":"2025-12-14 08:34:14"}
+{"level":"info","message":"Successfully connected to PostgreSQL database","service":"memory-service","timestamp":"2025-12-14 08:34:14"}
+{"level":"info","message":"PostgreSQL UUID extension is ready","service":"memory-service","timestamp":"2025-12-14 08:34:14"}
+{"level":"info","message":"Connected to Neo4j Neo4j Kernel v5.13.0 (community) in 100ms","service":"memory-service","timestamp":"2025-12-14 08:34:15"}
+{"level":"debug","message":"Neo4j read/write verification successful","service":"memory-service","timestamp":"2025-12-14 08:34:15"}
+{"level":"info","message":"Successfully connected to Neo4j","service":"memory-service","timestamp":"2025-12-14 08:34:15"}
+{"level":"debug","message":"Created constraint entity_id on :Entity(id)","service":"memory-service","timestamp":"2025-12-14 08:34:15"}
+{"level":"debug","message":"Created constraint event_id on :Event(id)","service":"memory-service","timestamp":"2025-12-14 08:34:15"}
+{"level":"debug","message":"Created constraint task_id on :Task(id)","service":"memory-service","timestamp":"2025-12-14 08:34:15"}
+{"level":"info","message":"Neo4j constraints verified/created","service":"memory-service","timestamp":"2025-12-14 08:34:15"}
+{"level":"info","message":"Initializing vector collections...","service":"memory-service","timestamp":"2025-12-14 08:34:15"}
+{"level":"info","message":"Database initialization completed successfully","service":"memory-service","timestamp":"2025-12-14 08:34:15"}
+{"level":"info","message":"All database connections established","service":"memory-service","timestamp":"2025-12-14 08:34:15"}
+{"level":"info","message":"Connected to Neo4j Neo4j Kernel v5.13.0 (community) in 43ms","service":"memory-service","timestamp":"2025-12-14 08:34:15"}
+{"level":"debug","message":"Neo4j read/write verification successful","service":"memory-service","timestamp":"2025-12-14 08:34:15"}
+{"level":"info","message":"Scheduling daily memory consolidation...","service":"memory-service","timestamp":"2025-12-14 08:34:15"}
+{"level":"info","message":"WebSocket server configured","service":"memory-service","timestamp":"2025-12-14 08:34:15"}
+{"level":"info","message":"Memory Service listening on port 4001","service":"memory-service","timestamp":"2025-12-14 08:34:15"}
+{"level":"info","message":"Memory Service initialized successfully","service":"memory-service","timestamp":"2025-12-14 08:34:15"}
+{"level":"info","message":"Initializing database connections...","service":"memory-service","timestamp":"2025-12-14 08:41:59"}
+{"level":"info","message":"Running database migrations...","service":"memory-service","timestamp":"2025-12-14 08:42:00"}
+{"level":"info","message":"Successfully connected to PostgreSQL database","service":"memory-service","timestamp":"2025-12-14 08:42:00"}
+{"level":"info","message":"PostgreSQL UUID extension is ready","service":"memory-service","timestamp":"2025-12-14 08:42:00"}
+{"level":"warn","message":"Neo4j not ready, waiting 2000ms before attempt 1...","service":"memory-service","timestamp":"2025-12-14 08:42:05"}
+{"level":"warn","message":"Neo4j not ready, waiting 4000ms before attempt 2...","service":"memory-service","timestamp":"2025-12-14 08:42:12"}
+{"level":"warn","message":"Neo4j not ready, waiting 8000ms before attempt 3...","service":"memory-service","timestamp":"2025-12-14 08:42:21"}
+{"level":"warn","message":"Neo4j not ready, waiting 16000ms before attempt 4...","service":"memory-service","timestamp":"2025-12-14 08:42:34"}
+{"level":"info","message":"Connected to Neo4j Neo4j Kernel v5.13.0 (community) in 1031ms","service":"memory-service","timestamp":"2025-12-14 08:43:00"}
+{"level":"debug","message":"Neo4j read/write verification successful","service":"memory-service","timestamp":"2025-12-14 08:43:03"}
+{"level":"info","message":"Successfully connected to Neo4j","service":"memory-service","timestamp":"2025-12-14 08:43:03"}
+{"level":"debug","message":"Created constraint entity_id on :Entity(id)","service":"memory-service","timestamp":"2025-12-14 08:43:03"}
+{"level":"debug","message":"Created constraint event_id on :Event(id)","service":"memory-service","timestamp":"2025-12-14 08:43:03"}
+{"level":"debug","message":"Created constraint task_id on :Task(id)","service":"memory-service","timestamp":"2025-12-14 08:43:03"}
+{"level":"info","message":"Neo4j constraints verified/created","service":"memory-service","timestamp":"2025-12-14 08:43:03"}
+{"level":"info","message":"Initializing vector collections...","service":"memory-service","timestamp":"2025-12-14 08:43:03"}
+{"level":"info","message":"Database initialization completed successfully","service":"memory-service","timestamp":"2025-12-14 08:43:04"}
+{"level":"info","message":"All database connections established","service":"memory-service","timestamp":"2025-12-14 08:43:04"}
+{"level":"info","message":"Connected to Neo4j Neo4j Kernel v5.13.0 (community) in 13ms","service":"memory-service","timestamp":"2025-12-14 08:43:04"}
+{"level":"debug","message":"Neo4j read/write verification successful","service":"memory-service","timestamp":"2025-12-14 08:43:04"}
+{"level":"info","message":"Scheduling daily memory consolidation...","service":"memory-service","timestamp":"2025-12-14 08:43:04"}
+{"level":"info","message":"WebSocket server configured","service":"memory-service","timestamp":"2025-12-14 08:43:04"}
+{"level":"info","message":"Memory Service listening on port 4001","service":"memory-service","timestamp":"2025-12-14 08:43:04"}
+{"level":"info","message":"Memory Service initialized successfully","service":"memory-service","timestamp":"2025-12-14 08:43:04"}
+{"level":"info","message":"SIGINT received. Closing database connections...","service":"memory-service","timestamp":"2025-12-14 08:45:39"}
+{"level":"info","message":"Shutting down...","service":"memory-service","timestamp":"2025-12-14 08:45:39"}
+{"level":"info","message":"Initializing database connections...","service":"memory-service","timestamp":"2025-12-14 08:46:10"}
+{"level":"info","message":"Running database migrations...","service":"memory-service","timestamp":"2025-12-14 08:46:10"}
+{"level":"info","message":"Successfully connected to PostgreSQL database","service":"memory-service","timestamp":"2025-12-14 08:46:12"}
+{"level":"info","message":"PostgreSQL UUID extension is ready","service":"memory-service","timestamp":"2025-12-14 08:46:12"}
+{"level":"warn","message":"Neo4j not ready, waiting 2000ms before attempt 1...","service":"memory-service","timestamp":"2025-12-14 08:46:17"}
+{"level":"info","message":"Connected to Neo4j Neo4j Kernel v5.13.0 (community) in 120ms","service":"memory-service","timestamp":"2025-12-14 08:46:21"}
+{"level":"debug","message":"Neo4j read/write verification successful","service":"memory-service","timestamp":"2025-12-14 08:46:22"}
+{"level":"info","message":"Successfully connected to Neo4j","service":"memory-service","timestamp":"2025-12-14 08:46:22"}
+{"level":"debug","message":"Created constraint entity_id on :Entity(id)","service":"memory-service","timestamp":"2025-12-14 08:46:22"}
+{"level":"debug","message":"Created constraint event_id on :Event(id)","service":"memory-service","timestamp":"2025-12-14 08:46:22"}
+{"level":"debug","message":"Created constraint task_id on :Task(id)","service":"memory-service","timestamp":"2025-12-14 08:46:22"}
+{"level":"info","message":"Neo4j constraints verified/created","service":"memory-service","timestamp":"2025-12-14 08:46:22"}
+{"level":"info","message":"Initializing vector collections...","service":"memory-service","timestamp":"2025-12-14 08:46:22"}
+{"level":"info","message":"Database initialization completed successfully","service":"memory-service","timestamp":"2025-12-14 08:46:22"}
+{"level":"info","message":"All database connections established","service":"memory-service","timestamp":"2025-12-14 08:46:22"}
+{"level":"info","message":"Connected to Neo4j Neo4j Kernel v5.13.0 (community) in 25ms","service":"memory-service","timestamp":"2025-12-14 08:46:22"}
+{"level":"debug","message":"Neo4j read/write verification successful","service":"memory-service","timestamp":"2025-12-14 08:46:22"}
+{"level":"info","message":"Scheduling daily memory consolidation...","service":"memory-service","timestamp":"2025-12-14 08:46:22"}
+{"level":"info","message":"WebSocket server configured","service":"memory-service","timestamp":"2025-12-14 08:46:22"}
+{"level":"info","message":"Memory Service listening on port 4001","service":"memory-service","timestamp":"2025-12-14 08:46:22"}
+{"level":"info","message":"Memory Service initialized successfully","service":"memory-service","timestamp":"2025-12-14 08:46:22"}
+{"level":"info","message":"Initializing database connections...","service":"memory-service","timestamp":"2025-12-14 09:01:32"}
+{"level":"info","message":"Running database migrations...","service":"memory-service","timestamp":"2025-12-14 09:01:32"}
+{"level":"info","message":"Successfully connected to PostgreSQL database","service":"memory-service","timestamp":"2025-12-14 09:01:32"}
+{"level":"info","message":"PostgreSQL UUID extension is ready","service":"memory-service","timestamp":"2025-12-14 09:01:32"}
+{"level":"info","message":"Connected to Neo4j Neo4j Kernel v5.13.0 (community) in 151ms","service":"memory-service","timestamp":"2025-12-14 09:01:35"}
+{"level":"debug","message":"Neo4j read/write verification successful","service":"memory-service","timestamp":"2025-12-14 09:01:35"}
+{"level":"info","message":"Successfully connected to Neo4j","service":"memory-service","timestamp":"2025-12-14 09:01:35"}
+{"level":"debug","message":"Created constraint entity_id on :Entity(id)","service":"memory-service","timestamp":"2025-12-14 09:01:36"}
+{"level":"debug","message":"Created constraint event_id on :Event(id)","service":"memory-service","timestamp":"2025-12-14 09:01:36"}
+{"level":"debug","message":"Created constraint task_id on :Task(id)","service":"memory-service","timestamp":"2025-12-14 09:01:36"}
+{"level":"info","message":"Neo4j constraints verified/created","service":"memory-service","timestamp":"2025-12-14 09:01:36"}
+{"level":"info","message":"Initializing vector collections...","service":"memory-service","timestamp":"2025-12-14 09:01:36"}
+{"level":"info","message":"Database initialization completed successfully","service":"memory-service","timestamp":"2025-12-14 09:01:36"}
+{"level":"info","message":"All database connections established","service":"memory-service","timestamp":"2025-12-14 09:01:36"}
+{"level":"info","message":"Connected to Neo4j Neo4j Kernel v5.13.0 (community) in 13ms","service":"memory-service","timestamp":"2025-12-14 09:01:36"}
+{"level":"debug","message":"Neo4j read/write verification successful","service":"memory-service","timestamp":"2025-12-14 09:01:36"}
+{"level":"info","message":"Scheduling daily memory consolidation...","service":"memory-service","timestamp":"2025-12-14 09:01:36"}
+{"level":"info","message":"WebSocket server configured","service":"memory-service","timestamp":"2025-12-14 09:01:36"}
+{"level":"info","message":"Memory Service listening on port 4001","service":"memory-service","timestamp":"2025-12-14 09:01:36"}
+{"level":"info","message":"Memory Service initialized successfully","service":"memory-service","timestamp":"2025-12-14 09:01:36"}
+{"level":"info","message":"SIGINT received. Closing database connections...","service":"memory-service","timestamp":"2025-12-14 09:06:35"}
+{"level":"info","message":"Initializing database connections...","service":"memory-service","timestamp":"2025-12-14 09:06:59"}
+{"level":"info","message":"Running database migrations...","service":"memory-service","timestamp":"2025-12-14 09:07:00"}
+{"level":"info","message":"Successfully connected to PostgreSQL database","service":"memory-service","timestamp":"2025-12-14 09:07:00"}
+{"level":"info","message":"PostgreSQL UUID extension is ready","service":"memory-service","timestamp":"2025-12-14 09:07:00"}
+{"level":"info","message":"Connected to Neo4j Neo4j Kernel v5.13.0 (community) in 82ms","service":"memory-service","timestamp":"2025-12-14 09:07:02"}
+{"level":"debug","message":"Neo4j read/write verification successful","service":"memory-service","timestamp":"2025-12-14 09:07:02"}
+{"level":"info","message":"Successfully connected to Neo4j","service":"memory-service","timestamp":"2025-12-14 09:07:02"}
+{"level":"debug","message":"Created constraint entity_id on :Entity(id)","service":"memory-service","timestamp":"2025-12-14 09:07:02"}
+{"level":"debug","message":"Created constraint event_id on :Event(id)","service":"memory-service","timestamp":"2025-12-14 09:07:03"}
+{"level":"debug","message":"Created constraint task_id on :Task(id)","service":"memory-service","timestamp":"2025-12-14 09:07:03"}
+{"level":"info","message":"Neo4j constraints verified/created","service":"memory-service","timestamp":"2025-12-14 09:07:03"}
+{"level":"info","message":"Initializing vector collections...","service":"memory-service","timestamp":"2025-12-14 09:07:03"}
+{"level":"info","message":"Database initialization completed successfully","service":"memory-service","timestamp":"2025-12-14 09:07:03"}
+{"level":"info","message":"All database connections established","service":"memory-service","timestamp":"2025-12-14 09:07:03"}
+{"level":"info","message":"Connected to Neo4j Neo4j Kernel v5.13.0 (community) in 106ms","service":"memory-service","timestamp":"2025-12-14 09:07:03"}
+{"level":"debug","message":"Neo4j read/write verification successful","service":"memory-service","timestamp":"2025-12-14 09:07:03"}
+{"level":"info","message":"Scheduling daily memory consolidation...","service":"memory-service","timestamp":"2025-12-14 09:07:04"}
+{"level":"info","message":"WebSocket server configured","service":"memory-service","timestamp":"2025-12-14 09:07:04"}
+{"level":"info","message":"Memory Service listening on port 4001","service":"memory-service","timestamp":"2025-12-14 09:07:04"}
+{"level":"info","message":"Memory Service initialized successfully","service":"memory-service","timestamp":"2025-12-14 09:07:04"}
+{"level":"info","message":"Initializing database connections...","service":"memory-service","timestamp":"2025-12-14 09:12:51"}
+{"level":"info","message":"Running database migrations...","service":"memory-service","timestamp":"2025-12-14 09:12:51"}
+{"level":"info","message":"Successfully connected to PostgreSQL database","service":"memory-service","timestamp":"2025-12-14 09:12:52"}
+{"level":"info","message":"PostgreSQL UUID extension is ready","service":"memory-service","timestamp":"2025-12-14 09:12:52"}
+{"level":"info","message":"Connected to Neo4j Neo4j Kernel v5.13.0 (community) in 152ms","service":"memory-service","timestamp":"2025-12-14 09:12:53"}
+{"level":"debug","message":"Neo4j read/write verification successful","service":"memory-service","timestamp":"2025-12-14 09:12:54"}
+{"level":"info","message":"Successfully connected to Neo4j","service":"memory-service","timestamp":"2025-12-14 09:12:54"}
+{"level":"debug","message":"Created constraint entity_id on :Entity(id)","service":"memory-service","timestamp":"2025-12-14 09:12:54"}
+{"level":"debug","message":"Created constraint event_id on :Event(id)","service":"memory-service","timestamp":"2025-12-14 09:12:54"}
+{"level":"debug","message":"Created constraint task_id on :Task(id)","service":"memory-service","timestamp":"2025-12-14 09:12:54"}
+{"level":"info","message":"Neo4j constraints verified/created","service":"memory-service","timestamp":"2025-12-14 09:12:54"}
+{"level":"info","message":"Initializing vector collections...","service":"memory-service","timestamp":"2025-12-14 09:12:54"}
+{"level":"info","message":"Database initialization completed successfully","service":"memory-service","timestamp":"2025-12-14 09:12:54"}
+{"level":"info","message":"All database connections established","service":"memory-service","timestamp":"2025-12-14 09:12:54"}
+{"level":"info","message":"Connected to Neo4j Neo4j Kernel v5.13.0 (community) in 10ms","service":"memory-service","timestamp":"2025-12-14 09:12:54"}
+{"level":"debug","message":"Neo4j read/write verification successful","service":"memory-service","timestamp":"2025-12-14 09:12:54"}
+{"level":"info","message":"Scheduling daily memory consolidation...","service":"memory-service","timestamp":"2025-12-14 09:12:54"}
+{"level":"info","message":"WebSocket server configured","service":"memory-service","timestamp":"2025-12-14 09:12:54"}
+{"level":"info","message":"Memory Service listening on port 4001","service":"memory-service","timestamp":"2025-12-14 09:12:54"}
+{"level":"info","message":"Memory Service initialized successfully","service":"memory-service","timestamp":"2025-12-14 09:12:54"}
+{"level":"info","message":"Initializing database connections...","service":"memory-service","timestamp":"2025-12-14 09:13:00"}
+{"level":"info","message":"Running database migrations...","service":"memory-service","timestamp":"2025-12-14 09:13:01"}
+{"level":"info","message":"Successfully connected to PostgreSQL database","service":"memory-service","timestamp":"2025-12-14 09:13:01"}
+{"level":"info","message":"PostgreSQL UUID extension is ready","service":"memory-service","timestamp":"2025-12-14 09:13:01"}
+{"level":"info","message":"Connected to Neo4j Neo4j Kernel v5.13.0 (community) in 91ms","service":"memory-service","timestamp":"2025-12-14 09:13:01"}
+{"level":"debug","message":"Neo4j read/write verification successful","service":"memory-service","timestamp":"2025-12-14 09:13:01"}
+{"level":"info","message":"Successfully connected to Neo4j","service":"memory-service","timestamp":"2025-12-14 09:13:01"}
+{"level":"debug","message":"Created constraint entity_id on :Entity(id)","service":"memory-service","timestamp":"2025-12-14 09:13:01"}
+{"level":"debug","message":"Created constraint event_id on :Event(id)","service":"memory-service","timestamp":"2025-12-14 09:13:02"}
+{"level":"debug","message":"Created constraint task_id on :Task(id)","service":"memory-service","timestamp":"2025-12-14 09:13:02"}
+{"level":"info","message":"Neo4j constraints verified/created","service":"memory-service","timestamp":"2025-12-14 09:13:02"}
+{"level":"info","message":"Initializing vector collections...","service":"memory-service","timestamp":"2025-12-14 09:13:02"}
+{"level":"info","message":"Database initialization completed successfully","service":"memory-service","timestamp":"2025-12-14 09:13:02"}
+{"level":"info","message":"All database connections established","service":"memory-service","timestamp":"2025-12-14 09:13:02"}
+{"level":"info","message":"Connected to Neo4j Neo4j Kernel v5.13.0 (community) in 14ms","service":"memory-service","timestamp":"2025-12-14 09:13:02"}
+{"level":"debug","message":"Neo4j read/write verification successful","service":"memory-service","timestamp":"2025-12-14 09:13:02"}
+{"level":"info","message":"Scheduling daily memory consolidation...","service":"memory-service","timestamp":"2025-12-14 09:13:02"}
+{"level":"info","message":"WebSocket server configured","service":"memory-service","timestamp":"2025-12-14 09:13:02"}
+{"level":"info","message":"Memory Service listening on port 4001","service":"memory-service","timestamp":"2025-12-14 09:13:02"}
+{"level":"info","message":"Memory Service initialized successfully","service":"memory-service","timestamp":"2025-12-14 09:13:02"}
+{"level":"info","message":"Initializing database connections...","service":"memory-service","timestamp":"2025-12-14 09:18:36"}
+{"level":"info","message":"Running database migrations...","service":"memory-service","timestamp":"2025-12-14 09:18:36"}
+{"level":"info","message":"Successfully connected to PostgreSQL database","service":"memory-service","timestamp":"2025-12-14 09:18:37"}
+{"level":"info","message":"PostgreSQL UUID extension is ready","service":"memory-service","timestamp":"2025-12-14 09:18:37"}
+{"level":"info","message":"Connected to Neo4j Neo4j Kernel v5.13.0 (community) in 145ms","service":"memory-service","timestamp":"2025-12-14 09:18:45"}
+{"level":"debug","message":"Neo4j read/write verification successful","service":"memory-service","timestamp":"2025-12-14 09:18:46"}
+{"level":"info","message":"Successfully connected to Neo4j","service":"memory-service","timestamp":"2025-12-14 09:18:46"}
+{"level":"debug","message":"Created constraint entity_id on :Entity(id)","service":"memory-service","timestamp":"2025-12-14 09:18:46"}
+{"level":"debug","message":"Created constraint event_id on :Event(id)","service":"memory-service","timestamp":"2025-12-14 09:18:46"}
+{"level":"debug","message":"Created constraint task_id on :Task(id)","service":"memory-service","timestamp":"2025-12-14 09:18:46"}
+{"level":"info","message":"Neo4j constraints verified/created","service":"memory-service","timestamp":"2025-12-14 09:18:46"}
+{"level":"info","message":"Initializing vector collections...","service":"memory-service","timestamp":"2025-12-14 09:18:46"}
+{"level":"info","message":"Database initialization completed successfully","service":"memory-service","timestamp":"2025-12-14 09:18:46"}
+{"level":"info","message":"All database connections established","service":"memory-service","timestamp":"2025-12-14 09:18:46"}
+{"level":"info","message":"Connected to Neo4j Neo4j Kernel v5.13.0 (community) in 17ms","service":"memory-service","timestamp":"2025-12-14 09:18:46"}
+{"level":"debug","message":"Neo4j read/write verification successful","service":"memory-service","timestamp":"2025-12-14 09:18:46"}
+{"level":"info","message":"Scheduling daily memory consolidation...","service":"memory-service","timestamp":"2025-12-14 09:18:46"}
+{"level":"info","message":"WebSocket server configured","service":"memory-service","timestamp":"2025-12-14 09:18:46"}
+{"level":"info","message":"Memory Service listening on port 4001","service":"memory-service","timestamp":"2025-12-14 09:18:46"}
+{"level":"info","message":"Memory Service initialized successfully","service":"memory-service","timestamp":"2025-12-14 09:18:46"}
+{"level":"info","message":"Initializing database connections...","service":"memory-service","timestamp":"2025-12-14 09:20:07"}
+{"level":"info","message":"Running database migrations...","service":"memory-service","timestamp":"2025-12-14 09:20:07"}
+{"level":"info","message":"Successfully connected to PostgreSQL database","service":"memory-service","timestamp":"2025-12-14 09:20:08"}
+{"level":"info","message":"PostgreSQL UUID extension is ready","service":"memory-service","timestamp":"2025-12-14 09:20:08"}
+{"level":"info","message":"Connected to Neo4j Neo4j Kernel v5.13.0 (community) in 109ms","service":"memory-service","timestamp":"2025-12-14 09:20:12"}
+{"level":"debug","message":"Neo4j read/write verification successful","service":"memory-service","timestamp":"2025-12-14 09:20:13"}
+{"level":"info","message":"Successfully connected to Neo4j","service":"memory-service","timestamp":"2025-12-14 09:20:13"}
+{"level":"debug","message":"Created constraint entity_id on :Entity(id)","service":"memory-service","timestamp":"2025-12-14 09:20:13"}
+{"level":"debug","message":"Created constraint event_id on :Event(id)","service":"memory-service","timestamp":"2025-12-14 09:20:13"}
+{"level":"debug","message":"Created constraint task_id on :Task(id)","service":"memory-service","timestamp":"2025-12-14 09:20:13"}
+{"level":"info","message":"Neo4j constraints verified/created","service":"memory-service","timestamp":"2025-12-14 09:20:13"}
+{"level":"info","message":"Initializing vector collections...","service":"memory-service","timestamp":"2025-12-14 09:20:13"}
+{"level":"info","message":"Database initialization completed successfully","service":"memory-service","timestamp":"2025-12-14 09:20:14"}
+{"level":"info","message":"All database connections established","service":"memory-service","timestamp":"2025-12-14 09:20:14"}
+{"level":"info","message":"Connected to Neo4j Neo4j Kernel v5.13.0 (community) in 13ms","service":"memory-service","timestamp":"2025-12-14 09:20:14"}
+{"level":"debug","message":"Neo4j read/write verification successful","service":"memory-service","timestamp":"2025-12-14 09:20:14"}
+{"level":"info","message":"Scheduling daily memory consolidation...","service":"memory-service","timestamp":"2025-12-14 09:20:14"}
+{"level":"info","message":"WebSocket server configured","service":"memory-service","timestamp":"2025-12-14 09:20:14"}
+{"level":"info","message":"Memory Service listening on port 4001","service":"memory-service","timestamp":"2025-12-14 09:20:14"}
+{"level":"info","message":"Memory Service initialized successfully","service":"memory-service","timestamp":"2025-12-14 09:20:14"}
+{"level":"info","message":"Initializing database connections...","service":"memory-service","timestamp":"2025-12-14 09:23:41"}
+{"level":"info","message":"Running database migrations...","service":"memory-service","timestamp":"2025-12-14 09:23:41"}
+{"level":"info","message":"Successfully connected to PostgreSQL database","service":"memory-service","timestamp":"2025-12-14 09:23:41"}
+{"level":"info","message":"PostgreSQL UUID extension is ready","service":"memory-service","timestamp":"2025-12-14 09:23:41"}
+{"level":"info","message":"Connected to Neo4j Neo4j Kernel v5.13.0 (community) in 110ms","service":"memory-service","timestamp":"2025-12-14 09:23:45"}
+{"level":"debug","message":"Neo4j read/write verification successful","service":"memory-service","timestamp":"2025-12-14 09:23:45"}
+{"level":"info","message":"Successfully connected to Neo4j","service":"memory-service","timestamp":"2025-12-14 09:23:45"}
+{"level":"debug","message":"Created constraint entity_id on :Entity(id)","service":"memory-service","timestamp":"2025-12-14 09:23:45"}
+{"level":"debug","message":"Created constraint event_id on :Event(id)","service":"memory-service","timestamp":"2025-12-14 09:23:45"}
+{"level":"debug","message":"Created constraint task_id on :Task(id)","service":"memory-service","timestamp":"2025-12-14 09:23:45"}
+{"level":"info","message":"Neo4j constraints verified/created","service":"memory-service","timestamp":"2025-12-14 09:23:45"}
+{"level":"info","message":"Initializing vector collections...","service":"memory-service","timestamp":"2025-12-14 09:23:45"}
+{"level":"info","message":"Database initialization completed successfully","service":"memory-service","timestamp":"2025-12-14 09:23:46"}
+{"level":"info","message":"All database connections established","service":"memory-service","timestamp":"2025-12-14 09:23:46"}
+{"level":"info","message":"Connected to Neo4j Neo4j Kernel v5.13.0 (community) in 64ms","service":"memory-service","timestamp":"2025-12-14 09:23:46"}
+{"level":"debug","message":"Neo4j read/write verification successful","service":"memory-service","timestamp":"2025-12-14 09:23:46"}
+{"level":"info","message":"Scheduling daily memory consolidation...","service":"memory-service","timestamp":"2025-12-14 09:23:46"}
+{"level":"info","message":"WebSocket server configured","service":"memory-service","timestamp":"2025-12-14 09:23:46"}
+{"level":"info","message":"Memory Service listening on port 4001","service":"memory-service","timestamp":"2025-12-14 09:23:46"}
+{"level":"info","message":"Memory Service initialized successfully","service":"memory-service","timestamp":"2025-12-14 09:23:46"}
