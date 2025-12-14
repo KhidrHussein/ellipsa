@@ -189,7 +189,7 @@ export class EmailProcessingService {
       });
 
       // 3. Create draft response
-      const draft: DraftResponse = {
+      const initialDraft: DraftResponse = {
         threadId: email.threadId,
         to: [email.from],
         subject: email.subject.startsWith('Re:') ? email.subject : `Re: ${email.subject}`,
@@ -199,6 +199,9 @@ export class EmailProcessingService {
         emailId: email.id  // Add emailId to reference the original email
       };
 
+      // Store draft in memory to assign ID and persist it
+      const draft = await this.memoryService.createDraft(initialDraft);
+
       // 4. Send draft notification
       await notificationBridge.notifyDraftReady({
         threadId: draft.threadId || '',
@@ -207,7 +210,8 @@ export class EmailProcessingService {
         body: draft.body || '',
         inReplyTo: draft.inReplyTo,
         references: draft.references,
-        emailId: email.id
+        emailId: email.id,
+        draftId: draft.id
       });
 
       // 5. Update email status

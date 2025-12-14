@@ -1,4 +1,4 @@
-export type NotificationType = 
+export type NotificationType =
   | 'email'
   | 'email:received'
   | 'email:action-required'
@@ -27,6 +27,7 @@ export interface DraftResponseData {
   inReplyTo?: string;
   references?: string[];
   emailId?: string;
+  draftId?: string;
 }
 
 export interface INotificationService {

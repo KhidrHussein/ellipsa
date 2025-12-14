@@ -66,6 +66,7 @@ export interface EmailSummary {
 }
 
 export interface DraftResponse {
+  id?: string;
   threadId?: string;
   to: EmailAddress[];
   from?: EmailAddress;
