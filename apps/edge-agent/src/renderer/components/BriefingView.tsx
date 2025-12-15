@@ -10,6 +10,7 @@ interface BriefingViewProps {
   onClose: () => void;
 }
 
+
 // Helper to get greeting based on time of day
 function getGreeting(): string {
   const hour = new Date().getHours();

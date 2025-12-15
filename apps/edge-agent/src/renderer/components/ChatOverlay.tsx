@@ -18,6 +18,7 @@ export function ChatOverlay({ onClose }: ChatOverlayProps) {
   const { sendMessage, lastMessage } = useRealtime();
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
+  const [isThinking, setIsThinking] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = () => {
@@ -26,12 +27,13 @@ export function ChatOverlay({ onClose }: ChatOverlayProps) {
 
   useEffect(() => {
     scrollToBottom();
-  }, [messages]);
+  }, [messages, isThinking]);
 
   // Handle incoming messages
   useEffect(() => {
     if (lastMessage) {
       if (lastMessage.type === 'assistant_message') {
+        setIsThinking(false);
         setMessages(prev => [...prev, {
           id: Date.now().toString(),
           role: 'assistant',
@@ -53,6 +55,7 @@ export function ChatOverlay({ onClose }: ChatOverlayProps) {
     };
 
     setMessages((prev) => [...prev, userMessage]);
+    setIsThinking(true);
     sendMessage('user_message', input);
     setInput('');
   };
@@ -143,6 +146,20 @@ export function ChatOverlay({ onClose }: ChatOverlayProps) {
                 </div>
               </motion.div>
             ))}
+            {isThinking && (
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0 }}
+                className="flex justify-start"
+              >
+                <div className="bg-gray-100 text-black rounded-2xl px-4 py-3 flex items-center gap-1">
+                  <div className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce [animation-delay:-0.3s]" />
+                  <div className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce [animation-delay:-0.15s]" />
+                  <div className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce" />
+                </div>
+              </motion.div>
+            )}
           </AnimatePresence>
           <div ref={messagesEndRef} />
         </div>
