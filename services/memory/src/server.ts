@@ -189,6 +189,7 @@ class MemoryServer {
 
     // Initialize WebSocket Service after HTTP server is started
     this.webSocketService = new WebSocketService(this.server, this.eventProcessingService);
+    this.app.set('webSocketService', this.webSocketService);
   }
 
   public async close(): Promise<void> {

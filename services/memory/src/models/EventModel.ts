@@ -18,6 +18,7 @@ export const EventType = z.enum([
   'user_message',
   'assistant_message',
   'action_execution',
+  'window',
   'other',
 ]);
 
@@ -109,9 +110,13 @@ export class EventModel extends BaseModel<BaseEvent, EventInput, EventUpdate> {
     const textToEmbed = `${data.title} ${data.description || ''}`.trim();
     const embedding = await this.generateEmbedding(textToEmbed);
 
+    // Exclude 'tasks' from the insert payload as they are handled separately by TaskModel
+    // and are not a column in the events table.
+    const { tasks, ...cleanData } = data as any;
+
     // Create the event with the generated embedding
     const eventData = {
-      ...data,
+      ...cleanData,
       participants: JSON.stringify(data.participants) as any,
       metadata: JSON.stringify(data.metadata) as any,
       embedding: JSON.stringify(embedding) as any,

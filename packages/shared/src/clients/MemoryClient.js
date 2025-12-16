@@ -36,5 +36,11 @@ export class MemoryClient extends ServiceClient {
             url: `/events/${id}`,
         });
     }
+    async createTask(task) {
+        return this.request({
+            method: 'POST',
+            url: '/tasks',
+            data: task,
+        });
+    }
 }
-//# sourceMappingURL=MemoryClient.js.map

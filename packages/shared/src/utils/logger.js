@@ -2,7 +2,9 @@ import winston from 'winston';
 const { combine, timestamp, printf, colorize, align } = winston.format;
 const logFormat = printf((info) => {
     const { level, message, timestamp, ...meta } = info;
-    const metaString = Object.keys(meta).length > 0 ? `\n${JSON.stringify(meta, null, 2)}` : '';
+    const metaString = Object.keys(meta).filter(key => key !== 'splat' && key !== 'level' && key !== 'message' && key !== 'timestamp').length > 0
+        ? `\n${JSON.stringify(meta, null, 2)}`
+        : '';
     return `${timestamp} [${level}]: ${message}${metaString}`;
 });
 export const logger = winston.createLogger({
@@ -34,4 +36,3 @@ process.on('unhandledRejection', (reason, promise) => {
     logger.error('Unhandled Rejection at:', promise, 'reason:', reason);
 });
 export default logger;
-//# sourceMappingURL=logger.js.map

@@ -26,11 +26,11 @@ import express, { type Request, type Response, type NextFunction } from "express
 import { z } from "zod";
 import axios, { type AxiosError } from "axios";
 // Import schemas from the shared package
-import { 
-  EventSchema, 
-  TaskSchema, 
-  EntitySchema 
-} from "@ellipsa/shared";
+import {
+  EventSchema,
+  TaskSchema,
+  EntitySchema
+} from "./schemas.js";
 import { processAudio } from "./audioProcessor.js";
 import { MemoryService } from "./services/MemoryService.js";
 import { logger } from "./utils/logger.js";
@@ -40,12 +40,14 @@ export const IngestSchema = z.object({
   id: z.string(),
   type: z.enum(['audio', 'screenshot', 'clipboard', 'window']),
   content: z.string(),
-  timestamp: z.string().datetime(),
+  // Relaxed timestamp validation to string to avoid strict RFC3339 issues
+  timestamp: z.string(),
   metadata: z.record(z.any()).optional(),
   audio_ref: z.string().optional(),
   screenshot_ref: z.string().optional(),
   active_window: z.string().optional(),
-  segment_ts: z.number(),
+  // Allow number or string (coerced) for robustness
+  segment_ts: z.union([z.number(), z.string()]).transform(val => Number(val)),
   meta: z.record(z.any()).optional()
 });
 
@@ -86,27 +88,34 @@ app.use(express.json({ limit: "10mb" }));
 // In-memory storage for events (replace with a database in production)
 const events = new Map<string, any>();
 
+import { GoalAlignmentService } from "./services/GoalAlignmentService.js";
+
 // Initialize MemoryService
 const memoryService = new MemoryService(process.env.MEMORY_SERVICE_URL);
+const goalAlignmentService = new GoalAlignmentService({
+  promptServiceUrl: CONFIG.PROMPT_SERVICE_URL,
+  memoryServiceUrl: process.env.MEMORY_SERVICE_URL || 'http://localhost:4004',
+  realtimeServiceUrl: ''
+});
 
 // Enhanced logging middleware
 app.use((req: Request, res: Response, next: NextFunction) => {
   const start = Date.now();
-  
+
   // Log request start
   console.log(`[${new Date().toISOString()}] ${req.method} ${req.path} - Request started`);
-  
+
   // Log request body (safely)
   if (Object.keys(req.body).length > 0) {
     console.log(`[${new Date().toISOString()}] Request body: ${JSON.stringify(req.body, null, 2)}`);
   }
-  
+
   // Log response finish
   res.on('finish', () => {
     const duration = Date.now() - start;
     console.log(`[${new Date().toISOString()}] ${req.method} ${req.path} - ${res.statusCode} - ${duration}ms`);
   });
-  
+
   next();
 });
 
@@ -153,7 +162,7 @@ async function processInput(ingest: z.infer<typeof IngestSchema>): Promise<Proce
         messages: [
           {
             role: "system" as const,
-            content: `You are a context processor. Analyze the ${inputType} input and extract structured information.
+            content: `You are a context processor. Analyze the ${inputType} input and extract structured information. Return a JSON object.
             Context: ${JSON.stringify(context, null, 2)}`
           },
           {
@@ -178,8 +187,9 @@ async function processInput(ingest: z.infer<typeof IngestSchema>): Promise<Proce
 
     const result = response.data.choices[0].message.content;
     const parsed = JSON.parse(result);
-    const eventId = `evt_${Date.now()}`;
-    
+    // Use crypto.randomUUID() for standard UUID v4
+    const eventId = crypto.randomUUID();
+
     // Create event with proper typing
     const event: z.infer<typeof EventSchema> = {
       id: eventId,
@@ -196,7 +206,7 @@ async function processInput(ingest: z.infer<typeof IngestSchema>): Promise<Proce
 
     // Extract tasks with proper typing
     const tasks: z.infer<typeof TaskSchema>[] = (Array.isArray(parsed.tasks) ? parsed.tasks : []).map((task: any, index: number) => ({
-      id: `task_${Date.now()}_${index}`,
+      id: crypto.randomUUID(),
       text: typeof task.text === 'string' ? task.text : 'Untitled task',
       owner: "user",
       status: "open",
@@ -206,7 +216,7 @@ async function processInput(ingest: z.infer<typeof IngestSchema>): Promise<Proce
 
     // Extract entities with proper typing
     const entities: z.infer<typeof EntitySchema>[] = (Array.isArray(parsed.entities) ? parsed.entities : []).map((entity: any, index: number) => ({
-      id: `ent_${Date.now()}_${index}`,
+      id: crypto.randomUUID(),
       canonical_name: typeof entity.name === 'string' ? entity.name : 'Unnamed Entity',
       ...(typeof entity === 'object' && entity !== null ? entity : {})
     }));
@@ -268,6 +278,10 @@ app.get('/health', (req: Request, res: Response) => {
 
 // Input validation middleware
 const validateIngestRequest = (req: Request, res: Response, next: NextFunction) => {
+  console.log('--- [DEBUG] Ingest Request Received ---');
+  console.log('Raw Body:', JSON.stringify(req.body, null, 2));
+  console.log('Content-Type:', req.headers['content-type']);
+
   const parsed = IngestSchema.safeParse(req.body);
   if (!parsed.success) {
     const error = {
@@ -276,11 +290,15 @@ const validateIngestRequest = (req: Request, res: Response, next: NextFunction) 
       details: parsed.error.flatten(),
       timestamp: new Date().toISOString()
     };
-    
-    console.warn(`[${new Date().toISOString()}] Validation failed:`, error);
+
+    console.error('--- [DEBUG] Validation FAILED ---');
+    console.error(JSON.stringify(error, null, 2));
+
+    // TEMPORARY: Allow invalid data to pass for debugging if needed, 
+    // but better to reject and see the log.
     return res.status(400).json(error);
   }
-  
+
   // Attach parsed data to request object
   (req as any).parsedIngest = parsed;
   next();
@@ -289,23 +307,23 @@ const validateIngestRequest = (req: Request, res: Response, next: NextFunction) 
 // Rate limiting middleware (in-memory, use Redis in production)
 const rateLimit = (windowMs = 60000, max = 100) => {
   const requests = new Map<string, { count: number; resetTime: number }>();
-  
+
   return (req: Request, res: Response, next: NextFunction) => {
     const ip = req.ip || 'unknown';
     const now = Date.now();
-    
+
     if (!requests.has(ip)) {
       requests.set(ip, { count: 0, resetTime: now + windowMs });
     }
-    
+
     const client = requests.get(ip)!;
-    
+
     // Reset counter if window has passed
     if (now > client.resetTime) {
       client.count = 0;
       client.resetTime = now + windowMs;
     }
-    
+
     // Check if rate limit exceeded
     if (client.count >= max) {
       const retryAfter = Math.ceil((client.resetTime - now) / 1000);
@@ -317,7 +335,7 @@ const rateLimit = (windowMs = 60000, max = 100) => {
         timestamp: new Date().toISOString()
       });
     }
-    
+
     // Increment counter and continue
     client.count++;
     next();
@@ -328,9 +346,9 @@ const rateLimit = (windowMs = 60000, max = 100) => {
 app.post("/processor/v1/ingest", rateLimit(60000, 500), validateIngestRequest, async (req: Request, res: Response) => {
   try {
     const ingest = (req as any).parsedIngest;
-    
+
     const { event, tasks, entities } = await processInput(ingest.data);
-    
+
     // Prepare the event data for storage
     const eventMetadata = {
       ...(event as any).metadata || {},
@@ -345,21 +363,24 @@ app.post("/processor/v1/ingest", rateLimit(60000, 500), validateIngestRequest, a
       start_ts: undefined,
       end_ts: undefined
     };
-    
+
     // Remove undefined values from metadata
-    Object.keys(eventMetadata).forEach(key => 
+    Object.keys(eventMetadata).forEach(key =>
       eventMetadata[key] === undefined && delete eventMetadata[key]
     );
 
     const eventData = {
-      id: event.id || `evt_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      id: event.id || crypto.randomUUID(),
       type: event.type || 'conversation',
+      // Ensure TITLE is set for the frontend to display
+      title: event.source_app && event.type === 'window' ? `${event.source_app} - ${event.content || 'Activity'}` : (event.summary_text || 'New Event'),
       content: event.summary_text || 'No content',
       metadata: eventMetadata,
       start_time: new Date(event.start_ts || Date.now()),
       end_time: event.end_ts ? new Date(event.end_ts) : undefined,
       participants: (event.participants || []).map((p: any) => ({
-        entity_id: typeof p === 'string' ? p : p.id || p.entity_id || `ent_${Math.random().toString(36).substr(2, 9)}`,
+        // Ensure entity_id is UUID
+        entity_id: (typeof p === 'object' && p.id) ? p.id : (typeof p === 'object' && p.entity_id && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(p.entity_id)) ? p.entity_id : crypto.randomUUID(),
         name: typeof p === 'string' ? p : p.name || p.entity_id || 'Unknown',
         metadata: typeof p === 'string' ? {} : p.metadata || {}
       })),
@@ -377,7 +398,7 @@ app.post("/processor/v1/ingest", rateLimit(60000, 500), validateIngestRequest, a
     const storedEvent = await memoryService.storeEvent({
       ...eventData,
       // Convert tasks to the correct format
-      tasks: eventData.tasks.map((t: z.infer<typeof TaskSchema>) => ({
+      tasks: eventData.tasks.map((t: any) => ({
         ...t,
         // Ensure required fields are present
         text: t.text || '',
@@ -386,29 +407,26 @@ app.post("/processor/v1/ingest", rateLimit(60000, 500), validateIngestRequest, a
         priority: t.priority || 'medium'
       }))
     });
-    
+
     // Store in local map
     events.set(eventData.id, eventData);
 
     logger.info(`Stored event ${storedEvent} with ${tasks.length} tasks and ${entities.length} entities`);
-    
+
     // Store entities in the knowledge graph through the memory service
     await Promise.all(entities.map(async (entity) => {
       if (!entity) {
         logger.warn('Skipping null/undefined entity');
         return;
       }
-      
-      const entityId = entity.id || `ent_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-      if (!entityId) {
-        logger.warn('Skipping entity with no ID:', entity);
-        return;
-      }
+
+      // Ensure entity ID is UUID
+      const entityId = entity.id || crypto.randomUUID();
 
       try {
         // This would be more sophisticated in a real implementation
         const entityEvent = {
-          id: `evt_entity_${entityId}_${Date.now()}`,
+          id: crypto.randomUUID(),
           type: 'entity_update',
           content: `Entity ${entity.canonical_name || entityId} updated`,
           metadata: {
@@ -425,13 +443,51 @@ app.post("/processor/v1/ingest", rateLimit(60000, 500), validateIngestRequest, a
           }],
           tasks: []
         };
-        
+
         await memoryService.storeEvent(entityEvent);
       } catch (error) {
         logger.error(`Failed to store entity ${entity.id}:`, error);
       }
     }));
-    
+
+    // Check Goal Alignment for window events
+    let goalFeedback = null;
+    if (event.type === 'window' && event.content) {
+      try {
+        // Ideally fetch this from User Service
+        let focus = ingest.meta?.userFocus;
+
+        if (!focus) {
+          const prefs = await memoryService.getUserPreferences();
+          focus = prefs.primaryFocus;
+          console.log(`[Processor] Fetched user focus from User Service: "${focus}"`);
+        }
+
+        if (!focus) {
+          focus = 'Using Ellipsa to be productive';
+          console.log('[Processor] User focus not found, using default.');
+        }
+
+        // We'll perform the check asynchronously to not block the ingest response too long, 
+        // OR we block if we want immediate feedback in the response. Blocking for <2s is okay.
+
+        // Note: The service stores the event in memory. We can also return it here.
+        // For MVP, let's just trigger it. The TimelineView will pick it up via polling the memory events.
+        // But if we want a "Toast", we should return it.
+
+        // IMPORTANT: We need to modify the service to return the feedback object.
+        // I will assume checkAlignment returns the feedback object if I modify it, 
+        // but currently it returns void. 
+        // Let's trigger it fire-and-forget for now, and relies on the new event created in memory 
+        // to show up in the timeline. The "Nudge" toast can be driven by a subscription to `goal_feedback` events in the frontend.
+
+        goalAlignmentService.checkAlignment(event.content, focus).catch(err => console.error(err));
+
+      } catch (err) {
+        console.error('Goal alignment check failed:', err);
+      }
+    }
+
     // Return the results
     res.json({
       success: true,
@@ -444,7 +500,7 @@ app.post("/processor/v1/ingest", rateLimit(60000, 500), validateIngestRequest, a
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : "Unknown error";
     console.error(`[${new Date().toISOString()}] Error processing input:`, errorMessage);
-    
+
     // Handle axios errors specifically
     if (axios.isAxiosError(error)) {
       const status = error.response?.status || 500;
@@ -455,7 +511,7 @@ app.post("/processor/v1/ingest", rateLimit(60000, 500), validateIngestRequest, a
         details: data
       });
     }
-    
+
     res.status(500).json({
       error: "processing_failed",
       message: errorMessage,
@@ -492,7 +548,7 @@ app.post("/processor/v1/ingest", rateLimit(60000, 500), validateIngestRequest, a
 app.get("/processor/v1/events", (req: Request, res: Response) => {
   try {
     const allEvents = Array.from(events.values());
-    res.json({ 
+    res.json({
       success: true,
       events: allEvents,
       count: allEvents.length,
@@ -562,22 +618,22 @@ app.get("/processor/v1/health", async (req: Request, res: Response) => {
     const promptHealth = await axios.get(`${CONFIG.PROMPT_SERVICE_URL}/prompt/v1/health`, {
       timeout: 5000
     });
-    
+
     health.services.prompt_service.status = "healthy";
     health.services.prompt_service.details = promptHealth.data;
-    
+
     // Check if we have any recent errors
     const recentErrorCount = 0; // In production, track recent errors
     if (recentErrorCount > 0) {
       health.status = "degraded";
       health.warning = `Experiencing ${recentErrorCount} recent errors`;
     }
-    
+
     res.json(health);
   } catch (error) {
     health.status = "unhealthy";
     health.services.prompt_service.status = "unavailable";
-    
+
     if (axios.isAxiosError(error)) {
       health.services.prompt_service.error = {
         message: error.message,
@@ -590,7 +646,7 @@ app.get("/processor/v1/health", async (req: Request, res: Response) => {
         message: error instanceof Error ? error.message : "Unknown error"
       };
     }
-    
+
     res.status(503).json(health);
   }
 });
@@ -619,7 +675,7 @@ app.use((req: Request, res: Response) => {
     path: req.path,
     method: req.method
   };
-  
+
   console.warn(`[${new Date().toISOString()}] 404 Not Found: ${req.method} ${req.path}`);
   res.status(404).json(error);
 });
@@ -638,18 +694,18 @@ export type { ProcessResult };
 // Handle graceful shutdown
 const shutdown = () => {
   console.log(`[${new Date().toISOString()}] Shutting down gracefully...`);
-  
+
   // Close the server
   server.close((err) => {
     if (err) {
       console.error(`[${new Date().toISOString()}] Error during shutdown:`, err);
       process.exit(1);
     }
-    
+
     console.log(`[${new Date().toISOString()}] Server closed`);
     process.exit(0);
   });
-  
+
   // Force shutdown after timeout
   setTimeout(() => {
     console.error(`[${new Date().toISOString()}] Forcing shutdown after timeout`);

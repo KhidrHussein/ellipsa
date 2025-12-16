@@ -1,4 +1,6 @@
 import { app, BrowserWindow, Tray, Menu, ipcMain, nativeImage, screen, nativeTheme, dialog, desktopCapturer } from 'electron';
+import { exec } from 'child_process';
+import axios from 'axios';
 import type { Display } from 'electron';
 import * as path from 'path';
 import * as fs from 'fs';
@@ -24,6 +26,9 @@ export class MainProcess {
     // Create system tray
     createTray();
 
+    // Start window monitor
+    this.startWindowMonitor();
+
     // Initialize services
     try {
       // Initialize your services here
@@ -31,6 +36,101 @@ export class MainProcess {
     } catch (error) {
       console.error('Failed to initialize services:', error);
       throw error;
+    }
+  }
+
+
+  private lastWindowTitle = '';
+  private monitorInterval: NodeJS.Timeout | null = null;
+  private processorUrl = 'http://localhost:4002/processor/v1/ingest';
+
+  private startWindowMonitor() {
+    console.log('[Main] Starting window monitor...');
+
+    // Poll every 5 seconds
+    this.monitorInterval = setInterval(() => {
+      console.log('[Main] Running monitor check...');
+      this.checkActiveWindow();
+    }, 5000);
+  }
+
+  private async checkActiveWindow() {
+    let psScriptPath = path.join(__dirname, '../../../src/resources/get-window.ps1');
+
+    // Check various paths for dev/prod compatibility
+    const pathsToCheck = [
+      // Dev: relative from dist/apps/edge-agent/src/main.js -> src/resources/get-window.ps1
+      path.join(__dirname, '../../../../src/resources/get-window.ps1'),
+      // Dev fallback: from project root
+      path.join(process.cwd(), 'src/resources/get-window.ps1'),
+      // Prod: resources/app/src/resources/get-window.ps1 (if copied)
+      path.join(process.resourcesPath, 'src/resources/get-window.ps1'),
+      // Prod fallback: resources/get-window.ps1
+      path.join(process.resourcesPath, 'get-window.ps1'),
+    ];
+
+    for (const p of pathsToCheck) {
+      if (fs.existsSync(p)) {
+        psScriptPath = p;
+        break;
+      }
+    }
+
+    // console.log('[Main] Using window monitor script:', psScriptPath);
+
+    const command = `powershell.exe -ExecutionPolicy Bypass -File "${psScriptPath}"`;
+
+    exec(command, (error, stdout, stderr) => {
+      if (error) {
+        console.error('[Main] Window monitor exec error:', error);
+        return;
+      }
+
+      try {
+        const raw = stdout.trim();
+        if (!raw) return;
+
+        const result = JSON.parse(raw);
+        if (result.error) {
+          console.warn('[Main] Window monitor script warning:', result.error);
+          return;
+        }
+
+        const currentTitle = result.title;
+        const appName = result.appName || 'Unknown';
+        const fullIdentifier = `${appName} - ${currentTitle}`;
+
+        // Only send if changed
+        if (currentTitle && fullIdentifier !== this.lastWindowTitle) {
+          console.log(`[Main] Active window changed: "${this.lastWindowTitle}" -> "${fullIdentifier}"`);
+          this.lastWindowTitle = fullIdentifier;
+          this.sendWindowIngest(currentTitle, appName);
+        }
+
+      } catch (err) {
+        console.error('[Main] Failed to parse window monitor output:', err);
+        console.error('[Main] Raw stdout:', stdout);
+      }
+    });
+  }
+
+  private async sendWindowIngest(windowTitle: string, appName: string = 'unknown', url?: string) {
+    try {
+      await axios.post(this.processorUrl, {
+        id: `ingest_${Date.now()}`,
+        type: 'window',
+        content: windowTitle,
+        timestamp: new Date().toISOString(),
+        active_window: appName, // Send App Name as active_window source
+        segment_ts: Date.now(),
+        meta: {
+          source: 'edge-agent-monitor',
+          appName: appName,
+          url: url
+        }
+      });
+    } catch (error) {
+      console.error('[Main] Failed to send window ingest:', error instanceof Error ? error.message : String(error));
     }
   }
 }

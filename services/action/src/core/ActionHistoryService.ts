@@ -73,6 +73,25 @@ export class ActionHistoryService {
         const { actionId, plan, result, provenance } = entry;
         const userId = provenance.user_id || 'unknown_user';
 
+        // Extract action title/goal
+        let actionTitle = plan.goal;
+        if (!actionTitle && plan.plan.length > 0) {
+            const firstAction = plan.plan[0];
+            // Generate a fallback title like "Open App: Chrome" or "Type Text"
+            // Convert snake_case to Title Case
+            const opName = firstAction.op.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+
+            if ('app' in firstAction.args) {
+                actionTitle = `${opName}: ${firstAction.args.app}`;
+            } else if ('url' in firstAction.args) {
+                actionTitle = `${opName}: ${firstAction.args.url}`;
+            } else {
+                actionTitle = opName;
+            }
+        }
+
+        const finalTitle = actionTitle || 'System Action';
+
         // Extract providers used
         const providers = new Set(plan.plan.map(a => a.provider));
 
@@ -98,14 +117,14 @@ export class ActionHistoryService {
 
         // Construct content summary
         const statusEmoji = result.status === 'completed' ? '✅' : result.status === 'failed' ? '❌' : '⚠️';
-        const content = `${statusEmoji} Action Execution: ${plan.goal || 'No goal specified'}
+        const content = `${statusEmoji} Action Execution: ${finalTitle}
 Status: ${result.status}
 Duration: ${result.total_duration_ms}ms
 Steps: ${result.steps.length}`;
 
         await this.memoryClient.storeEvent({
             type: 'action_execution',
-            title: `Action: ${plan.goal || 'No goal specified'}`,
+            title: `Action: ${finalTitle}`,
             content,
             start_time: result.started_at,
             end_time: result.completed_at,
@@ -113,7 +132,7 @@ Steps: ${result.steps.length}`;
             metadata: {
                 actionId,
                 status: result.status,
-                goal: plan.goal,
+                goal: finalTitle,
                 total_duration_ms: result.total_duration_ms,
                 step_count: result.steps.length,
                 provenance,

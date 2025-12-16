@@ -1,10 +1,5 @@
 import { z } from "zod";
-// Export service clients
-export { ServiceClient } from './clients/ServiceClient.js';
-export { MemoryClient } from './clients/MemoryClient.js';
-// Export utilities
-export { logger } from './utils/logger.js';
-// Existing schema exports
+
 export const EntitySchema = z.object({
     id: z.string(),
     canonical_name: z.string(),
@@ -16,6 +11,8 @@ export const EntitySchema = z.object({
     created_at: z.string().optional(),
     last_seen_at: z.string().optional()
 });
+export type Entity = z.infer<typeof EntitySchema>;
+
 export const TaskSchema = z.object({
     id: z.string(),
     title: z.string(),
@@ -28,18 +25,29 @@ export const TaskSchema = z.object({
     updated_at: z.string().optional(),
     metadata: z.record(z.any()).default({})
 });
+export type Task = z.infer<typeof TaskSchema>;
+
 export const EventSchema = z.object({
     id: z.string(),
     type: z.string(),
-    content: z.string(),
-    metadata: z.record(z.any()).default({}),
-    start_time: z.union([z.string(), z.date()]),
+    title: z.string().optional(), // Added for Timeline display
+    content: z.string().optional(), // Memory service uses content
+    summary_text: z.string().optional(), // Processor uses summary_text
+    metadata: z.record(z.any()).default({}).optional(),
+    start_time: z.union([z.string(), z.date()]).optional(),
     end_time: z.union([z.string(), z.date()]).optional(),
-    participants: z.array(z.object({
+    start_ts: z.string().optional(), // Processor
+    end_ts: z.string().optional(), // Processor
+    participants: z.array(z.union([z.string(), z.object({
         entity_id: z.string(),
         name: z.string().optional(),
         metadata: z.record(z.any()).optional()
-    })).default([]),
-    tasks: z.array(TaskSchema).default([])
+    })])).default([]).optional(),
+    tasks: z.array(TaskSchema).default([]).optional(),
+    action_items: z.array(z.any()).optional(), // Processor
+    source_app: z.string().optional(),
+    tone_summary: z.any().optional(),
+    confidence_score: z.number().optional(),
+    provenance: z.array(z.string()).optional()
 });
-export * from './prompts.js';
+export type Event = z.infer<typeof EventSchema>;

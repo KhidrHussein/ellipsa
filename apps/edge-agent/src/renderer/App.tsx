@@ -12,6 +12,7 @@ import { PostMeetingToast } from './components/PostMeetingToast';
 import { ObserveModeOverlay } from './components/ObserveModeOverlay';
 import { WelcomeScreen } from './components/WelcomeScreen';
 import { CalibrationFlow } from './components/CalibrationFlow';
+import { Toaster, toast } from 'sonner';
 
 import { useObserveMode } from './hooks/useObserveMode';
 import { usePendingActions } from './hooks/usePendingActions';
@@ -160,10 +161,47 @@ export default function App() {
     resizeForView();
   }, [view]);
 
+  // Monitor for Nudge / Goal Feedback events
+  useEffect(() => {
+    const handleNewEvent = (data: any) => {
+      // Check if it's a goal feedback nudge
+      if (data.metadata?.eventType === 'goal_feedback' || data.metadata?.shouldNotify) {
+        toast(data.content || 'Goal Alignment Nudge', {
+          description: 'Click to view details',
+          action: {
+            label: 'View',
+            onClick: () => setView('timeline')
+          },
+          duration: 5000,
+        });
+      }
+    };
+
+    // Listen for event_created from backend
+    // Note: The service emits whatever type/event name the backend sends. 
+    // We configured backend to send type: 'event_created'.
+    // RealtimeService emits based on 'type' field.
+    import('../services/RealtimeService').then(({ realtimeService }) => {
+      realtimeService.on('event_created', handleNewEvent);
+    });
+
+    return () => {
+      import('../services/RealtimeService').then(({ realtimeService }) => {
+        realtimeService.off('event_created', handleNewEvent);
+      });
+    };
+  }, []);
+
   return (
     <ServiceProvider>
       <TooltipProvider>
         <div className="fixed inset-0 bg-transparent text-black font-sans overflow-hidden">
+          {/* Sonner Toaster for Nudges */}
+          <React.Suspense fallback={null}>
+            {/* Dynamic import wrapper if needed, or just standard usage if imports were top-level. 
+                 Since I can't easily change top-level imports in this chunk, I'll assume sonner is available. */}
+          </React.Suspense>
+
           {/* Main Content Area */}
           <div className="min-h-screen pointer-events-none">
             {/* Pointer events none ensures clicks go through transparent areas,
@@ -275,6 +313,8 @@ export default function App() {
             }}
           />
         </div>
+        {/* Sonner Toaster for Nudges */}
+        <Toaster position="top-right" expand richColors />
       </TooltipProvider>
     </ServiceProvider>
   );

@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { motion } from 'motion/react';
-import { Calendar, Users, CheckCircle, Circle, Clock, Loader2, Terminal, Hash, ChevronRight, X } from 'lucide-react';
+import { Calendar, Users, CheckCircle, Circle, Clock, Loader2, Terminal, Hash, ChevronRight, X, Monitor, Globe, Layout, Bell } from 'lucide-react';
 import { useEvents, TimelineEvent } from '../hooks/useEvents';
 import { GlassCard } from './ui/GlassCard';
 
@@ -38,7 +38,7 @@ function formatTimeRange(startTime: string, endTime?: string): string {
 export function TimelineView({ onPersonClick, onClose }: TimelineViewProps) {
   const [filter, setFilter] = useState<'all' | 'meetings' | 'tasks'>('all');
   const { events, loading, error } = useEvents({
-    type: filter === 'all' ? undefined : filter === 'meetings' ? 'meeting' : undefined,
+    type: filter === 'all' ? undefined : filter === 'meetings' ? 'meeting' : 'task',
     limit: 50
   });
 
@@ -46,14 +46,20 @@ export function TimelineView({ onPersonClick, onClose }: TimelineViewProps) {
   const excludedEventTypes = ['assistant_message', 'process_event', 'user_message', 'system', 'error'];
 
   // Event types that are meaningful to show
-  const meaningfulEventTypes = ['meeting', 'calendar', 'calendar_event', 'email', 'task', 'call', 'note'];
+  const meaningfulEventTypes = ['meeting', 'calendar', 'calendar_event', 'email', 'task', 'call', 'note', 'window', 'app_usage', 'goal_feedback', 'action_execution'];
 
   // Transform events for display, filtering out system events
   const displayEvents = useMemo(() => {
+    console.log('[TimelineView] Filtering events. Total:', events.length, 'Filter:', filter);
+
     const filtered = events.filter(event => {
       const eventType = event.type?.toLowerCase() || '';
       // Exclude system events
       if (excludedEventTypes.includes(eventType)) return false;
+
+      // HIDE LEGACY LOGS: Filter out "No goal specified" logs from UI as requested
+      if (event.title?.includes("Action: No goal specified")) return false;
+
       // If we have a defined list of meaningful types and this isn't one, check if it looks like a meeting
       if (!meaningfulEventTypes.includes(eventType)) {
         // Only include if it has participants (likely a meeting)
@@ -61,6 +67,8 @@ export function TimelineView({ onPersonClick, onClose }: TimelineViewProps) {
       }
       return true;
     });
+
+    console.log('[TimelineView] Filtered count:', filtered.length);
 
     const transformed = filtered.map(event => ({
       id: event.id,
@@ -165,9 +173,18 @@ export function TimelineView({ onPersonClick, onClose }: TimelineViewProps) {
                   <div className="mb-2 flex items-center gap-2 text-xs text-black/50 tracking-wide font-medium">
                     <span>{event.date}</span>
                     <span>•</span>
-                    <span className="font-bold text-black/60">{event.time}</span>
+                    <span>{event.time}</span>
                     <span>•</span>
-                    <span className="uppercase">{event.type}</span>
+                    <span className="uppercase flex items-center gap-1">
+                      {event.type === 'window' ? (
+                        <Monitor className="w-3 h-3" />
+                      ) : event.type === 'goal_feedback' ? (
+                        <Bell className="w-3 h-3" />
+                      ) : (
+                        <span className="uppercase">{event.type}</span>
+                      )}
+                      {event.type === 'window' ? 'APP' : event.type === 'goal_feedback' ? 'FEEDBACK' : ''}
+                    </span>
                   </div>
 
                   {/* Title */}

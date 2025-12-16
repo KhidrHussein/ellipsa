@@ -109,8 +109,22 @@ export function createEventsRouter(
         );
       }
 
-      // Emit WebSocket event
-      req.app.get('io').emit('event:created', { eventId: event.id });
+      // Emit WebSocket event using the native WS service
+      const wsService = req.app.get('webSocketService');
+      if (wsService) {
+        wsService.broadcast({
+          type: 'event_created',
+          content: event.title || 'New event created',
+          metadata: {
+            eventId: event.id,
+            eventType: event.type,
+            shouldNotify: eventData.metadata?.shouldNotify
+          }
+        });
+      } else {
+        // Fallback or legacy (though frontend uses native WS now)
+        req.app.get('io').emit('event:created', { eventId: event.id });
+      }
 
       res.status(201).json({
         success: true,

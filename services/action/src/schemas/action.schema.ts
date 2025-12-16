@@ -335,6 +335,7 @@ export const ProvenanceSchema = z.object({
 export const ActionPlanSchema = z.object({
     agent_id: z.string().optional(),
     plan: z.array(ActionSchema).min(1).max(50), // Limit to 50 steps
+    goal: z.string().optional(),
     provenance: ProvenanceSchema.optional(),
     context: z.record(z.unknown()).optional(),
 });

@@ -74,13 +74,13 @@ export class MemoryService {
    */
   async storeEvent(event: MemoryEvent): Promise<string> {
     try {
-      const response = await axios.post(`${this.baseURL}/memory/v1/events`, event, {
+      const response = await axios.post(`${this.baseURL}/api/v1/events`, event, {
         timeout: 30000,
         headers: {
           'Content-Type': 'application/json',
         },
       });
-      
+
       console.log(`[MemoryService] Stored event with ID: ${response.data.event_id}`);
       return response.data.event_id;
     } catch (error) {
@@ -109,15 +109,18 @@ export class MemoryService {
         limit,
       };
 
-      const response = await axios.post(`${this.baseURL}/memory/v1/retrieve`, options, {
+      // Endpoint is /search, not /retrieve
+      const response = await axios.post(`${this.baseURL}/api/v1/search`, options, {
         timeout: 30000,
         headers: {
           'Content-Type': 'application/json',
         },
       });
 
-      console.log(`[MemoryService] Retrieved ${response.data.results.length} memories`);
-      return response.data.results;
+      // Response wrapper check: response.data.data.results
+      const results = response.data.data?.results || response.data.results || [];
+      console.log(`[MemoryService] Retrieved ${results.length} memories`);
+      return results;
     } catch (error) {
       console.error('[MemoryService] Failed to retrieve memories:', error);
       throw error;
@@ -131,10 +134,10 @@ export class MemoryService {
    */
   async getEvent(eventId: string) {
     try {
-      const response = await axios.get(`${this.baseURL}/memory/v1/events/${eventId}`, {
+      const response = await axios.get(`${this.baseURL}/api/v1/events/${eventId}`, {
         timeout: 30000,
       });
-      
+
       console.log(`[MemoryService] Retrieved event: ${eventId}`);
       return response.data;
     } catch (error) {
@@ -150,10 +153,10 @@ export class MemoryService {
    */
   async getEntity(entityId: string) {
     try {
-      const response = await axios.get(`${this.baseURL}/memory/v1/entities/${entityId}`, {
+      const response = await axios.get(`${this.baseURL}/api/v1/entities/${entityId}`, {
         timeout: 30000,
       });
-      
+
       console.log(`[MemoryService] Retrieved entity: ${entityId}`);
       return response.data;
     } catch (error) {
@@ -221,13 +224,41 @@ export class MemoryService {
    */
   async health(): Promise<{ status: string; timestamp: string }> {
     try {
-      const response = await axios.get(`${this.baseURL}/memory/v1/health`, {
+      const response = await axios.get(`${this.baseURL}/api/v1/health`, {
         timeout: 5000,
       });
       return response.data;
     } catch (error) {
       console.error('[MemoryService] Health check failed:', error);
       throw error;
+    }
+  }
+
+  /**
+   * Get user preferences
+   * @returns User preferences object
+   */
+  async getUserPreferences(): Promise<any> {
+    try {
+      // According to useUserPreferences.ts: http://localhost:4001/api/v1/user/preferences
+      // Here baseURL is likely http://localhost:4001, but the path is /api/v1...
+      // The MemoryService constructor takes base URL. 
+      // We need to be careful about paths. 
+      // Existing calls use `${this.baseURL}/memory/v1/...`. 
+      // The user preferences are at `${this.baseURL}/api/v1/user/preferences` likely if on same service, or different service.
+      // Assuming Memory Service hosts the user endpoint for now based on port 4001.
+
+      const response = await axios.get(`${this.baseURL}/api/v1/user/preferences`, {
+        timeout: 5000
+      });
+
+      if (response.data?.success && response.data?.data?.preferences) {
+        return response.data.data.preferences;
+      }
+      return {};
+    } catch (error) {
+      console.error('[MemoryService] Failed to get user preferences:', error);
+      return {};
     }
   }
 }

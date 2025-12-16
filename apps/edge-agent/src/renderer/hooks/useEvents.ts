@@ -37,6 +37,8 @@ interface UseEventsResult {
     refetch: () => void;
 }
 
+import { realtimeService } from '../../services/RealtimeService';
+
 export function useEvents(options: UseEventsOptions = {}): UseEventsResult {
     const [events, setEvents] = useState<TimelineEvent[]>([]);
     const [loading, setLoading] = useState(true);
@@ -82,6 +84,20 @@ export function useEvents(options: UseEventsOptions = {}): UseEventsResult {
 
     useEffect(() => {
         fetchEvents();
+    }, [fetchEvents]);
+
+    // specific effect for realtime updates
+    useEffect(() => {
+        const handleNewEvent = (data: any) => {
+            // We can optimize by appending if logic allows, but refetch is safer for order/filtering
+            console.log('[useEvents] New event received, refreshing...');
+            fetchEvents();
+        };
+
+        realtimeService.on('event_created', handleNewEvent);
+        return () => {
+            realtimeService.off('event_created', handleNewEvent);
+        };
     }, [fetchEvents]);
 
     return { events, loading, error, refetch: fetchEvents };
