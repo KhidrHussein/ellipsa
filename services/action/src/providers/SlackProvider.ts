@@ -137,20 +137,27 @@ export class SlackProvider implements IActionProvider {
     /**
      * Send a message to a Slack channel
      */
+    /**
+     * Send a message to a Slack channel
+     */
     private async sendMessage(client: WebClient, action: Action): Promise<StepResult> {
         if (!('channel' in action.args) || !('text' in action.args)) {
             throw new Error('Missing required arguments: channel, text');
         }
 
-        const channel = action.args.channel as string;
+        let channel = action.args.channel as string;
         const text = action.args.text as string;
         const threadTs = 'threadTs' in action.args ? (action.args.threadTs as string) : undefined;
+
+        // Resolve channel name to ID if needed
+        channel = await this.resolveChannelId(client, channel);
 
         try {
             const result = await client.chat.postMessage({
                 channel,
                 text,
                 thread_ts: threadTs,
+                as_user: true,
             });
 
             return {
@@ -163,7 +170,107 @@ export class SlackProvider implements IActionProvider {
                 },
             };
         } catch (error) {
-            throw new Error(`Failed to send Slack message: ${error instanceof Error ? error.message : 'Unknown error'}`);
+            const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+
+            // Handle not_in_channel by attempting to join
+            if (errorMessage.includes('not_in_channel')) {
+                console.log(`[SlackProvider] User is not in channel ${channel}. Attempting to join...`);
+                try {
+                    await client.conversations.join({ channel });
+                    console.log(`[SlackProvider] Successfully joined channel ${channel}. Retrying message...`);
+
+                    // Retry message
+                    const result = await client.chat.postMessage({
+                        channel,
+                        text,
+                        thread_ts: threadTs,
+                        as_user: true,
+                    });
+
+                    return {
+                        op: action.op,
+                        status: 'success',
+                        output: {
+                            channel: result.channel,
+                            ts: result.ts,
+                            thread_ts: result.message?.thread_ts,
+                        },
+                    };
+                } catch (joinError) {
+                    throw new Error(`Failed to send message: You are not a member of channel ${channel} and could not join automatically. Please join the channel manually.`);
+                }
+            }
+
+            throw new Error(`Failed to send Slack message: ${errorMessage}`);
+        }
+    }
+
+    /**
+     * Resolve a channel name (e.g. "general", "#general") to a Channel ID (e.g. "C12345")
+     */
+    private async resolveChannelId(client: WebClient, nameOrId: string): Promise<string> {
+        // If it looks like a channel ID (starts with C, G, or D and is uppercase/numeric), assume it's an ID
+        if (/^[CGD][A-Z0-9]{8,}$/.test(nameOrId)) {
+            return nameOrId;
+        }
+
+        const cleanName = nameOrId.replace(/^#/, '');
+        console.log(`[SlackProvider] Resolving channel '${nameOrId}' to ID...`);
+
+        try {
+            let channels: any[] = [];
+            // Attempt to list public and private channels
+            try {
+                const result = await client.conversations.list({
+                    types: 'public_channel,private_channel',
+                    exclude_archived: true,
+                    limit: 1000,
+                });
+                channels = result.channels || [];
+            } catch (listError: any) {
+                // If scope is missing for private channels, try public only
+                if (listError?.data?.error === 'missing_scope') {
+                    console.log(`[SlackProvider] Missing scope for private channels, retrying with public only...`);
+                    const result = await client.conversations.list({
+                        types: 'public_channel',
+                        exclude_archived: true,
+                        limit: 1000,
+                    });
+                    channels = result.channels || [];
+                } else {
+                    throw listError;
+                }
+            }
+
+            // 1. Exact match
+            let match = channels.find(c => c.name === cleanName);
+            if (match?.id) return match.id;
+
+            // 2. Normalized match (ignore case, punctuation)
+            const normalizedInput = cleanName.toLowerCase().replace(/[^a-z0-9]/g, '');
+            match = channels.find(c => c.name && c.name.toLowerCase().replace(/[^a-z0-9]/g, '') === normalizedInput);
+            if (match?.id) {
+                console.log(`[SlackProvider] Fuzzy resolved '${nameOrId}' to '${match.name}' (${match.id})`);
+                return match.id;
+            }
+
+            // 3. Containment match (if input contains channel name, e.g. "social thread" -> "social")
+            // Sort channels by length descending to match longest valid name first (e.g. "general-updates" over "general")
+            const sortedChannels = [...channels].sort((a, b) => b.name.length - a.name.length);
+            match = sortedChannels.find(c => c.name && normalizedInput.includes(c.name.toLowerCase().replace(/[^a-z0-9]/g, '')));
+
+            if (match?.id) {
+                console.log(`[SlackProvider] Fuzzy resolved (contains) '${nameOrId}' to '${match.name}' (${match.id})`);
+                return match.id;
+            }
+
+            // Fallback: If not found, return original and hope API handles it (or it fails later)
+            console.log(`[SlackProvider] Could not resolve '${nameOrId}'. Using as-is.`);
+            return nameOrId;
+        } catch (error) {
+            console.error(`[SlackProvider] Error resolving channel:`, error);
+            // Return original on error to not block execution if list failed
+            return nameOrId;
         }
     }
 
@@ -248,9 +355,9 @@ export class SlackProvider implements IActionProvider {
                 provider: this.name,
                 description: 'Send a message to a Slack channel',
                 argsSchema: {
-                    channel: 'string (channel ID or name)',
-                    text: 'string',
-                    threadTs: 'string (optional, for threading)',
+                    channel: 'string (Channel ID or name, e.g. #general)',
+                    text: 'string (Message content)',
+                    threadTs: 'string (Optional: thread timestamp to reply to)',
                 },
                 requiresApproval: false,
                 destructive: false,
@@ -261,9 +368,9 @@ export class SlackProvider implements IActionProvider {
                 provider: this.name,
                 description: 'Reply in a Slack thread',
                 argsSchema: {
-                    channel: 'string',
-                    text: 'string',
-                    threadTs: 'string (thread timestamp)',
+                    channel: 'string (Channel ID)',
+                    text: 'string (Reply content)',
+                    threadTs: 'string (Thread timestamp to reply to)',
                 },
                 requiresApproval: false,
                 destructive: false,
@@ -274,8 +381,8 @@ export class SlackProvider implements IActionProvider {
                 provider: this.name,
                 description: 'Send a direct message to a user',
                 argsSchema: {
-                    userId: 'string (Slack user ID)',
-                    text: 'string',
+                    userId: 'string (Slack user ID, e.g. U12345)',
+                    text: 'string (Message content)',
                 },
                 requiresApproval: false,
                 destructive: false,

@@ -1,8 +1,8 @@
-import { ActionPlan, ExecutionResult, Action, StepResult, Provenance } from '../schemas/action.schema';
-import { IActionProvider, ExecutionContext, ValidationResult } from './ActionProvider.interface';
-import { ActionRegistry } from './ActionRegistry';
-import { SafetyValidator } from './SafetyValidator';
-import { ActionHistoryService } from './ActionHistoryService';
+import { ActionPlan, ExecutionResult, Action, StepResult, Provenance } from '../schemas/action.schema.js';
+import { IActionProvider, ExecutionContext, ValidationResult } from './ActionProvider.interface.js';
+import { ActionRegistry } from './ActionRegistry.js';
+import { SafetyValidator } from './SafetyValidator.js';
+import { ActionHistoryService } from './ActionHistoryService.js';
 
 /**
  * ActionExecutor orchestrates action execution across multiple providers
@@ -25,7 +25,7 @@ export class ActionExecutor {
         const actionId = this.generateActionId();
         const startedAt = new Date();
         const executionContext: ExecutionContext = {
-            userId: plan.provenance?.user_id,
+            userId: context.userId || plan.provenance?.user_id,
             timestamp: startedAt,
             headless: context.headless ?? true,
             continueOnError: context.continueOnError ?? false,

@@ -21,6 +21,7 @@ export class NotionProvider implements IActionProvider {
 
     constructor(tokenService?: TokenService) {
         this.tokenService = tokenService;
+        console.log(`[NotionProvider] Constructed with TokenService: ${!!tokenService}`);
     }
 
     async initialize(): Promise<void> {
@@ -100,11 +101,17 @@ export class NotionProvider implements IActionProvider {
         action: Action,
         context: ExecutionContext
     ): Promise<StepResult> {
+        console.log('[NotionProvider] executeAction called');
+        console.log(`[NotionProvider] Has TokenService: ${!!this.tokenService}`);
+        console.log(`[NotionProvider] Context userId: ${context.userId}`);
+
         let client = this.client;
 
         // Try to get user token
         if (this.tokenService && context.userId) {
+            console.log(`[NotionProvider] Attempting to get token for user: ${context.userId}`);
             const token = await this.tokenService.getToken(context.userId, 'notion');
+            console.log(`[NotionProvider] Token found: ${!!token}`);
             if (token && token.accessToken) {
                 client = new Client({ auth: token.accessToken });
             }
@@ -136,13 +143,42 @@ export class NotionProvider implements IActionProvider {
      * Create a new page in Notion
      */
     private async createPage(client: Client, action: Action): Promise<StepResult> {
-        if (!('parentId' in action.args) || !('title' in action.args)) {
-            throw new Error('Missing required arguments: parentId, title');
+        if (!('title' in action.args)) {
+            throw new Error('Missing required argument: title');
         }
 
-        const parentId = action.args.parentId as string;
-        const title = action.args.title as string;
-        const content = 'content' in action.args ? (action.args.content as any[]) : [];
+        // Type assertion needed because 'title' is shared with other actions (like GitHub issues)
+        // causing TS to fail to narrow down to NotionCreatePageAction
+        const args = action.args as any;
+
+        let parentId = args.parentId as string | undefined;
+        const title = args.title as string;
+        let content = 'content' in args ? args.content : [];
+
+        // Normalize content: if string, convert to paragraph block
+        if (typeof content === 'string') {
+            content = [
+                {
+                    object: 'block',
+                    type: 'paragraph',
+                    paragraph: {
+                        rich_text: [{ type: 'text', text: { content: content } }],
+                    },
+                },
+            ];
+        }
+
+        // Resolve parent ID (handle names vs UUIDs)
+        if (parentId) {
+            const originalId = parentId;
+            parentId = await this.resolveParentId(client, parentId);
+
+            if (!parentId) {
+                throw new Error(`Could not find a parent page or database named '${originalId}'. Please ask the user to create it first, or provide the exact name of an existing page.`);
+            }
+        } else {
+            throw new Error('Missing required argument: parentId. Please provide a valid Page ID, Database ID, or the specific name of a parent page.');
+        }
 
         try {
             const response = await client.pages.create({
@@ -152,7 +188,7 @@ export class NotionProvider implements IActionProvider {
                         title: [{ text: { content: title } }],
                     },
                 },
-                children: content,
+                children: content as any[],
             });
 
             return {
@@ -165,6 +201,61 @@ export class NotionProvider implements IActionProvider {
             };
         } catch (error) {
             throw new Error(`Failed to create Notion page: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        }
+    }
+
+    /**
+     * Helper to resolve a parentId string to a valid UUID.
+     * If it's already a UUID, returns it.
+     * If it's a name, searches for it.
+     */
+    private async resolveParentId(client: Client, idOrName: string): Promise<string> {
+        // Simple UUID regex check
+        const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+        if (uuidRegex.test(idOrName)) {
+            return idOrName;
+        }
+
+        console.log(`[NotionProvider] '${idOrName}' is not a UUID. Searching for page/database...`);
+
+        try {
+            const response = await client.search({
+                query: idOrName,
+                page_size: 1,
+            });
+
+            if (response.results.length > 0) {
+                const match = response.results[0];
+                console.log(`[NotionProvider] Found match for '${idOrName}': ${match.id} (${(match as any).object})`);
+                return match.id;
+            }
+
+            console.log(`[NotionProvider] No match found for '${idOrName}'. Fetching available pages...`);
+
+            // Fallback: Fetch available pages to give a helpful error
+            const listResponse = await client.search({
+                filter: { property: 'object', value: 'page' },
+                page_size: 5,
+                sort: { direction: 'descending', timestamp: 'last_edited_time' }
+            });
+
+            const availablePages = listResponse.results
+                .map((p: any) => {
+                    const title = p.properties?.title?.title?.[0]?.plain_text ||
+                        p.properties?.Name?.title?.[0]?.plain_text ||
+                        'Untitled';
+                    return `"${title}"`;
+                })
+                .join(', ');
+
+            throw new Error(`Could not find a parent page named '${idOrName}'. Available pages you can add to: ${availablePages || 'None found (check integration permissions)'}.`);
+
+        } catch (error) {
+            if (error instanceof Error && error.message.includes('Could not find')) {
+                throw error;
+            }
+            console.error(`[NotionProvider] Search failed:`, error);
+            throw new Error(`Failed to resolve parent '${idOrName}': ${error instanceof Error ? error.message : 'Unknown error'}`);
         }
     }
 
@@ -205,7 +296,10 @@ export class NotionProvider implements IActionProvider {
             throw new Error('Missing required argument: databaseId');
         }
 
-        const databaseId = action.args.databaseId as string;
+        let databaseId = action.args.databaseId as string;
+
+        // Resolve database name to ID
+        databaseId = await this.resolveParentId(client, databaseId);
 
         try {
             // Use search API to find pages in database
@@ -247,8 +341,11 @@ export class NotionProvider implements IActionProvider {
             throw new Error('Missing required arguments: databaseId, properties');
         }
 
-        const databaseId = action.args.databaseId as string;
+        let databaseId = action.args.databaseId as string;
         const properties = action.args.properties as any;
+
+        // Resolve database name to ID
+        databaseId = await this.resolveParentId(client, databaseId);
 
         try {
             const response = await client.pages.create({
@@ -276,9 +373,9 @@ export class NotionProvider implements IActionProvider {
                 provider: this.name,
                 description: 'Create a new Notion page',
                 argsSchema: {
-                    parentId: 'string (parent page ID)',
-                    title: 'string',
-                    content: 'array (optional, page blocks)',
+                    parentId: 'string (Required: ID of the parent page or database)',
+                    title: 'string (Title of the new page)',
+                    content: 'array (Optional: content blocks)',
                 },
                 requiresApproval: false,
                 destructive: false,
@@ -289,7 +386,7 @@ export class NotionProvider implements IActionProvider {
                 provider: this.name,
                 description: 'Update a Notion page',
                 argsSchema: {
-                    pageId: 'string',
+                    pageId: 'string (ID of the page to update)',
                     properties: 'object (properties to update)',
                 },
                 requiresApproval: false,
@@ -301,8 +398,8 @@ export class NotionProvider implements IActionProvider {
                 provider: this.name,
                 description: 'Query a Notion database',
                 argsSchema: {
-                    databaseId: 'string',
-                    filter: 'object (optional, query filter)',
+                    databaseId: 'string (ID of the database to query)',
+                    filter: 'object (Optional: Notion filter object)',
                 },
                 requiresApproval: false,
                 destructive: false,
@@ -313,8 +410,8 @@ export class NotionProvider implements IActionProvider {
                 provider: this.name,
                 description: 'Create a new database entry',
                 argsSchema: {
-                    databaseId: 'string',
-                    properties: 'object (entry properties)',
+                    databaseId: 'string (ID of the database)',
+                    properties: 'object (Entry properties)',
                 },
                 requiresApproval: false,
                 destructive: false,

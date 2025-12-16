@@ -21,6 +21,7 @@ import { OAuthManager } from './services/oauth/OAuthManager.js';
 import { SlackOAuthProvider } from './services/oauth/SlackOAuthProvider.js';
 import { NotionOAuthProvider } from './services/oauth/NotionOAuthProvider.js';
 import { GitHubOAuthProvider } from './services/oauth/GitHubOAuthProvider.js';
+import { GoogleOAuthProvider } from './services/oauth/GoogleOAuthProvider.js';
 import { validateActionPlan, ActionPlan, ExecutionResult } from './schemas/action.schema.js';
 import { loadSafetyConfig, getDevSafetyConfig } from './config/safety.config.js';
 
@@ -228,7 +229,7 @@ async function initializeServices(app: express.Express): Promise<Services> {
         oauthManager.registerProvider(new SlackOAuthProvider(
             process.env.SLACK_CLIENT_ID,
             process.env.SLACK_CLIENT_SECRET,
-            process.env.SLACK_REDIRECT_URI || `http://localhost:${process.env.PORT || 4007}/auth/slack/callback`
+            process.env.SLACK_REDIRECT_URI || `http://localhost:${process.env.PORT || 4004}/auth/slack/callback`
         ));
     }
 
@@ -237,19 +238,31 @@ async function initializeServices(app: express.Express): Promise<Services> {
         oauthManager.registerProvider(new NotionOAuthProvider(
             process.env.NOTION_CLIENT_ID,
             process.env.NOTION_CLIENT_SECRET,
-            process.env.NOTION_REDIRECT_URI || `http://localhost:${process.env.PORT || 4007}/auth/notion/callback`
+            process.env.NOTION_REDIRECT_URI || `http://localhost:${process.env.PORT || 4004}/auth/notion/callback`
         ));
     }
+
+
 
     // Register GitHub OAuth
     if (process.env.GITHUB_CLIENT_ID && process.env.GITHUB_CLIENT_SECRET) {
         oauthManager.registerProvider(new GitHubOAuthProvider(
             process.env.GITHUB_CLIENT_ID,
             process.env.GITHUB_CLIENT_SECRET,
-            process.env.GITHUB_REDIRECT_URI || `http://localhost:${process.env.PORT || 4007}/auth/github/callback`
+            process.env.GITHUB_REDIRECT_URI || `http://localhost:${process.env.PORT || 4004}/auth/github/callback`
         ));
     }
 
+    // Register Google OAuth
+    if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
+        oauthManager.registerProvider(new GoogleOAuthProvider(
+            process.env.GOOGLE_CLIENT_ID,
+            process.env.GOOGLE_CLIENT_SECRET,
+            process.env.GOOGLE_REDIRECT_URI || `http://localhost:${process.env.PORT || 4004}/auth/google/callback`
+        ));
+    }
+
+    // Register providers
     // Register providers
     console.log('[Server] Initializing BrowserProvider...');
     const browserProvider = new BrowserProvider();
@@ -267,28 +280,26 @@ async function initializeServices(app: express.Express): Promise<Services> {
 
     // Register API providers (conditionally based on env vars)
     console.log('[Server] Initializing SlackProvider...');
-    const slackProvider = new SlackProvider();
+    const slackProvider = new SlackProvider(tokenService);
     await slackProvider.initialize?.();
-    if (process.env.SLACK_BOT_TOKEN) {
-        actionRegistry.registerProvider(slackProvider);
-    }
+    // Register unconditionally to support user OAuth tokens even if no global bot token
+    actionRegistry.registerProvider(slackProvider);
 
     console.log('[Server] Initializing NotionProvider...');
-    const notionProvider = new NotionProvider();
+    const notionProvider = new NotionProvider(tokenService); // Pass tokenService
     await notionProvider.initialize?.();
-    if (process.env.NOTION_API_KEY) {
-        actionRegistry.registerProvider(notionProvider);
-    }
+    // Register unconditionally to support user OAuth tokens even if no global API key
+    actionRegistry.registerProvider(notionProvider);
 
     console.log('[Server] Initializing GitHubProvider...');
-    const githubProvider = new GitHubProvider();
+    const githubProvider = new GitHubProvider(tokenService); // Pass tokenService
     await githubProvider.initialize?.();
-    if (process.env.GITHUB_TOKEN) {
-        actionRegistry.registerProvider(githubProvider);
-    }
+    // Register unconditionally to support user OAuth tokens even if no global API key
+    actionRegistry.registerProvider(githubProvider);
 
-    // Calendar provider uses OAuth from Gmail
-    const calendarProvider = new CalendarProvider();
+    // Calendar provider uses OAuth from Gmail/TokenService
+    // Pass TokenService for independent auth
+    const calendarProvider = new CalendarProvider(tokenService);
 
     // Initialize email services
     const metrics = new EmailMetrics();
@@ -304,28 +315,24 @@ async function initializeServices(app: express.Express): Promise<Services> {
     const processingService = new EmailProcessingService(promptService, memoryService, emailLLMService);
 
     console.log('[Server] Initializing GmailEmailService...');
-    const emailService = GmailEmailService.create(processingService, memoryService);
+    // Pass tokenService to GmailEmailService
+    const emailService = GmailEmailService.create(processingService, memoryService, tokenService);
 
     // Initialize and register Gmail Provider
     console.log('[Server] Initializing GmailProvider...');
     const gmailProvider = new GmailProvider(emailService);
     actionRegistry.registerProvider(gmailProvider);
 
-    // Initialize and register Calendar Provider (using Gmail's auth)
-    // We need to wait for email service to be connected or just pass the client if available
-    // For now, we'll try to get the auth client from email service
-    try {
-        // This might fail if not connected, but CalendarProvider handles lazy init
-        // We'll just register it for now
-        actionRegistry.registerProvider(calendarProvider);
+    // Register Calendar Provider
+    // It will auto-initialize using TokenService when needed
+    actionRegistry.registerProvider(calendarProvider);
 
-        // Try to initialize if connected
-        if (await emailService.isConnected()) {
-            const authClient = await emailService.getAuthClient();
-            await calendarProvider.initialize(authClient);
-        }
-    } catch (error) {
-        console.warn('[Server] Failed to initialize Calendar provider with Gmail auth:', error);
+    // Attempt early initialization if possible (optional)
+    try {
+        await calendarProvider.initialize();
+    } catch (e) {
+        // Expected if not authenticated yet
+        console.log('[Server] Calendar provider waiting for authentication');
     }
 
     const routineService = new RoutineService(emailService, calendarProvider, memoryService, actionExecutor, memoryClient);
@@ -353,11 +360,12 @@ async function initializeServices(app: express.Express): Promise<Services> {
     // OAuth callback route moved to startServer
     console.log('[Server] OAuth callback route configured');
 
-    // OAuth URL endpoint
+    // OAuth URL endpoint - LEGACY (Redirect to new flow)
     app.get('/auth/url', async (req, res) => {
         try {
-            const authUrl = await oauthService.getAuthUrl();
-            res.json({ authUrl });
+            // Redirect to the new standard endpoint logic for google
+            const url = services.oauthManager.getAuthUrl('google', 'user');
+            res.json({ authUrl: url });
         } catch (error) {
             console.error('[Server] Error generating auth URL:', error);
             res.status(500).json({ error: 'Failed to generate authentication URL' });
@@ -388,7 +396,7 @@ function setupActionRoutes(app: express.Express, services: Services) {
 
             // Execute the plan
             const result: ExecutionResult = await services.actionExecutor.execute(actionPlan, {
-                userId: (req as any).user?.id || 'anonymous',
+                userId: (req as any).user?.id || 'user', // Default to 'user' for local single-user mode
                 timestamp: new Date(),
                 headless: true,
                 continueOnError: false,
@@ -653,66 +661,49 @@ async function startServer() {
         // Setup new action routes
         setupActionRoutes(app, services);
 
-        // OAuth callback route
+        // OAuth callback route - Legacy URI support for Google
+        // Since GOOGLE_REDIRECT_URI is often set to /oauth2callback in .env and Cloud Console,
+        // we handle the google provider callback here to avoid breaking existing configurations.
         app.get('/oauth2callback', async (req, res) => {
-            console.log('[Server] Received OAuth callback request');
-            const code = req.query.code as string;
-
-            if (!code) {
-                console.error('[Server] No authorization code in callback');
-                return res.status(400).send('Authorization code is required');
-            }
-
             try {
-                const oauth2Client = oauthService.getClient();
-                const { tokens } = await oauth2Client.getToken(code);
-                oauth2Client.setCredentials(tokens);
+                const code = req.query.code as string;
+                const state = req.query.state as string;
 
-                if (services?.emailService) {
-                    await services.emailService.connect();
-
-                    // Initialize Calendar Provider with the authenticated OAuth client
-                    try {
-                        const calendarProvider = services.actionRegistry.getProvider('calendar') as CalendarProvider | undefined;
-                        if (calendarProvider) {
-                            const authClient = await services.emailService.getAuthClient();
-                            await calendarProvider.initialize(authClient);
-                            console.log('[Server] Calendar provider initialized with Gmail OAuth');
-                        }
-                    } catch (calError) {
-                        console.warn('[Server] Failed to initialize Calendar provider:', calError);
-                    }
-
-                    // Initialize automation if not already running
-                    if (!services.emailAutomationService) {
-                        const emailAutomationService = await createEmailAutomation({
-                            emailService: services.emailService,
-                            promptService: new PromptService({ apiKey: process.env.OPENAI_API_KEY || '', defaultModel: 'gpt-4' }),
-                            memoryService: services.memoryService as any,
-                            metrics: services.metrics,
-                            checkInterval: 5 * 60 * 1000,
-                            maxEmailsPerCheck: 10,
-                        });
-                        emailAutomationService.start();
-                        services.emailAutomationService = emailAutomationService;
-                    }
+                if (!code) {
+                    return res.status(400).send('Missing code');
                 }
 
-                console.log('[Server] Gmail authenticated and email automation started');
-
-
-                // Start routines
-                if (services?.routineService) {
-                    services.routineService.start();
-                    console.log('[Server] Routine service started');
+                if (!services) {
+                    return res.status(500).send('Services not initialized');
                 }
 
-                return res.send('Successfully authenticated! You can close this window.');
+                // If no state is provided (legacy legacy flow), we can't easily use OAuthManager which requires state for userId
+                // But the new flow initiated via getAuthUrl DOES provide state.
+                if (state) {
+                    const { userId } = await services.oauthManager.handleCallback('google', code, state);
+
+                    res.send(`
+                        <html>
+                            <body>
+                                <h1>Successfully connected to Google Workspace!</h1>
+                                <p>You can close this window now.</p>
+                                <script>
+                                    window.opener?.postMessage({ type: 'oauth_success', provider: 'google', userId: '${userId}' }, '*');
+                                    setTimeout(() => window.close(), 2000);
+                                </script>
+                            </body>
+                        </html>
+                    `);
+                } else {
+                    res.status(400).send('State parameter missing. Please try connecting again from the application settings.');
+                }
             } catch (error) {
-                console.error('[Server] OAuth callback error:', error);
-                return res.status(500).send('Authentication failed. Please try again.');
+                console.error('[Server] Error in legacy callback:', error);
+                res.status(500).send(`Authentication failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
             }
         });
+
+
 
         // Health check endpoint
         app.get('/health', (req, res) => {

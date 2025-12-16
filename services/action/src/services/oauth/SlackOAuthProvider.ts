@@ -7,7 +7,7 @@ export class SlackOAuthProvider implements IOAuthProvider {
     private clientId: string;
     private clientSecret: string;
     private redirectUri: string;
-    private scopes: string[] = ['chat:write', 'im:write', 'channels:read', 'users:read'];
+    private scopes: string[] = ['chat:write', 'im:write', 'channels:read', 'groups:read', 'mpim:read', 'users:read'];
 
     constructor(clientId: string, clientSecret: string, redirectUri: string) {
         this.clientId = clientId;
@@ -28,8 +28,8 @@ export class SlackOAuthProvider implements IOAuthProvider {
             // If we want to act AS the user, we need 'user_scope'.
         });
         // For true "act as user", we should use user_scope.
-        // Let's add user_scope for chat:write
-        params.append('user_scope', 'chat:write,files:write');
+        // Updated to include read permissions so the app can see what the user sees
+        params.append('user_scope', 'chat:write,files:write,channels:read,groups:read,im:read,mpim:read,users:read');
 
         return `https://slack.com/oauth/v2/authorize?${params.toString()}`;
     }

@@ -197,9 +197,9 @@ const DeleteCalendarEventActionSchema = z.object({
 const NotionCreatePageActionSchema = z.object({
     op: z.literal('notion_create_page'),
     args: z.object({
-        parentId: z.string(),
+        parentId: z.string().optional(),
         title: z.string(),
-        content: z.array(z.any()).optional(),
+        content: z.union([z.string(), z.array(z.any())]).optional(),
     }),
 });
 

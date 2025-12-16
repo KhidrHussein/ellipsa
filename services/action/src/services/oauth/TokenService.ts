@@ -40,8 +40,15 @@ export class TokenService {
      */
     async getToken(userId: string, provider: string): Promise<TokenData | null> {
         const userTokens = this.tokens.get(userId);
-        if (!userTokens) return null;
-        return userTokens.get(provider) || null;
+        if (!userTokens) {
+            console.log(`[TokenService] No tokens found for user ${userId}. Available users: ${Array.from(this.tokens.keys()).join(', ')}`);
+            return null;
+        }
+        const token = userTokens.get(provider);
+        if (!token) {
+            console.log(`[TokenService] No token found for provider ${provider} for user ${userId}. Available providers: ${Array.from(userTokens.keys()).join(', ')}`);
+        }
+        return token || null;
     }
 
     /**

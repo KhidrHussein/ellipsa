@@ -17,7 +17,7 @@ const INTEGRATIONS: any[] = [
         name: 'Google Workspace',
         description: 'Connect Gmail and Calendar',
         Icon: Mail,
-        provider: 'google', // This currently maps to the legacy oauth flow 
+        provider: 'google',
     },
     {
         id: 'slack',
@@ -80,17 +80,6 @@ export function IntegrationsSection() {
 
     const handleConnect = async (provider: string) => {
         try {
-            if (provider === 'google') {
-                // Legacy flow for now
-                // @ts-ignore
-                const response = await actionClient.request({ method: 'GET', url: '/auth/url' });
-                if (response.authUrl) {
-                    // @ts-ignore
-                    window.ellipsa.openExternal(response.authUrl);
-                }
-                return;
-            }
-
             const response = await actionClient.getAuthUrl(provider, userId);
             if (response.url) {
                 // @ts-ignore

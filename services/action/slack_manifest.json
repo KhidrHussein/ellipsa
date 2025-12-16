@@ -1,0 +1,44 @@
+{
+    "_metadata": {
+        "major_version": 1,
+        "minor_version": 1
+    },
+    "display_information": {
+        "name": "Ellipsa",
+        "description": "Your AI Executive Assistant",
+        "background_color": "#000000"
+    },
+    "features": {
+        "bot_user": {
+            "display_name": "Ellipsa",
+            "always_online": true
+        }
+    },
+    "oauth_config": {
+        "redirect_urls": [
+            "http://localhost:4004/auth/slack/callback"
+        ],
+        "scopes": {
+            "bot": [
+                "chat:write",
+                "im:write",
+                "channels:read",
+                "users:read"
+            ],
+            "user": [
+                "chat:write",
+                "files:write",
+                "channels:read",
+                "groups:read",
+                "im:read",
+                "mpim:read",
+                "users:read"
+            ]
+        }
+    },
+    "settings": {
+        "org_deploy_enabled": false,
+        "socket_mode_enabled": false,
+        "token_rotation_enabled": false
+    }
+}

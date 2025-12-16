@@ -1,6 +1,6 @@
 // @ts-nocheck
 // Google APIs and Auth
-import { google } from 'googleapis';
+import { google, gmail_v1 } from 'googleapis';
 import type { OAuth2Client } from 'google-auth-library';
 
 // Import types from local modules
@@ -18,7 +18,8 @@ import type {
 import type { IEmailService } from './EmailService.interface';
 import type { EmailProcessingService } from './EmailProcessingService';
 import type { IEmailMemoryService } from './IEmailMemoryService';
-import { oauthService } from './OAuthService';
+// OLD: import { oauthService } from './OAuthService';
+import { TokenService } from '../../services/oauth/TokenService';
 
 // Type definitions for Gmail API
 interface GmailMessagePart {
@@ -96,18 +97,6 @@ interface CustomOAuth2Client extends OAuth2Client {
 // Mock the services if they don't exist
 const emailProcessingService: Partial<EmailProcessingService> = {} as EmailProcessingService;
 const emailMemoryService: Partial<IEmailMemoryService> = {} as IEmailMemoryService;
-const mockOAuthService: typeof oauthService = {
-  getClient: async () => ({} as CustomOAuth2Client),
-  isAuthenticated: () => Promise.resolve(true),
-  getAuthUrl: () => '',
-  getTokens: () => Promise.resolve({}),
-  revokeToken: () => Promise.resolve(),
-  on: () => { },
-  off: () => { }
-};
-
-// Use mock services if the real ones aren't available
-const safeOAuthService = (oauthService as typeof oauthService) || mockOAuthService;
 
 declare global {
   // eslint-disable-next-line no-var
@@ -134,8 +123,8 @@ interface GmailMessagePart {
  * Gmail implementation of the IEmailService interface
  */
 export class GmailEmailService implements IEmailService {
-  private gmail: gmail_v1.Gmail;
-  private oAuth2Client: OAuth2Client;
+  private gmail: gmail_v1.Gmail | null = null;
+  private oAuth2Client: OAuth2Client | null = null;
   private static readonly MAX_RETRIES = 3;
   private static readonly RETRY_DELAY_MS = 1000;
 
@@ -147,41 +136,24 @@ export class GmailEmailService implements IEmailService {
    */
   static create(
     processingService: EmailProcessingService,
-    memoryService: IEmailMemoryService
+    memoryService: IEmailMemoryService,
+    tokenService: TokenService | null = null,
+    userId: string = 'user'
   ): GmailEmailService {
-    try {
-      const oauth2Client = oauthService.getClient();
-
-      // Verify we have the required scopes (just log a warning if not, don't fail)
-      const requiredScopes = [
-        'https://mail.google.com/',
-        'https://www.googleapis.com/auth/gmail.modify',
-        'https://www.googleapis.com/auth/gmail.compose',
-        'https://www.googleapis.com/auth/gmail.labels'
-      ];
-
-      const currentScopes = oauth2Client.credentials.scope?.split(' ') || [];
-      const hasAllScopes = requiredScopes.every(scope => currentScopes.includes(scope));
-
-      if (!hasAllScopes) {
-        console.warn('Note: Missing required Gmail scopes. The service will connect when first used.');
-      }
-
-      return new GmailEmailService(oauth2Client, processingService, memoryService);
-    } catch (error) {
-      console.error('Failed to create GmailEmailService:', error);
-      throw new Error(`Failed to create Gmail service: ${error instanceof Error ? error.message : 'Unknown error'}`);
-    }
+    return new GmailEmailService(processingService, memoryService, tokenService, userId);
   }
 
   private constructor(
-    oauth2Client: OAuth2Client,
     private readonly processingService: EmailProcessingService,
-    private readonly memoryService: IEmailMemoryService
+    private readonly memoryService: IEmailMemoryService,
+    private readonly tokenService: TokenService | null,
+    private readonly userId: string
   ) {
-    this.oAuth2Client = oauth2Client;
-    this.gmail = google.gmail({ version: 'v1', auth: this.oAuth2Client });
-    console.log('[GmailEmailService] Initialized. Using mock OAuth?', (oauthService as any) === mockOAuthService);
+    if (this.tokenService) {
+      console.log(`[GmailEmailService] Initialized for user ${this.userId} with TokenService`);
+    } else {
+      console.warn('[GmailEmailService] Initialized without TokenService (Legacy mode)');
+    }
   }
 
   // IEmailService implementation
@@ -189,14 +161,51 @@ export class GmailEmailService implements IEmailService {
   private connectionPromise: Promise<void> | null = null;
 
   private async ensureConnected(): Promise<void> {
-    console.log('[GmailEmailService] ensureConnected called. isConnected:', this._isConnected);
+    // console.log('[GmailEmailService] ensureConnected called. isConnected:', this._isConnected);
     if (this._isConnected) return;
 
     if (!this.connectionPromise) {
       this.connectionPromise = this.connect();
     }
 
-    await this.connectionPromise;
+    try {
+      await this.connectionPromise;
+    } catch (error) {
+      this.connectionPromise = null;
+      throw error;
+    }
+  }
+
+  private async getOAuthClient(): Promise<OAuth2Client> {
+    if (this.oAuth2Client) return this.oAuth2Client;
+
+    // Extract client ID and secret from env
+    const clientId = process.env.GOOGLE_CLIENT_ID;
+    const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
+    const redirectUri = process.env.GOOGLE_REDIRECT_URI || 'http://localhost:4004/oauth2callback';
+
+    if (!clientId || !clientSecret) {
+      throw new Error('Missing Google OAuth credentials');
+    }
+
+    const client = new google.auth.OAuth2(clientId, clientSecret, redirectUri);
+
+    // Try to get token from TokenService
+    if (this.tokenService) {
+      const tokenData = await this.tokenService.getToken(this.userId, 'google');
+      if (tokenData && tokenData.accessToken) {
+        client.setCredentials({
+          access_token: tokenData.accessToken,
+          refresh_token: tokenData.refreshToken,
+          expiry_date: tokenData.expiresAt,
+          token_type: tokenData.tokenType,
+          scope: tokenData.scope,
+        });
+      }
+    }
+
+    this.oAuth2Client = client;
+    return client;
   }
 
   async connect(): Promise<void> {
@@ -204,18 +213,28 @@ export class GmailEmailService implements IEmailService {
     if (this._isConnected) return;
 
     try {
+      const client = await this.getOAuthClient();
+      this.gmail = google.gmail({ version: 'v1', auth: client });
+
+      // Check if we actually have credentials
+      if (!client.credentials || !client.credentials.access_token) {
+        console.log('[GmailEmailService] No credentials found. Waiting for authentication.');
+        // We don't throw here to allow instantiation before login, but methods requiring auth will fail
+        return;
+      }
+
       // Verify the credentials are valid
-      console.log('[GmailEmailService] Verifying credentials...');
+      // console.log('[GmailEmailService] Verifying credentials...');
       const response = await this.withRetry(async () => {
-        return this.gmail.users.getProfile({ userId: 'me' });
+        return this.gmail!.users.getProfile({ userId: 'me' });
       });
-      console.log('[GmailEmailService] getProfile response status:', response.status);
+      // console.log('[GmailEmailService] getProfile response status:', response.status);
 
       if (!response.data.emailAddress) {
         throw new Error('Failed to get user profile');
       }
 
-      console.log(`Connected to Gmail as ${response.data.emailAddress}`);
+      console.log(`[GmailEmailService] Connected as ${response.data.emailAddress}`);
       this._isConnected = true;
     } catch (error) {
       this.connectionPromise = null; // Reset so we can retry
@@ -226,7 +245,8 @@ export class GmailEmailService implements IEmailService {
         // Token has been revoked, expired, or not available
         throw new Error('Authentication token is invalid or has been revoked. Please re-authenticate.');
       }
-      throw new Error(`Failed to connect to Gmail: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      // Don't kill the process, just log
+      // throw new Error(`Failed to connect to Gmail: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }
 
@@ -263,7 +283,7 @@ export class GmailEmailService implements IEmailService {
     if (!this._isConnected) return false;
 
     try {
-      await this.gmail.users.getProfile({ userId: 'me' });
+      await this.gmail!.users.getProfile({ userId: 'me' });
       return true;
     } catch (error) {
       this._isConnected = false;
@@ -272,10 +292,7 @@ export class GmailEmailService implements IEmailService {
   }
 
   async getAuthClient(): Promise<OAuth2Client> {
-    if (!(await this.isConnected())) {
-      throw new Error('Not connected to Gmail. Please connect first.');
-    }
-    return this.oAuth2Client;
+    return this.getOAuthClient();
   }
 
   // Alias getMessage to maintain interface compatibility
@@ -287,6 +304,8 @@ export class GmailEmailService implements IEmailService {
     try {
       // Ensure we have a valid token
       await this.ensureConnected();
+
+      if (!this.gmail) throw new Error('Gmail service not fully initialized');
 
       // Build Gmail search query
       const queryParts: string[] = [];
@@ -320,7 +339,7 @@ export class GmailEmailService implements IEmailService {
 
       do {
         const response = await this.withRetry(async () => {
-          return this.gmail.users.messages.list({
+          return this.gmail!.users.messages.list({
             userId: 'me',
             q: query,
             maxResults: Math.min(maxResults - processedCount, 100), // Gmail max is 100
@@ -443,7 +462,7 @@ export class GmailEmailService implements IEmailService {
       }
 
       if (removeLabelIds.length > 0 || addLabelIds.length > 0) {
-        await this.gmail.users.messages.modify({
+        await this.gmail!.users.messages.modify({
           userId: 'me',
           id: emailId,
           requestBody: {
@@ -454,7 +473,7 @@ export class GmailEmailService implements IEmailService {
       }
 
       if (actions.includes('DELETE')) {
-        await this.gmail.users.messages.trash({
+        await this.gmail!.users.messages.trash({
           userId: 'me',
           id: emailId
         });
@@ -484,7 +503,7 @@ export class GmailEmailService implements IEmailService {
       });
 
       const response = await this.withRetry(() =>
-        this.gmail.users.messages.send({
+        this.gmail!.users.messages.send({
           userId: 'me',
           requestBody: {
             raw: message,
@@ -542,7 +561,7 @@ export class GmailEmailService implements IEmailService {
       });
 
       const response = await this.withRetry(() =>
-        this.gmail.users.drafts.create({
+        this.gmail!.users.drafts.create({
           userId: 'me',
           requestBody: {
             message: {
@@ -571,7 +590,7 @@ export class GmailEmailService implements IEmailService {
   private async sendRawEmail(email: Omit<EmailMessage, 'id' | 'date'>): Promise<{ id: string; threadId: string }> {
     const message = this.createRawEmail(email);
     const response = await this.withRetry(() =>
-      this.gmail.users.messages.send({
+      this.gmail!.users.messages.send({
         userId: 'me',
         requestBody: { raw: message },
       })
@@ -602,9 +621,28 @@ export class GmailEmailService implements IEmailService {
   }
 
   private async refreshAuthToken(): Promise<void> {
-    const accessToken = await oauthService.getAccessToken();
-    if (!accessToken) {
-      throw new Error('Failed to refresh access token');
+    if (this.tokenService && this.oAuth2Client && this.oAuth2Client.credentials.refresh_token) {
+      try {
+        const { credentials } = await this.oAuth2Client.refreshAccessToken();
+        this.oAuth2Client.setCredentials(credentials);
+        // Save new tokens
+        await this.tokenService.setToken(this.userId, 'google', {
+          accessToken: credentials.access_token!,
+          refreshToken: credentials.refresh_token || undefined,
+          expiresAt: credentials.expiry_date || undefined,
+          tokenType: credentials.token_type || undefined,
+          scope: credentials.scope || undefined,
+        });
+      } catch (error) {
+        console.error('[GmailEmailService] Failed to refresh token:', error);
+        throw new Error('Failed to refresh access token');
+      }
+    } else if (!this.tokenService) {
+      // Legacy flow
+      const accessToken = await (this.oAuth2Client as any).getAccessToken(); // Mock or old method
+      if (!accessToken) {
+        throw new Error('Failed to refresh access token');
+      }
     }
   }
 
@@ -612,7 +650,7 @@ export class GmailEmailService implements IEmailService {
     await this.ensureConnected();
 
     try {
-      const response = await this.gmail.users.messages.list({
+      const response = await this.gmail!.users.messages.list({
         userId: 'me',
         maxResults: limit,
         pageToken,
@@ -644,7 +682,7 @@ export class GmailEmailService implements IEmailService {
 
   async getEmail(id: string): Promise<EmailMessage> {
     return this.withRetry(async () => {
-      const response = await this.gmail.users.messages.get({
+      const response = await this.gmail!.users.messages.get({
         userId: 'me',
         id,
         format: 'full',
