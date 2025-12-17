@@ -219,7 +219,7 @@ export class EventProcessingService {
           const event = await this.createEvent(extraction, metadata);
 
           if (extraction.entities?.length > 0) {
-            await this.processEntities(extraction.entities, event.id);
+            await this.processEntities(extraction.entities, event.id, metadata.user_id || 'user');
           }
 
           if (extraction.action_items?.length && extraction.action_items.length > 0) {
@@ -243,6 +243,7 @@ export class EventProcessingService {
 
   private async createEvent(extraction: ExtractionResult, metadata: any) {
     return this.eventModel.create({
+      user_id: metadata.user_id || 'user', // Default or extracted
       type: 'other',
       title: extraction.summary?.substring(0, 100) || 'Untitled Event',
       description: extraction.summary || '',
@@ -265,7 +266,7 @@ export class EventProcessingService {
     return 'other';
   }
 
-  private async processEntities(entities: any[], eventId: string) {
+  private async processEntities(entities: any[], eventId: string, userId: string) {
     if (!entities) return;
 
     for (const entity of entities) {
@@ -280,6 +281,7 @@ export class EventProcessingService {
         }
 
         await this.entityModel.create({
+          user_id: userId,
           type: safeType as EntityType,
           name: entity.value,
           metadata: {
@@ -407,6 +409,7 @@ export class EventProcessingService {
 
       // Persist user message as an event
       const event = await this.eventModel.create({
+        user_id: metadata.user_id || 'user',
         type: 'user_message',
         title: 'User Message',
         start_time: new Date(),
@@ -422,6 +425,7 @@ export class EventProcessingService {
           console.log(`[EventProcessing] Extracted ${extraction.entities.length} entities from user message`);
           for (const entity of extraction.entities) {
             await this.entityModel.create({
+              user_id: metadata.user_id || 'user',
               name: entity.value,
               type: entity.type as EntityType,
               description: entity.context || text,
@@ -478,6 +482,7 @@ export class EventProcessingService {
 
       // Persist assistant response
       await this.eventModel.create({
+        user_id: metadata.user_id || 'user',
         type: 'assistant_message',
         title: 'Assistant Message',
         start_time: new Date(),

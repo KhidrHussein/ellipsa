@@ -229,6 +229,15 @@ if (!window.electron) {
     // Click-through control for draggable floating button
     setIgnoreMouseEvents: (ignore: boolean) => ipcRenderer.send('set-ignore-mouse-events', { ignore }),
 
+    // Auth
+    startGoogleLogin: () => ipcRenderer.invoke('start-google-login'),
+    onLoginSuccess: (callback: (userId: string) => void) => {
+      const handler = (_: IpcRendererEvent, userId: string) => callback(userId);
+      ipcRenderer.on('login-success', handler);
+      return () => ipcRenderer.removeListener('login-success', handler);
+    },
+    setUserId: (userId: string) => ipcRenderer.send('set-user-id', userId),
+
     // External links
     openExternal: async (url: string) => { ipcRenderer.send('open-external', { url }); }
   };

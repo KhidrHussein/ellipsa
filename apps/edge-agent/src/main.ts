@@ -43,6 +43,12 @@ export class MainProcess {
   private lastWindowTitle = '';
   private monitorInterval: NodeJS.Timeout | null = null;
   private processorUrl = 'http://localhost:4002/processor/v1/ingest';
+  private currentUserId: string = 'user'; // Default to generic user
+
+  public setUserId(userId: string) {
+    console.log('[Main] Setting current user ID:', userId);
+    this.currentUserId = userId;
+  }
 
   private startWindowMonitor() {
     console.log('[Main] Starting window monitor...');
@@ -123,10 +129,13 @@ export class MainProcess {
         timestamp: new Date().toISOString(),
         active_window: appName, // Send App Name as active_window source
         segment_ts: Date.now(),
+        // Include user_id at top level if processor supports it, or mostly in metadata
+        user_id: this.currentUserId,
         meta: {
           source: 'edge-agent-monitor',
           appName: appName,
-          url: url
+          url: url,
+          user_id: this.currentUserId // Critical for correct attribution
         }
       });
     } catch (error) {
@@ -138,24 +147,87 @@ export class MainProcess {
 // Disable hardware acceleration to fix transparent window rendering issues on Windows
 app.disableHardwareAcceleration();
 
+// Protocol Registration
+if (process.defaultApp) {
+  if (process.argv.length >= 2) {
+    app.setAsDefaultProtocolClient('ellipsa', process.execPath, [path.resolve(process.argv[1])]);
+  }
+} else {
+  app.setAsDefaultProtocolClient('ellipsa');
+}
+
+// Single Instance Lock
+const gotTheLock = app.requestSingleInstanceLock();
+
+if (!gotTheLock) {
+  app.quit();
+} else {
+  app.on('second-instance', (event, commandLine, workingDirectory) => {
+    // Someone tried to run a second instance, we should focus our window.
+    if (mainWindow) {
+      if (mainWindow.isMinimized()) mainWindow.restore();
+      mainWindow.focus();
+
+      // Handle deep link
+      const url = commandLine.find(arg => arg.startsWith('ellipsa://'));
+      if (url) {
+        handleDeepLink(url);
+      }
+    }
+  });
+
+  // Create main window, load the rest of the app, etc...
+  app.whenReady().then(() => {
+    // Initialize screen-related functionality after app is ready
+    try {
+      const primaryDisplay = screen.getPrimaryDisplay();
+      console.log('Primary display:', primaryDisplay.id, primaryDisplay.size);
+    } catch (error) {
+      console.error('Error initializing screen:', error);
+    }
+
+    return mainProcess.start();
+  }).catch(error => {
+    console.error('Failed to start application:', error);
+    app.quit();
+  });
+}
+
+// Handle MacOS deep linking
+app.on('open-url', (event, url) => {
+  event.preventDefault();
+  handleDeepLink(url);
+});
+
+function handleDeepLink(url: string) {
+  console.log('[Main] Received deep link:', url);
+  try {
+    const urlObj = new URL(url);
+    if (urlObj.hostname === 'auth-success') {
+      const userId = urlObj.searchParams.get('userId');
+      if (userId) {
+        console.log('[Main] Auth Success for user:', userId);
+
+        // Update the monitor with the logged-in user ID
+        mainProcess.setUserId(userId);
+
+        if (mainWindow) {
+          if (mainWindow.isMinimized()) mainWindow.restore();
+          mainWindow.focus();
+          // Restore always on top if it was previously set or default behavior
+          mainWindow.setAlwaysOnTop(true, 'screen-saver');
+
+          mainWindow.webContents.send('login-success', userId);
+        }
+      }
+    }
+  } catch (error) {
+    console.error('[Main] Error handling deep link:', error);
+  }
+}
+
 // Initialize the main process
 const mainProcess = new MainProcess();
-
-// Start the app
-app.whenReady().then(() => {
-  // Initialize screen-related functionality after app is ready
-  try {
-    const primaryDisplay = screen.getPrimaryDisplay();
-    console.log('Primary display:', primaryDisplay.id, primaryDisplay.size);
-  } catch (error) {
-    console.error('Error initializing screen:', error);
-  }
-
-  return mainProcess.start();
-}).catch(error => {
-  console.error('Failed to start application:', error);
-  app.quit();
-});
 
 // For resolving paths in the app
 const appRoot = path.join(__dirname, '../../../..');
@@ -264,6 +336,30 @@ app.on('will-quit', () => {
   if (audioCaptureCleanup) {
     audioCaptureCleanup();
     audioCaptureCleanup = null;
+  }
+});
+
+// Handle Google Login Request
+ipcMain.handle('start-google-login', async () => {
+  try {
+    // We use a temporary ID to initiate the flow. The backend will replace it with the real ID from the profile.
+    const tempUserId = `login_${Date.now()}`;
+    // Assuming Action Service is on port 4004
+    const response = await axios.get(`http://localhost:4004/auth/google/url?userId=${tempUserId}`);
+    const { url } = response.data;
+
+    if (url) {
+      if (mainWindow) {
+        mainWindow.setAlwaysOnTop(false);
+        mainWindow.minimize(); // Minimize to let browser show clearly
+      }
+      require('electron').shell.openExternal(url);
+      return { success: true };
+    }
+    return { success: false, error: 'No URL returned' };
+  } catch (error) {
+    console.error('[Main] Failed to start Google login:', error);
+    return { success: false, error: String(error) };
   }
 });
 
@@ -1052,6 +1148,12 @@ ipcMain.handle('get-window-pos', () => {
 ipcMain.on('set-window-pos', (_, { x, y }: { x: number; y: number }) => {
   if (!mainWindow || mainWindow.isDestroyed()) return;
   mainWindow.setPosition(Math.round(x), Math.round(y));
+});
+
+// Handle user ID update from renderer (e.g. on app launch if already logged in)
+ipcMain.on('set-user-id', (_event, userId: string) => {
+  console.log('[Main] Received user ID update from renderer:', userId);
+  mainProcess.setUserId(userId);
 });
 
 // Function to get display at point

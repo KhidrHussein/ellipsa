@@ -24,10 +24,14 @@ export class CalendarProvider implements IActionProvider {
     private initialized = false;
     private memoryClient: MemoryClient | null = null;
 
+    private activeUserId: string;
+
     constructor(
         private tokenService?: TokenService,
-        private userId: string = 'user' // Default to 'user' for single-user mode if not provided
-    ) { }
+        private userId: string = 'user'
+    ) {
+        this.activeUserId = userId;
+    }
 
     /**
      * Set the Memory Client for persisting calendar events
@@ -46,7 +50,18 @@ export class CalendarProvider implements IActionProvider {
             console.log('[CalendarProvider] Initialized with provided OAuth client');
         } else if (this.tokenService) {
             // Try to initialize from TokenService
-            const tokenData = await this.tokenService.getToken(this.userId, 'google');
+            let tokenData = await this.tokenService.getToken(this.userId, 'google');
+
+            // Fallback: If no token for current user (and it is default 'user'), look for ANY valid google token
+            if (!tokenData && this.userId === 'user') {
+                const found = await this.tokenService.findUserWithProvider('google');
+                if (found) {
+                    console.log(`[CalendarProvider] No token for '${this.userId}'. Found token for '${found.userId}', using it.`);
+                    tokenData = found.token;
+                    this.activeUserId = found.userId;
+                }
+            }
+
             if (tokenData && tokenData.accessToken) {
                 const clientId = process.env.GOOGLE_CLIENT_ID;
                 const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
@@ -61,7 +76,7 @@ export class CalendarProvider implements IActionProvider {
                         token_type: tokenData.tokenType,
                         scope: tokenData.scope,
                     });
-                    console.log(`[CalendarProvider] Initialized with TokenService for user ${this.userId}`);
+                    console.log(`[CalendarProvider] Initialized with TokenService for user ${this.activeUserId}`);
                 }
             }
         }
@@ -272,6 +287,7 @@ export class CalendarProvider implements IActionProvider {
 
                     // Build the event data object
                     const eventData = {
+                        user_id: this.activeUserId,     // Ensure we attribute to the correct user
                         type: 'meeting' as const,      // Required - must be 'meeting' for Briefing
                         title: summary || 'Untitled Meeting',  // Required - fallback to prevent null
                         description: description || `Calendar event: ${summary || 'Meeting'}`,
@@ -282,6 +298,7 @@ export class CalendarProvider implements IActionProvider {
                         source: 'google_calendar',
                         participants,
                         metadata: {
+                            user_id: this.activeUserId, // Redundant but safe
                             google_event_id: event.data.id,
                             htmlLink: event.data.htmlLink,
                             location: location || null,

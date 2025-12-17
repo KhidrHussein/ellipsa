@@ -27,7 +27,7 @@ export function createEntitiesRouter(
     try {
       const entity = await entityModel.findById(req.params.id);
       if (!entity) {
-        return res.status(404).json({ 
+        return res.status(404).json({
           success: false,
           error: {
             code: 'NOT_FOUND',
@@ -39,7 +39,7 @@ export function createEntitiesRouter(
           }
         });
       }
-      
+
       // Get related events using the event model
       const events = await eventModel.findAll(
         { 'participants.entity_id': entity.id },
@@ -51,7 +51,7 @@ export function createEntitiesRouter(
         }
       );
 
-      res.json({ 
+      res.json({
         success: true,
         data: {
           ...entity,
@@ -64,7 +64,7 @@ export function createEntitiesRouter(
       });
     } catch (error: unknown) {
       console.error('Error fetching entity:', error);
-      
+
       const errorResponse: {
         success: boolean;
         error: {
@@ -89,8 +89,8 @@ export function createEntitiesRouter(
       };
 
       if (error instanceof Error) {
-        errorResponse.error.details = process.env.NODE_ENV === 'development' 
-          ? error.message 
+        errorResponse.error.details = process.env.NODE_ENV === 'development'
+          ? error.message
           : undefined;
       }
 
@@ -102,23 +102,25 @@ export function createEntitiesRouter(
   router.post('/', async (req: Request, res: Response, next: NextFunction) => {
     try {
       const entityData = req.body;
-      
+
       // Check if entity exists
       let entity = await entityModel.findById(entityData.id);
-      
+
       if (entity) {
         // Update existing entity
         entity = await entityModel.update(entityData.id, entityData);
       } else {
         // Create new entity
+        const userId = (req.headers['x-user-id'] as string) || 'user';
         entity = await entityModel.create({
+          user_id: userId,
           name: entityData.name || `Entity ${entityData.id}`,
           type: entityData.type || 'unknown',
           metadata: entityData.metadata || {},
         });
       }
-      
-      res.status(201).json({ 
+
+      res.status(201).json({
         success: true,
         data: entity,
         meta: {
@@ -128,7 +130,7 @@ export function createEntitiesRouter(
       });
     } catch (error: unknown) {
       console.error('Error saving entity:', error);
-      
+
       const errorResponse: {
         success: boolean;
         error: {
@@ -153,8 +155,8 @@ export function createEntitiesRouter(
       };
 
       if (error instanceof Error) {
-        errorResponse.error.details = process.env.NODE_ENV === 'development' 
-          ? error.message 
+        errorResponse.error.details = process.env.NODE_ENV === 'development'
+          ? error.message
           : undefined;
       }
 

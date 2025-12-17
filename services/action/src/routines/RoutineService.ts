@@ -5,6 +5,8 @@ import { IEmailMemoryService } from '../email/services/IEmailMemoryService.js';
 import { ActionExecutor } from '../core/ActionExecutor.js';
 import { MemoryClient } from '@ellipsa/shared';
 
+import { TokenService } from '../services/oauth/TokenService.js';
+
 export class RoutineService {
     private jobs: schedule.Job[] = [];
 
@@ -13,7 +15,8 @@ export class RoutineService {
         private calendarProvider: CalendarProvider,
         private memoryService: IEmailMemoryService,
         private actionExecutor: ActionExecutor,
-        private memoryClient: MemoryClient
+        private memoryClient: MemoryClient,
+        private tokenService: TokenService
     ) { }
 
     public start() {
@@ -30,6 +33,20 @@ export class RoutineService {
         });
 
         console.log('[RoutineService] Routines scheduled.');
+
+        // Initial sweep to populate pending actions immediately
+        setTimeout(async () => {
+            console.log('[RoutineService] Running initial email sweep...');
+            try {
+                // Ensure we have a user context before sweeping if possible, 
+                // but performSweep internally uses the service which has the token logic now.
+                // We'll trust the service's fallback logic.
+                await this.emailService.performSweep({ unreadOnly: true, limit: 10 });
+                console.log('[RoutineService] Initial sweep completed.');
+            } catch (error) {
+                console.error('[RoutineService] Initial sweep failed:', error);
+            }
+        }, 5000); // Wait 5s for services to stabilize
     }
 
     public stop() {
@@ -52,6 +69,14 @@ export class RoutineService {
     }
 
     private async runStartOfDay() {
+        // 0. Determine Active User (Local single-user mode)
+        let userId = 'user';
+        const user = await this.tokenService.findUserWithProvider('google');
+        if (user) {
+            userId = user.userId;
+            console.log(`[RoutineService] Generatng briefing for user: ${userId}`);
+        }
+
         // 1. Get Urgent Emails
         // We'll perform a sweep for unread emails and check for 'high' priority
         const sweepResult = await this.emailService.performSweep({
@@ -80,7 +105,8 @@ export class RoutineService {
             date: now.toISOString(),
             urgentEmails: urgentEmails.map(e => ({ subject: e.subject, from: e.from.address })),
             eventsCount: todaysEvents.length,
-            status: 'generated'
+            status: 'generated',
+            user_id: userId // Add to metadata
         };
 
         // Store in memory (using a generic store method if available, or just logging for now)
@@ -99,7 +125,10 @@ ${todaysEvents.slice(0, 5).map(e => `- ${e.summary} at ${e.start?.dateTime ? new
                 priority: 'high',
                 source: 'assistant',
                 due_date: endOfDay.toISOString(),
-                metadata: briefing
+                metadata: {
+                    ...briefing,
+                    assignee_id: userId // Store inside metadata if not supported at top level
+                }
             });
             console.log('[RoutineService] Daily Briefing Task created.');
         } catch (error) {

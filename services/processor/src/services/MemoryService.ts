@@ -73,16 +73,20 @@ export class MemoryService {
    * @returns The ID of the created event
    */
   async storeEvent(event: MemoryEvent): Promise<string> {
+    const userId = event.metadata?.user_id || (event as any).user_id || 'user';
     try {
       const response = await axios.post(`${this.baseURL}/api/v1/events`, event, {
         timeout: 30000,
         headers: {
           'Content-Type': 'application/json',
+          'x-user-id': userId, // Propagate user_id via header
         },
       });
 
-      console.log(`[MemoryService] Stored event with ID: ${response.data.event_id}`);
-      return response.data.event_id;
+      // Correctly extract event_id from the nested response structure
+      const eventId = response.data?.data?.event_id || response.data?.event_id;
+      console.log(`[MemoryService] Stored event with ID: ${eventId}`);
+      return eventId;
     } catch (error) {
       console.error('[MemoryService] Failed to store event:', error);
       throw error;

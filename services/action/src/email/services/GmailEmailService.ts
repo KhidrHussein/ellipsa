@@ -191,8 +191,20 @@ export class GmailEmailService implements IEmailService {
     const client = new google.auth.OAuth2(clientId, clientSecret, redirectUri);
 
     // Try to get token from TokenService
+    // Try to get token from TokenService
     if (this.tokenService) {
-      const tokenData = await this.tokenService.getToken(this.userId, 'google');
+      let tokenData = await this.tokenService.getToken(this.userId, 'google');
+
+      // Fallback: If no token for current user (and it is default 'user'), look for ANY valid google token
+      if (!tokenData && this.userId === 'user') {
+        const found = await this.tokenService.findUserWithProvider('google');
+        if (found) {
+          console.log(`[GmailEmailService] No token for '${this.userId}'. Found token for '${found.userId}', using it.`);
+          tokenData = found.token;
+          // We keep this.userId as 'user' to avoid mutations, but we use the found token.
+        }
+      }
+
       if (tokenData && tokenData.accessToken) {
         client.setCredentials({
           access_token: tokenData.accessToken,

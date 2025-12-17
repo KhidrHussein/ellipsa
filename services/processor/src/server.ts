@@ -48,7 +48,8 @@ export const IngestSchema = z.object({
   active_window: z.string().optional(),
   // Allow number or string (coerced) for robustness
   segment_ts: z.union([z.number(), z.string()]).transform(val => Number(val)),
-  meta: z.record(z.any()).optional()
+  meta: z.record(z.any()).optional(),
+  user_id: z.string().optional() // Added user_id
 });
 
 export type Ingest = z.infer<typeof IngestSchema>;
@@ -345,9 +346,11 @@ const rateLimit = (windowMs = 60000, max = 100) => {
 // Apply rate limiting to ingest endpoint (500 requests per minute per IP)
 app.post("/processor/v1/ingest", rateLimit(60000, 500), validateIngestRequest, async (req: Request, res: Response) => {
   try {
-    const ingest = (req as any).parsedIngest;
+    const parsed = (req as any).parsedIngest;
+    const ingest = parsed.data;
+    const userId = ingest.meta?.user_id || ingest.user_id || 'user';
 
-    const { event, tasks, entities } = await processInput(ingest.data);
+    const { event, tasks, entities } = await processInput(ingest);
 
     // Prepare the event data for storage
     const eventMetadata = {
@@ -361,7 +364,8 @@ app.post("/processor/v1/ingest", rateLimit(60000, 500), validateIngestRequest, a
       type: undefined,
       participants: undefined,
       start_ts: undefined,
-      end_ts: undefined
+      end_ts: undefined,
+      user_id: userId
     };
 
     // Remove undefined values from metadata
@@ -386,7 +390,7 @@ app.post("/processor/v1/ingest", rateLimit(60000, 500), validateIngestRequest, a
       })),
       tasks: (event.action_items || []).map((t: any) => ({
         text: t.text || t.description || '',
-        owner: t.owner || 'system',
+        owner: t.owner || userId,
         status: (t.status ? t.status.toLowerCase() : 'pending'),
         priority: (t.priority ? t.priority.toLowerCase() : 'medium'),
         due_ts: t.due_ts,
@@ -402,7 +406,7 @@ app.post("/processor/v1/ingest", rateLimit(60000, 500), validateIngestRequest, a
         ...t,
         // Ensure required fields are present
         text: t.text || '',
-        owner: t.owner || 'system',
+        owner: t.owner || userId,
         status: t.status || 'pending',
         priority: t.priority || 'medium'
       }))
@@ -411,7 +415,7 @@ app.post("/processor/v1/ingest", rateLimit(60000, 500), validateIngestRequest, a
     // Store in local map
     events.set(eventData.id, eventData);
 
-    logger.info(`Stored event ${storedEvent} with ${tasks.length} tasks and ${entities.length} entities`);
+    logger.info(`Stored event ${storedEvent} with ${tasks.length} tasks and ${entities.length} entities for user ${userId}`);
 
     // Store entities in the knowledge graph through the memory service
     await Promise.all(entities.map(async (entity) => {
@@ -433,7 +437,8 @@ app.post("/processor/v1/ingest", rateLimit(60000, 500), validateIngestRequest, a
             ...(entity.metadata || {}),
             entity_id: entityId,
             entity_type: entity.type || 'unknown',
-            canonical_name: entity.canonical_name
+            canonical_name: entity.canonical_name,
+            user_id: userId
           },
           start_time: new Date(),
           participants: [{

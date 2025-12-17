@@ -21,7 +21,11 @@ export function createEventsRouter(
         filterOptions.type = type as string;
       }
 
-      const events = await eventModel.findAll(filterOptions, {
+      const userId = (req.headers['x-user-id'] as string) || 'user';
+      const events = await eventModel.findAll({
+        ...filterOptions,
+        user_id: userId
+      }, {
         page: 1,
         pageSize: limit ? parseInt(limit as string, 10) : 50,
         sortBy: 'start_time',
@@ -60,8 +64,10 @@ export function createEventsRouter(
       const eventData = req.body;
 
       // Validate and create event
+      const userId = (req.headers['x-user-id'] as string) || 'user';
       const event = await eventModel.create({
         ...eventData,
+        user_id: userId,
         start_time: new Date(eventData.start_time),
         end_time: eventData.end_time ? new Date(eventData.end_time) : undefined,
       });
@@ -81,6 +87,7 @@ export function createEventsRouter(
 
             if (!existingEntity) {
               await entityModel.create({
+                user_id: userId,
                 name: participant.name || `Participant ${participant.entity_id}`,
                 type: 'person',
                 metadata: participant.metadata || {},

@@ -71,6 +71,7 @@ export type EntityType = z.infer<typeof EntityType>;
 
 const BaseEntitySchema = z.object({
   id: z.string().uuid().optional(),
+  user_id: z.string(),
   name: z.string().min(1),
   type: EntityType,
   description: z.string().optional(),
@@ -120,7 +121,7 @@ export class EntityModel extends BaseModel<BaseEntity, EntityInput, EntityUpdate
     trx?: Knex.Transaction,
     _options?: Record<string, unknown>
   ): Promise<BaseEntity> {
-    const duplicates = await this.findPotentialDuplicates(data.name, data.type);
+    const duplicates = await this.findPotentialDuplicates(data.name, data.user_id, data.type);
     if (duplicates.length > 0) {
       console.warn('Potential duplicate entities found:', duplicates);
     }
@@ -175,6 +176,7 @@ export class EntityModel extends BaseModel<BaseEntity, EntityInput, EntityUpdate
           metadata: {
             name: entity.name,
             type: entity.type,
+            user_id: entity.user_id,
             ...(entity.metadata || {}),
           }
         });
@@ -185,6 +187,7 @@ export class EntityModel extends BaseModel<BaseEntity, EntityInput, EntityUpdate
           metadatas: [{
             name: entity.name,
             type: entity.type,
+            user_id: entity.user_id,
             updated_at: entity.updated_at ? new Date(entity.updated_at).toISOString() : new Date().toISOString(),
             ...(entity.metadata || {}),
           }],
@@ -199,12 +202,14 @@ export class EntityModel extends BaseModel<BaseEntity, EntityInput, EntityUpdate
                 id: $id,
                 name: $name,
                 type: $type,
+                user_id: $user_id,
                 createdAt: datetime()
               })`,
               {
                 id: entity.id,
                 name: entity.name,
                 type: entity.type,
+                user_id: entity.user_id
               }
             )
           );
@@ -256,6 +261,7 @@ export class EntityModel extends BaseModel<BaseEntity, EntityInput, EntityUpdate
    */
   private async findPotentialDuplicates(
     name: string,
+    userId: string,
     type?: EntityType,
     threshold: number = this.SIMILARITY_THRESHOLD
   ): Promise<BaseEntity[]> {
@@ -264,15 +270,17 @@ export class EntityModel extends BaseModel<BaseEntity, EntityInput, EntityUpdate
     try {
       const embedding = await this.generateEmbedding(name);
 
+      const whereConditions: any[] = [{ user_id: userId }];
+      if (type) {
+        whereConditions.push({ type });
+      }
+
       const queryOptions: any = {
         queryEmbeddings: [embedding],
         nResults: 5,
         include: ['metadatas', 'documents', 'distances'],
+        where: whereConditions.length > 1 ? { $and: whereConditions } : whereConditions[0]
       };
-
-      if (type) {
-        queryOptions.where = { type };
-      }
 
       const results = await this.collection.query(queryOptions);
 
@@ -734,6 +742,7 @@ export class EntityModel extends BaseModel<BaseEntity, EntityInput, EntityUpdate
         return this.toEntity({
           ...props,
           id: String(props.id || ''),
+          user_id: String(props.user_id || 'user'),
           metadata
         });
       });

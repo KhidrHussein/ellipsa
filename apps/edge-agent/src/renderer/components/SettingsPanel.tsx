@@ -301,6 +301,25 @@ export function SettingsPanel({ onClose }: SettingsPanelProps) {
                 <ChevronRight className="w-5 h-5 text-red-400" />
               </button>
 
+              <button
+                className="w-full p-4 bg-white hover:bg-red-50 border border-red-200 rounded-xl text-left transition-colors flex items-center justify-between"
+                onClick={() => {
+                  if (confirm('Are you sure you want to sign out? This will clear local preferences.')) {
+                    localStorage.removeItem('user_id');
+                    localStorage.removeItem('ellipsa_preferences');
+                    window.location.reload();
+                  }
+                }}
+              >
+                <div>
+                  <div className="text-red-600 mb-1">Sign Out</div>
+                  <p className="text-sm text-gray-600">
+                    Disconnect from your account and reset preferences
+                  </p>
+                </div>
+                <ChevronRight className="w-5 h-5 text-red-400" />
+              </button>
+
               <button className="w-full p-4 bg-white hover:bg-red-50 border border-red-200 rounded-xl text-left transition-colors flex items-center justify-between">
                 <div>
                   <div className="text-red-600 mb-1">Export All Data</div>

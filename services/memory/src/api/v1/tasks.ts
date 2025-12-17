@@ -7,10 +7,18 @@ export function createTasksRouter(taskModel: TaskModel): Router {
   // List tasks with optional filtering
   router.get('/', async (req, res) => {
     try {
-      const { status, limit } = req.query;
+      const { status, limit, user_id } = req.query;
+      const headerUserId = req.headers['x-user-id'] as string;
+      const targetUserId = (user_id as string) || headerUserId;
 
       // Build filter options
       const filterOptions: any = {};
+
+      // If a user ID is provided (via query or header), filter by assignee
+      if (targetUserId) {
+        filterOptions.assignee_id = targetUserId;
+      }
+
       if (status && status !== 'all') {
         filterOptions.status = status as string;
       }

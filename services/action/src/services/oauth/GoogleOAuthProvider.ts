@@ -33,7 +33,7 @@ export class GoogleOAuthProvider implements IOAuthProvider {
         return this.client.generateAuthUrl({
             access_type: 'offline',
             scope: scopes,
-            prompt: 'consent', // Force consent to ensure refresh token
+            prompt: 'consent select_account', // Force consent and account selection
             include_granted_scopes: true,
             state: state
         });
@@ -80,6 +80,28 @@ export class GoogleOAuthProvider implements IOAuthProvider {
             tokenType: credentials.token_type || undefined,
             scope: credentials.scope || token.scope,
             idToken: credentials.id_token || token.idToken
+        };
+    }
+
+    async getUserProfile(token: TokenData): Promise<{ id: string; email: string; name: string; avatarUrl?: string }> {
+        this.client.setCredentials({ access_token: token.accessToken });
+
+        // Use the configured client to request user info
+        const response = await this.client.request({
+            url: 'https://www.googleapis.com/oauth2/v2/userinfo'
+        });
+
+        const data = response.data as any;
+
+        if (!data.email) {
+            throw new Error('Failed to retrieve email from Google profile');
+        }
+
+        return {
+            id: data.id || data.email, // Prefer Google ID, fallback to email
+            email: data.email,
+            name: data.name || data.email,
+            avatarUrl: data.picture
         };
     }
 }

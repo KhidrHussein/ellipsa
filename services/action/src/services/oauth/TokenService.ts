@@ -72,6 +72,19 @@ export class TokenService {
         return Array.from(userTokens.keys());
     }
 
+    /**
+     * Find the first user that has a token for the given provider.
+     * Useful for single-user local environments where we just want "the" active user.
+     */
+    async findUserWithProvider(provider: string): Promise<{ userId: string, token: TokenData } | null> {
+        for (const [userId, providerMap] of this.tokens.entries()) {
+            if (providerMap.has(provider)) {
+                return { userId, token: providerMap.get(provider)! };
+            }
+        }
+        return null;
+    }
+
     private async saveTokens() {
         try {
             const dir = path.dirname(this.storageFile);

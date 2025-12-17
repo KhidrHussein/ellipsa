@@ -66,6 +66,11 @@ export interface ElectronAPI {
   // Additional properties from preload.js that may be present
   showReminder?: (data: any) => void;
   openEmail?: (id: string) => void;
+
+  // Auth
+  startGoogleLogin: () => Promise<void>;
+  onLoginSuccess: (callback: (userId: string) => void) => () => void;
+  setUserId: (userId: string) => void;
 }
 
 // FloatingAssistantUI class interface

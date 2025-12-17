@@ -55,6 +55,7 @@ class ServiceClient {
       ...options,
       headers: {
         'X-Service-Name': this.serviceName,
+        'X-User-ID': localStorage.getItem('user_id') || 'user', // Dynamic user ID
         ...(options.headers || {}),
       },
     };

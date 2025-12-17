@@ -12,13 +12,14 @@ import { PostMeetingToast } from './components/PostMeetingToast';
 import { ObserveModeOverlay } from './components/ObserveModeOverlay';
 import { WelcomeScreen } from './components/WelcomeScreen';
 import { CalibrationFlow } from './components/CalibrationFlow';
+import { LoginScreen } from './components/LoginScreen';
 import { Toaster, toast } from 'sonner';
 
 import { useObserveMode } from './hooks/useObserveMode';
 import { usePendingActions } from './hooks/usePendingActions';
 
 export default function App() {
-  const [view, setView] = useState<'welcome' | 'calibration' | 'none' | 'timeline' | 'briefing' | 'settings'>('none');
+  const [view, setView] = useState<'login' | 'welcome' | 'calibration' | 'none' | 'timeline' | 'briefing' | 'settings'>('none');
   const { isObserving, toggleObserveMode } = useObserveMode();
   const [showToast, setShowToast] = useState(false);
   const [selectedPerson, setSelectedPerson] = useState<string | null>(null);
@@ -32,7 +33,19 @@ export default function App() {
 
   // Check for existing calibration
   // Check for existing calibration
+  // Check for auth and existing calibration
   useEffect(() => {
+    // Check for user_id first
+    const userId = localStorage.getItem('user_id');
+    if (!userId) {
+      setView('login');
+      return;
+    }
+
+    // Sync user ID with Main process
+    // @ts-ignore
+    window.ellipsa?.setUserId?.(userId);
+
     // Check local storage first for speed
     const prefs = localStorage.getItem('ellipsa_preferences');
     if (!prefs) {
@@ -137,7 +150,7 @@ export default function App() {
       // Always keep window fullscreen for these views as they are overlays on the glass
       // This ensures the 800x500 cards are centered properly and the floating button can move
       // Settings, Timeline, and Briefing acts as overlays so we need the full canvas
-      const fullScreenViews = ['none', 'welcome', 'calibration', 'timeline', 'briefing', 'settings'];
+      const fullScreenViews = ['none', 'login', 'welcome', 'calibration', 'timeline', 'briefing', 'settings'];
 
       if (fullScreenViews.includes(view)) {
         if (ellipsa.getScreenSize) {
@@ -192,6 +205,20 @@ export default function App() {
     };
   }, []);
 
+  // Global Reset Shortcut for Development/Testing
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Ctrl + Shift + Delete to hard reset
+      if (e.ctrlKey && e.shiftKey && e.key === 'Delete') {
+        console.log('Force Reset Triggered');
+        localStorage.clear();
+        window.location.reload();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
+
   return (
     <ServiceProvider>
       <TooltipProvider>
@@ -209,7 +236,7 @@ export default function App() {
 
             <div className="pointer-events-auto">
               {/* Click-away overlay */}
-              {(view === 'timeline' || view === 'briefing' || view === 'settings') && (
+              {(view === 'timeline' || view === 'briefing' || view === 'settings' || view === 'welcome') && (
                 <div
                   className="fixed inset-0 z-20 bg-black/5"
                   onClick={() => setView('none')}
@@ -217,9 +244,9 @@ export default function App() {
               )}
 
               {/* View Cards */}
-              {(view === 'timeline' || view === 'briefing' || view === 'settings') && (
+              {(view === 'timeline' || view === 'briefing' || view === 'settings' || view === 'welcome') && (
                 <div className="fixed inset-0 z-30 flex items-center justify-center pointer-events-none">
-                  <div className="w-[800px] h-[500px] pointer-events-auto relative">
+                  <div className={`pointer-events-auto relative ${view === 'welcome' ? 'flex items-center justify-center w-full h-full p-12' : 'w-[800px] h-[500px]'}`}>
                     {view === 'timeline' && (
                       <TimelineView
                         onPersonClick={setSelectedPerson}
@@ -231,6 +258,22 @@ export default function App() {
                     )}
                     {view === 'settings' && (
                       <SettingsPanel onClose={() => setView('none')} />
+                    )}
+                    {view === 'welcome' && (
+                      // Welcome Screen (Home) - made fit within constraints or full but clickable behind?
+                      // Actually, if we want it retractable, putting it here is right.
+                      // We use a larger container for welcome screen as it was originally full screen
+                      <div className="w-full h-full bg-white/95 backdrop-blur-xl rounded-3xl shadow-2xl overflow-y-auto border border-gray-200" style={{ pointerEvents: 'auto' }}>
+                        <div className="relative">
+                          <button
+                            onClick={() => setView('none')}
+                            className="absolute top-6 right-6 p-2 rounded-full hover:bg-gray-100 z-50 text-gray-500 hover:text-black transition-colors"
+                          >
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                          </button>
+                          <WelcomeScreen onSelectDemo={handleDemoSelect} />
+                        </div>
+                      </div>
                     )}
                   </div>
                 </div>
@@ -281,37 +324,50 @@ export default function App() {
           )}
 
           {/* Welcome Screen */}
-          {view === 'welcome' && (
-            <div className="pointer-events-auto">
-              <WelcomeScreen onSelectDemo={handleDemoSelect} />
-            </div>
-          )}
+
 
           {/* Calibration Flow */}
           {view === 'calibration' && (
-            <div className="pointer-events-auto">
+            <div className="fixed inset-0 z-50 pointer-events-auto">
               <CalibrationFlow onComplete={() => setView('welcome')} />
             </div>
           )}
 
-          {/* Floating Button visible always for consistency - Moved to end for stacking order */}
-          <FloatingButton
-            isObserving={isObserving}
-            actionPending={actionPending}
-            actionCount={actionCount}
-            onClick={handleFloatingButtonClick}
-            onLongPress={handleLongPress}
-            onSwipeUp={handleSwipeUp}
-            collapsed={view === 'none' && !menuOpen && !showActionModal && !showToast && !selectedPerson}
-            onMenuOpenChange={setMenuOpen}
-            onMenuSelect={(item) => {
-              if (item === 'timeline') setView('timeline');
-              if (item === 'briefing') setView('briefing');
-              if (item === 'settings') setView('settings');
-              if (item === 'actions') setShowActionModal(true);
-              if (item === 'home') setView('calibration');
-            }}
-          />
+          {/* Login Screen */}
+          {view === 'login' && (
+            <div className="fixed inset-0 z-50 pointer-events-auto">
+              <LoginScreen onLoginSuccess={() => setView('calibration')} />
+            </div>
+          )}
+
+          {/* Floating Button - Hidden only during initial auth/calibration */}
+          {!['login', 'calibration'].includes(view) && (
+            <FloatingButton
+              isObserving={isObserving}
+              actionPending={actionPending}
+              actionCount={actionCount}
+              onClick={handleFloatingButtonClick}
+              onLongPress={handleLongPress}
+              onSwipeUp={handleSwipeUp}
+              collapsed={view === 'none' && !menuOpen && !showActionModal && !showToast && !selectedPerson}
+              onMenuOpenChange={setMenuOpen}
+              onMenuSelect={(item) => {
+                if (item === 'settings') {
+                  setView('settings');
+                } else if (item === 'timeline') {
+                  setView('timeline');
+                } else if (item === 'briefing') {
+                  setView('briefing');
+                } else if (item === 'actions') {
+                  setShowActionModal(true);
+                } else if (item === 'home') {
+                  setView('welcome');
+                }
+                setMenuOpen(false);
+              }}
+            />
+          )}
+
         </div>
         {/* Sonner Toaster for Nudges */}
         <Toaster position="top-right" expand richColors />

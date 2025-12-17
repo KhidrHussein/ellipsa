@@ -35,6 +35,7 @@ export const ParticipantSchema = z.object({
 export const EventInputSchema = z.object({
   // Required fields
   type: EventType,
+  user_id: z.string(),
   title: z.string(),
   start_time: z.union([z.string(), z.date()]),
 
@@ -55,6 +56,7 @@ const BaseEventSchema = z.object({
   id: z.string().uuid(),
   type: EventType,
   title: z.string(),
+  user_id: z.string(),
   start_time: z.union([z.string(), z.date()]),
 
   // Optional fields with defaults
@@ -140,6 +142,7 @@ export class EventModel extends BaseModel<BaseEvent, EventInput, EventUpdate> {
             title: event.title,
             timestamp: new Date(event.start_time).toISOString(),
             event_id: event.id,
+            user_id: event.user_id, // Added user_id
             // Store a summary for display in search results
             summary: textToEmbed.substring(0, 1000)
           }],
@@ -156,6 +159,7 @@ export class EventModel extends BaseModel<BaseEvent, EventInput, EventUpdate> {
               id: $id,
               type: $type,
               title: $title,
+              user_id: $user_id,
               start_time: $start_time,
               created_at: datetime()
             })`,
@@ -163,6 +167,7 @@ export class EventModel extends BaseModel<BaseEvent, EventInput, EventUpdate> {
               id: event.id,
               type: event.type,
               title: event.title,
+              user_id: event.user_id,
               start_time: new Date(event.start_time).toISOString()
             }
           )
@@ -204,6 +209,13 @@ export class EventModel extends BaseModel<BaseEvent, EventInput, EventUpdate> {
         query = query.where(key, value);
       }
     });
+
+    // Enforce user_id isolation if passed in filter (it should be mandatory in service layer)
+    // If not passed, we might be in admin mode, but for robustness:
+    if (!filters.user_id && !(options as any).skipUserCheck) {
+      // Log warning or throw error in strict mode
+      // console.warn('[EventModel] findAll called without user_id filter');
+    }
 
     // Get total count for pagination
     const countResult = await query.clone().count('* as count').first();
@@ -360,6 +372,9 @@ export class EventModel extends BaseModel<BaseEvent, EventInput, EventUpdate> {
   /**
    * Convert a database record to the entity type
    */
+  /**
+   * Convert a database record to the entity type
+   */
   protected toEntity(data: unknown): Event {
     if (typeof data !== 'object' || data === null) {
       throw new Error('Invalid data type for Event');
@@ -368,6 +383,7 @@ export class EventModel extends BaseModel<BaseEvent, EventInput, EventUpdate> {
     const eventData = data as Record<string, any>;
     return {
       id: eventData.id,
+      user_id: eventData.user_id || 'user', // Default for legacy
       type: eventData.type,
       title: eventData.title,
       description: eventData.description,

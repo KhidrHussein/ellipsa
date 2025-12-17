@@ -21,6 +21,7 @@ export function createRouter(
       // Validate and create event
       const event = await eventModel.create({
         ...eventData,
+        user_id: (req.headers['x-user-id'] as string) || 'user',
         start_time: new Date(eventData.start_time),
         end_time: eventData.end_time ? new Date(eventData.end_time) : undefined,
       });
@@ -37,6 +38,7 @@ export function createRouter(
               await entityModel.create({
                 name: participant.name || `Participant ${participant.entity_id}`,
                 type: 'person', // Default type, can be overridden
+                user_id: (req.headers['x-user-id'] as string) || 'user',
                 metadata: participant.metadata || {},
               });
             }

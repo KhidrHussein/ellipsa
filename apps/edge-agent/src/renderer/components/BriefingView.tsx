@@ -108,7 +108,7 @@ export function BriefingView({ onClose }: BriefingViewProps) {
   if (loading) {
     return (
       <motion.div
-        className="fixed inset-0 bg-white z-40 flex items-center justify-center"
+        className="h-full w-full bg-white rounded-3xl overflow-hidden border border-gray-200 shadow-xl flex items-center justify-center"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}

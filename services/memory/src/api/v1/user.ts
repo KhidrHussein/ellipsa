@@ -95,6 +95,7 @@ export function createUserRouter(entityModel: EntityModel): Router {
 
             if (!userEntity) {
                 userEntity = await entityModel.create({
+                    user_id: (req.headers['x-user-id'] as string) || 'user',
                     name: 'User',
                     type: 'user',
                     description: 'The primary user of the system',
@@ -131,6 +132,7 @@ export function createUserRouter(entityModel: EntityModel): Router {
                     });
                 } else {
                     focusEntity = await entityModel.create({
+                        user_id: (req.headers['x-user-id'] as string) || 'user',
                         name: focusEntityName,
                         type: 'concept',
                         description: primaryFocus,

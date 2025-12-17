@@ -335,7 +335,7 @@ async function initializeServices(app: express.Express): Promise<Services> {
         console.log('[Server] Calendar provider waiting for authentication');
     }
 
-    const routineService = new RoutineService(emailService, calendarProvider, memoryService, actionExecutor, memoryClient);
+    const routineService = new RoutineService(emailService, calendarProvider, memoryService, actionExecutor, memoryClient, tokenService);
 
     const services: Services = {
         actionExecutor,
@@ -596,36 +596,64 @@ function setupActionRoutes(app: express.Express, services: Services) {
         }
     });
 
-    /**
-     * GET /auth/:provider/callback
-     * Handle OAuth callback
-     */
     app.get('/auth/:provider/callback', async (req: Request, res: Response) => {
         try {
-            const provider = req.params.provider;
-            const code = req.query.code as string;
-            const state = req.query.state as string;
+            const { provider } = req.params;
+            const { code, state } = req.query;
 
             if (!code || !state) {
                 return res.status(400).send('Missing code or state');
             }
 
-            const { userId } = await services.oauthManager.handleCallback(provider, code, state);
+            console.log(`[Auth API] Handling callback for ${provider}`);
+            let { userId, token } = await services.oauthManager.handleCallback(provider, code as string, state as string);
+
+            // SECURITY: If this is Google Login, verify identity and use email as userId
+            if (provider === 'google') {
+                const googleProvider = services.oauthManager.getProvider('google') as GoogleOAuthProvider;
+                if (googleProvider && googleProvider.getUserProfile) {
+                    try {
+                        const profile = await googleProvider.getUserProfile(token);
+                        console.log('[Auth API] Google Profile:', profile.email);
+
+                        // Use sanitized email as the canonical User ID
+                        const realUserId = profile.email.replace(/[^a-zA-Z0-9]/g, '_').toLowerCase();
+
+                        // Delete the temporary token entry if the IDs differ
+                        if (realUserId !== userId) {
+                            console.log(`[Auth API] Upgrading temporary ID ${userId} to ${realUserId}`);
+                            // We don't necessarily delete the old one to avoid race conditions, but we save the new one.
+                            await services.tokenService.setToken(realUserId, provider, token);
+                            userId = realUserId;
+                        }
+                    } catch (err) {
+                        console.error('[Auth API] Failed to fetch user profile:', err);
+                    }
+                }
+            }
+
+            // Send HTML that attempts to open the deep link and provides a button
+            const deepLink = `ellipsa://auth-success?userId=${userId}&provider=${provider}`;
 
             res.send(`
                 <html>
-                    <body>
-                        <h1>Successfully connected to ${provider}!</h1>
-                        <p>You can close this window now.</p>
+                    <body style="font-family: sans-serif; background: #000; color: #fff; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh;">
+                        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
+                        </svg>
+                        <h1>Authentication Successful!</h1>
+                        <p style="color: #999; margin-bottom: 24px;">Please return to the Ellipsa app.</p>
+                        <a href="${deepLink}" style="padding: 12px 24px; background: #fff; color: #000; text-decoration: none; border-radius: 6px; font-weight: bold;">Open Ellipsa</a>
                         <script>
-                            window.opener?.postMessage({ type: 'oauth_success', provider: '${provider}', userId: '${userId}' }, '*');
-                            setTimeout(() => window.close(), 2000);
+                            setTimeout(function() {
+                                window.location.href = "${deepLink}";
+                            }, 500);
                         </script>
                     </body>
                 </html>
             `);
         } catch (error) {
-            console.error(`[Auth API] Error in ${req.params.provider} callback:`, error);
+            console.error(`[Auth API] Callback error for ${req.params.provider}:`, error);
             res.status(500).send(`Authentication failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
         }
     });
@@ -682,14 +710,20 @@ async function startServer() {
                 if (state) {
                     const { userId } = await services.oauthManager.handleCallback('google', code, state);
 
+                    const deepLink = `ellipsa://auth-success?userId=${userId}&provider=google`;
                     res.send(`
                         <html>
-                            <body>
-                                <h1>Successfully connected to Google Workspace!</h1>
-                                <p>You can close this window now.</p>
+                            <body style="font-family: sans-serif; background: #000; color: #fff; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh;">
+                                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
+                                </svg>
+                                <h1>Authentication Successful!</h1>
+                                <p style="color: #999; margin-bottom: 24px;">Please return to the Ellipsa app.</p>
+                                <a href="${deepLink}" style="padding: 12px 24px; background: #fff; color: #000; text-decoration: none; border-radius: 6px; font-weight: bold;">Open Ellipsa</a>
                                 <script>
-                                    window.opener?.postMessage({ type: 'oauth_success', provider: 'google', userId: '${userId}' }, '*');
-                                    setTimeout(() => window.close(), 2000);
+                                    setTimeout(function() {
+                                        window.location.href = "${deepLink}";
+                                    }, 500);
                                 </script>
                             </body>
                         </html>

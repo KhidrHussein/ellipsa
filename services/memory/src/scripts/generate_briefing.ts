@@ -70,6 +70,7 @@ async function generateMorningBriefing() {
 
         // 5. Store as Event (for Timeline/History)
         await eventModel.create({
+            user_id: 'user',
             type: 'assistant_message',
             title: 'Morning Briefing',
             start_time: new Date(),
