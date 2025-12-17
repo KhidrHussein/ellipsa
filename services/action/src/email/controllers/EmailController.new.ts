@@ -1,15 +1,15 @@
 import { Request, Response } from 'express';
-import { GmailEmailService } from '../services/GmailEmailService.new';
-import { EmailProcessingService } from '../services/EmailProcessingService';
-import { EmailMemoryService } from '../services/EmailMemoryService';
-import { EmailSweepOptions } from '../types';
+import { GmailEmailService } from '../services/GmailEmailService.new.js';
+import { EmailProcessingService } from '../services/EmailProcessingService.js';
+import { EmailMemoryService } from '../services/EmailMemoryService.js';
+import { EmailSweepOptions } from '../types.js';
 
 export class EmailController {
   constructor(
     private readonly emailService: GmailEmailService,
     private readonly processingService: EmailProcessingService,
     private readonly memoryService: EmailMemoryService
-  ) {}
+  ) { }
 
   async getEmail(req: Request, res: Response) {
     try {
@@ -49,7 +49,7 @@ export class EmailController {
       };
 
       const result = await this.emailService.performSweep(options);
-      
+
       res.status(200).json({
         success: true,
         data: result,
@@ -77,10 +77,10 @@ export class EmailController {
 
       // Get the email first
       const email = await this.emailService.getEmail(id);
-      
+
       // Process the email to generate a summary
       const summary = await this.processingService.processEmail(email);
-      
+
       res.status(200).json({
         success: true,
         data: summary,
@@ -99,7 +99,7 @@ export class EmailController {
   async draftResponse(req: Request, res: Response) {
     try {
       const { emailId, context } = req.body;
-      
+
       if (!emailId) {
         return res.status(400).json({
           success: false,
@@ -109,10 +109,10 @@ export class EmailController {
 
       // Get the email first
       const email = await this.emailService.getEmail(emailId);
-      
+
       // Generate a draft response
       const draft = await this.emailService.draftResponse(email, context || {});
-      
+
       res.status(200).json({
         success: true,
         data: draft,
@@ -131,7 +131,7 @@ export class EmailController {
   async sendEmail(req: Request, res: Response) {
     try {
       const { to, subject, body, threadId, inReplyTo } = req.body;
-      
+
       if (!to || !subject || !body) {
         return res.status(400).json({
           success: false,
@@ -146,7 +146,7 @@ export class EmailController {
         threadId,
         inReplyTo,
       });
-      
+
       res.status(200).json({
         success: result.success,
         messageId: result.messageId,

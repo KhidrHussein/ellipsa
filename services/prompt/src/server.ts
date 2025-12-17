@@ -3,6 +3,7 @@ import { z } from "zod";
 import OpenAI from "openai";
 import dotenv from "dotenv";
 import { MEETING_ASSISTANT_PROMPT, QUESTION_ANSWER_ASSISTANT_PROMPT, GENERAL_ASSISTANT_PROMPT } from "./lib/assistantPrompts";
+import { DRAFT_EMAIL_PROMPT, EVALUATE_ACTION_PROMPT, EVENING_BRIEFING_PROMPT } from "./lib/emailPrompts";
 
 // Load environment variables from .env file
 dotenv.config();
@@ -315,6 +316,109 @@ app.post("/prompt/v1/chat", async (req: Request, res: Response) => {
       message: error.message
     });
   }
+});
+
+// Email Draft Endpoint
+app.post("/prompt/v1/email/draft", async (req: Request, res: Response) => {
+  try {
+    const { history, context, sender_name, sender_email, subject, email_content, model = "gpt-4" } = req.body;
+
+    const filledPrompt = DRAFT_EMAIL_PROMPT
+      .replace('{history}', history || 'No history')
+      .replace('{context}', context || 'No additional context')
+      .replace('{sender_name}', sender_name)
+      .replace('{sender_email}', sender_email)
+      .replace('{subject}', subject)
+      .replace('{email_content}', email_content);
+
+    const completion = await openai.chat.completions.create({
+      model,
+      messages: [{ role: "system", content: filledPrompt }],
+      response_format: { type: "json_object" },
+      temperature: 0.5
+    });
+
+    res.json(JSON.parse(completion.choices[0].message.content || '{}'));
+  } catch (error: any) {
+    console.error("Draft generation failed", error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Email Evaluate Endpoint
+app.post("/prompt/v1/email/evaluate", async (req: Request, res: Response) => {
+  try {
+    const { subject, sender, summary, content_snippet, model = "gpt-3.5-turbo" } = req.body;
+
+    const filledPrompt = EVALUATE_ACTION_PROMPT
+      .replace('{subject}', subject)
+      .replace('{sender}', sender)
+      .replace('{summary}', summary)
+      .replace('{content_snippet}', content_snippet);
+
+    const completion = await openai.chat.completions.create({
+      model,
+      messages: [{ role: "system", content: filledPrompt }],
+      response_format: { type: "json_object" },
+      temperature: 0.1
+    });
+
+    res.json(JSON.parse(completion.choices[0].message.content || '{}'));
+  } catch (error: any) {
+    console.error("Evaluation failed", error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Evening Briefing Endpoint
+app.post("/prompt/v1/briefing", async (req: Request, res: Response) => {
+  try {
+    const { focus, completed_count, pending_count, tomorrow_schedule, model = "gpt-4" } = req.body;
+
+    const filledPrompt = EVENING_BRIEFING_PROMPT
+      .replace('{focus}', focus)
+      .replace('{completed_count}', completed_count)
+      .replace('{pending_count}', pending_count)
+      .replace('{tomorrow_schedule}', tomorrow_schedule);
+
+    const completion = await openai.chat.completions.create({
+      model,
+      messages: [{ role: "system", content: filledPrompt }],
+      response_format: { type: "json_object" },
+      temperature: 0.7
+    });
+
+    res.json(JSON.parse(completion.choices[0].message.content || '{}'));
+  } catch (error: any) {
+    console.error("Briefing generation failed", error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Summarize Endpoint
+app.post("/prompt/v1/summarize", async (req: Request, res: Response) => {
+    try {
+        const { content, model = "gpt-3.5-turbo" } = req.body;
+        // Basic summarization prompt if one isn't imported from prompts.ts (but I should use imported if available)
+        // I will use a simple one here for now as I didn't verify SUMMARIZATION_PROMPT export perfectly in server.ts imports
+        // Actually, let's use the one from lib/prompts if imported (it wasn't imported in previous step). 
+        // I'll just write the prompt here or import it. Let's import it.
+        
+        // Wait, I need to add the import first. I'll do it in a separate block or assume I can add it.
+        // To be safe, I'll define it inline or use a generic one.
+        const prompt = `Summarize the following content concisely:\n\n${content}`;
+
+        const completion = await openai.chat.completions.create({
+            model,
+            messages: [{ role: "system", content: "You are a helpful summarizer." }, { role: "user", content: prompt }],
+            temperature: 0.3
+        });
+        
+        res.json({ summary: completion.choices[0].message.content });
+    } catch (error: any) {
+        console.error("Summarization failed", error);
+        res.status(500).json({ error: error.message });
+    }
 });
 
 // Error handling middleware

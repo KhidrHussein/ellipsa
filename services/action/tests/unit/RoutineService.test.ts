@@ -5,6 +5,8 @@ import { IEmailMemoryService } from '../../src/email/services/IEmailMemoryServic
 import { ActionExecutor } from '../../src/core/ActionExecutor.js';
 import { EmailSummary } from '../../src/email/types/email.types.js';
 
+import { TokenService } from '../../src/services/oauth/TokenService.js';
+
 // Mock dependencies
 const mockEmailService = {
     performSweep: jest.fn(),
@@ -23,11 +25,19 @@ const mockMemoryService = {
 const mockActionExecutor = {
 } as unknown as jest.Mocked<ActionExecutor>;
 
+const mockTokenService = {
+    findUserWithProvider: jest.fn().mockResolvedValue({ userId: 'user', token: {} })
+} as unknown as jest.Mocked<TokenService>;
+
 describe('RoutineService', () => {
     let service: RoutineService;
 
     const mockMemoryClient = {
         createTask: jest.fn().mockResolvedValue({ task_id: 'task-123' })
+    } as any;
+
+    const mockPromptClient = {
+        generateBriefing: jest.fn().mockResolvedValue({ briefing_content: 'Mock Briefing' })
     } as any;
 
     beforeEach(() => {
@@ -38,7 +48,9 @@ describe('RoutineService', () => {
             mockCalendarProvider,
             mockMemoryService,
             mockActionExecutor,
-            mockMemoryClient
+            mockMemoryClient,
+            mockPromptClient,
+            mockTokenService
         );
     });
 

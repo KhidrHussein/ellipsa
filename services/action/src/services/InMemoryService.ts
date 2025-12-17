@@ -1,12 +1,16 @@
-import { EmailMessage, EmailSummary, DraftResponse } from '../email/types';
+import { EmailMessage, EmailSummary, DraftResponse } from '../email/types.js';
+import { MemoryClient } from '@ellipsa/shared';
 
 export interface IMemoryService {
   storeEmail(email: EmailMessage): Promise<void>;
   getEmail(emailId: string): Promise<EmailMessage | null>;
   storeSummary(summary: Omit<EmailSummary, 'id'> & { id?: string }): Promise<void>;
   getSummary(threadId: string): Promise<EmailSummary | null>;
+  createDraft(draft: DraftResponse): Promise<DraftResponse>;
   storeDraft(draft: DraftResponse): Promise<void>;
-  getDraft(threadId: string): Promise<DraftResponse | null>;
+  getDraft(id: string): Promise<DraftResponse | null>;
+  deleteDraft(id: string): Promise<void>;
+  getDrafts(): Promise<DraftResponse[]>;
   getConversationHistory(threadId: string): Promise<EmailMessage[]>;
   updateEmailStatus(emailId: string, status: 'read' | 'unread' | 'archived' | 'deleted'): Promise<void>;
 }
@@ -18,14 +22,19 @@ export class InMemoryService implements IMemoryService {
   private summaries: Map<string, StoredSummary> = new Map();
   private drafts: Map<string, DraftResponse> = new Map();
   private conversations: Map<string, EmailMessage[]> = new Map();
+  private memoryClient?: MemoryClient;
+
+  constructor(memoryClient?: MemoryClient) {
+    this.memoryClient = memoryClient;
+  }
 
   async storeEmail(email: EmailMessage): Promise<void> {
     this.emails.set(email.id, email);
-    
+
     // Update conversation history using threadId
     const threadId = email.threadId;
     const conversation = this.conversations.get(threadId) || [];
-    
+
     // Only add if not already in conversation
     if (!conversation.some(msg => msg.id === email.id)) {
       conversation.push(email);
@@ -52,13 +61,83 @@ export class InMemoryService implements IMemoryService {
     return summary ? { ...summary } : null;
   }
 
-  async storeDraft(draft: DraftResponse): Promise<void> {
-    this.drafts.set(draft.threadId, { ...draft });
+  async createDraft(draft: DraftResponse): Promise<DraftResponse> {
+    const id = draft.id || draft.threadId || `draft-${Date.now()}`;
+    const draftWithId = { ...draft, id };
+
+    if (this.memoryClient) {
+      try {
+        const payload = {
+          ...draftWithId,
+          thread_id: draftWithId.threadId,
+          in_reply_to: draftWithId.inReplyTo,
+          email_id: draftWithId.emailId,
+        };
+        await this.memoryClient.createDraft(payload);
+        return draftWithId;
+      } catch (error) {
+        console.error('Failed to persist draft:', error);
+        // Fallback or rethrow? For now fallback to Map is confusing if one succeeds and other fails.
+        // Let's rely on memoryClient if present.
+      }
+    }
+
+    this.drafts.set(id, draftWithId);
+    return draftWithId;
   }
 
-  async getDraft(threadId: string): Promise<DraftResponse | null> {
-    const draft = this.drafts.get(threadId);
+  // Alias for backward compatibility if needed, but prefer createDraft
+  async storeDraft(draft: DraftResponse): Promise<void> {
+    await this.createDraft(draft);
+  }
+
+  async getDraft(id: string): Promise<DraftResponse | null> {
+    if (this.memoryClient) {
+      try {
+        const remoteDraft = await this.memoryClient.getDraft(id);
+        if (remoteDraft) {
+          return {
+            ...remoteDraft,
+            threadId: remoteDraft.thread_id || remoteDraft.threadId,
+            inReplyTo: remoteDraft.in_reply_to || remoteDraft.inReplyTo,
+            emailId: remoteDraft.email_id || remoteDraft.emailId,
+          };
+        }
+      } catch (error) {
+        // console.error('Failed to get remote draft:', error);
+      }
+    }
+    const draft = this.drafts.get(id);
     return draft ? { ...draft } : null;
+  }
+
+  async deleteDraft(id: string): Promise<void> {
+    if (this.memoryClient) {
+      try {
+        await this.memoryClient.deleteDraft(id);
+      } catch (error) {
+        console.error('Failed to delete remote draft:', error);
+      }
+    }
+    this.drafts.delete(id);
+  }
+
+  async getDrafts(): Promise<DraftResponse[]> {
+    if (this.memoryClient) {
+      try {
+        const response = await this.memoryClient.getDrafts();
+        const results = (response as any).data || (Array.isArray(response) ? response : []);
+        return results.map((d: any) => ({
+          ...d,
+          threadId: d.thread_id || d.threadId,
+          inReplyTo: d.in_reply_to || d.inReplyTo,
+          emailId: d.email_id || d.emailId,
+        }));
+      } catch (error) {
+        console.error('Failed to get remote drafts:', error);
+      }
+    }
+    return Array.from(this.drafts.values());
   }
 
   async getConversationHistory(threadId: string): Promise<EmailMessage[]> {

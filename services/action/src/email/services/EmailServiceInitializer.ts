@@ -1,10 +1,11 @@
-import { GmailEmailService } from './GmailEmailService';
-import { EmailLLMService } from './EmailLLMService';
-import { InMemoryService } from '../../services/InMemoryService';
-import { EmailProcessingService } from './EmailProcessingService';
-import { EmailDigestService } from './EmailDigestService';
-import { IEmailService } from './EmailService.interface';
-import { oauthService } from './OAuthService';
+import { GmailEmailService } from './GmailEmailService.js';
+import { EmailLLMService } from './EmailLLMService.js';
+import { InMemoryService } from '../../services/InMemoryService.js';
+import { EmailProcessingService } from './EmailProcessingService.js';
+import { EmailDigestService } from './EmailDigestService.js';
+import { IEmailService } from './EmailService.interface.js';
+import { oauthService } from './OAuthService.js';
+import { PromptClient, MemoryClient } from '@ellipsa/shared';
 
 export interface EmailServices {
   emailService: IEmailService;
@@ -26,43 +27,49 @@ export async function initializeEmailServices(): Promise<EmailServices | null> {
     return null;
   }
 
+
+
+  // ... (existing imports, but since I'm targeting a chunk, I don't need to repeat all unless they are in scope of change)
+
   try {
     // Initialize LLM service for email processing
-    const llmService = new EmailLLMService(process.env.OPENAI_API_KEY!);
-    
-    // Initialize in-memory service
-    const memoryService = new InMemoryService();
-    
+    // NOTE: In production, PromptService URL might be from env
+    const promptClient = new PromptClient(process.env.PROMPT_SERVICE_URL || 'http://localhost:4003');
+    const llmService = new EmailLLMService(promptClient);
+
+    const memoryClient = new MemoryClient(process.env.MEMORY_SERVICE_URL || 'http://localhost:4001');
+    const memoryService = new InMemoryService(memoryClient);
+
     // Check if user is authenticated
     const isAuthenticated = await oauthService.isAuthenticated();
     if (!isAuthenticated) {
       console.error('User is not authenticated with Gmail. Please authenticate first.');
       return null;
     }
-    
+
     // Initialize processing service first
     const processingService = new EmailProcessingService(
       llmService as any, // Temporary type assertion to fix compilation
       memoryService as any // Temporary type assertion to fix compilation
     );
-    
+
     // Initialize Gmail service with the processing service
     const gmailService = await GmailEmailService.create(
       processingService,
       memoryService as any
     ) as IEmailService;
-    
+
     const emailService: IEmailService = gmailService;
-    
+
     // Initialize digest service with default schedule (9 AM daily)
     const digestService = new EmailDigestService(
       emailService,
       processingService,
       process.env.EMAIL_DIGEST_SCHEDULE || '0 9 * * *'
     );
-    
+
     console.log('Email services initialized successfully');
-    
+
     return {
       emailService,
       processingService,

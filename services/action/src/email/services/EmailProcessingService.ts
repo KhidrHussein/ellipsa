@@ -17,7 +17,9 @@ import { EmailLLMService } from './EmailLLMService.js'; // Import EmailLLMServic
 
 // Import from shared packages (temporary workaround)
 // TODO: Fix workspace linking for @ellipsa/shared and @ellipsa/prompt
-import type { IPromptService, StructuredData } from '@ellipsa/prompt';
+// import type { IPromptService, StructuredData } from '@ellipsa/prompt';
+type IPromptService = any;
+type StructuredData = any;
 
 interface PromptService extends IPromptService {
   // Extend with any additional methods not in IPromptService

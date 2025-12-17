@@ -1,42 +1,21 @@
 import { EmailMessage, EmailSummary, DraftResponse } from '../types/email.types.js';
-import OpenAI from 'openai';
+import { PromptClient } from '@ellipsa/shared';
 
 export class EmailLLMService {
-  private openai: OpenAI;
+  private promptClient: PromptClient;
 
-  constructor(apiKey: string) {
-    if (!apiKey) {
-      throw new Error('OpenAI API key is required');
-    }
-    this.openai = new OpenAI({
-      apiKey: apiKey,
-      dangerouslyAllowBrowser: true // Only for development
-    });
+  constructor(promptClient: PromptClient) {
+    this.promptClient = promptClient;
   }
 
   async summarizeEmail(email: EmailMessage): Promise<EmailSummary> {
     try {
-      const response = await this.openai.chat.completions.create({
-        model: 'gpt-4',
-        messages: [
-          {
-            role: 'system',
-            content: 'You are an AI assistant that helps summarize emails. Extract key points, action items, and categorize the email.'
-          },
-          {
-            role: 'user',
-            content: `Summarize this email and extract key information:
-              From: ${email.from.name} <${email.from.address}>
-              Subject: ${email.subject}
-              Date: ${email.date.toISOString()}
-              \n${email.text || email.html?.substring(0, 1000) || 'No content'}"
-            `
-          }
-        ],
-        temperature: 0.3,
-      });
+      const content = `From: ${email.from.name} <${email.from.address}>
+Subject: ${email.subject}
+Date: ${email.date.toISOString()}
+\n${email.text || email.html?.substring(0, 1000) || 'No content'}`;
 
-      const summary = response.choices[0]?.message?.content || 'No summary available';
+      const { summary } = await this.promptClient.summarize(content);
 
       // Parse the LLM response into a structured format
       return {
@@ -45,13 +24,13 @@ export class EmailLLMService {
         subject: email.subject,
         from: email.from,
         date: email.date,
-        summary,
-        actionRequired: this.determineActionRequired(summary),
-        priority: this.determinePriority(summary),
-        categories: this.extractCategories(summary),
+        summary: summary || 'No summary available',
+        actionRequired: this.determineActionRequired(summary || ''),
+        priority: this.determinePriority(summary || ''),
+        categories: this.extractCategories(summary || ''),
       };
     } catch (error) {
-      console.error('Error summarizing email with LLM:', error);
+      console.error('Error summarizing email with PromptService:', error);
       // Fallback to a simple summary
       return {
         id: email.id,
@@ -75,58 +54,37 @@ export class EmailLLMService {
     } = {}
   ): Promise<DraftResponse> {
     try {
-      const conversationContext = context.conversationHistory
+      const history = context.conversationHistory
         ?.map(msg => `From: ${msg.from.name}
 Date: ${msg.date.toISOString()}
 ${msg.text || ''}`)
         .join('\n\n---\n\n') || '';
 
-      const response = await this.openai.chat.completions.create({
-        model: 'gpt-4',
-        messages: [
-          {
-            role: 'system',
-            content: `You are an AI assistant helping to draft email responses. 
-            Be concise, professional, and address all points from the original email.
-            ${context.additionalContext ? '\nAdditional context: ' + context.additionalContext : ''}`
-          },
-          {
-            role: 'user',
-            content: `Draft a response to this email. Consider the following conversation history:
-            
-            ${conversationContext}
-            
-            ---
-            
-            Original email:
-            From: ${email.from.name} <${email.from.address}>
-            Subject: ${email.subject}
-            Date: ${email.date.toISOString()}
-            
-            ${email.text || email.html?.substring(0, 2000) || 'No content'}`
-          }
-        ],
-        temperature: 0.5,
+      const response = await this.promptClient.draftEmail({
+        history,
+        context: context.additionalContext,
+        sender_name: email.from.name,
+        sender_email: email.from.address,
+        subject: email.subject,
+        email_content: email.text || email.html?.substring(0, 2000) || 'No content',
       });
-
-      const draftText = response.choices[0]?.message?.content || 'I am following up on your email...';
 
       return {
         threadId: email.threadId,
         to: [email.from],
-        subject: email.subject.startsWith('Re:') ? email.subject : `Re: ${email.subject}`,
-        body: draftText,
+        subject: response.subject || (email.subject.startsWith('Re:') ? email.subject : `Re: ${email.subject}`),
+        body: response.body || 'I will follow up shortly.',
         inReplyTo: email.id,
         references: [...(context.conversationHistory?.map(e => e.id) || []), email.id],
       };
     } catch (error) {
-      console.error('Error drafting response with LLM:', error);
+      console.error('Error drafting response with PromptService:', error);
       // Fallback to a simple response
       return {
         threadId: email.threadId,
         to: [email.from],
         subject: email.subject.startsWith('Re:') ? email.subject : `Re: ${email.subject}`,
-        body: `Thank you for your email. I will get back to you soon.\n\nBest regards,\n[Your Name]`,
+        body: `Thank you for your email. I will get back to you soon.\n\nBest regards,\nEllipsa`,
         inReplyTo: email.id,
       };
     }
@@ -145,37 +103,18 @@ ${msg.text || ''}`)
     };
   }> {
     try {
-      const response = await this.openai.chat.completions.create({
-        model: 'gpt-3.5-turbo',
-        messages: [
-          {
-            role: 'system',
-            content: `You are an intelligent email assistant. specific task: Decide the single best action for this email.
-            Possible actions:
-            - REPLY: If the email requires a response, asks a question, or is a personal/work communication that warrants a reply.
-            - TASK: If the email contains a task, request, or action item that needs to be tracked but not necessarily replied to immediately.
-            - ARCHIVE: If it's a notification, newsletter, receipt, or "FYI" email that doesn't need action.
-            - NONE: If none of the above apply (e.g., spam, generic noise).
-            
-            Return JSON format: { "action": "...", "reasoning": "...", "draftIntent": "..." (if REPLY), "suggestedTask": {...} (if TASK) }`
-          },
-          {
-            role: 'user',
-            content: `Email Summary: ${email.summary}\n\nSubject: ${email.subject}\nFrom: ${email.from.address}\n\nFull Content Snippet: ${fullContent ? fullContent.substring(0, 500) : 'N/A'}`
-          }
-        ],
-        temperature: 0.1,
-        response_format: { type: "json_object" }
+      const response = await this.promptClient.evaluateEmail({
+        subject: email.subject,
+        sender: email.from.address,
+        summary: email.summary,
+        content_snippet: fullContent ? fullContent.substring(0, 500) : 'N/A'
       });
 
-      const content = response.choices[0]?.message?.content || '{}';
-      const result = JSON.parse(content);
-
       return {
-        action: result.action || 'NONE',
-        reasoning: result.reasoning || 'No reasoning provided',
-        draftIntent: result.draftIntent,
-        suggestedTask: result.suggestedTask
+        action: response.action || 'NONE',
+        reasoning: response.reasoning || 'No reasoning provided',
+        draftIntent: response.draftIntent,
+        suggestedTask: response.suggestedTask
       };
     } catch (error) {
       console.error('Error evaluating email action:', error);

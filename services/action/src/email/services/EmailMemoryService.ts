@@ -84,6 +84,10 @@ export class EmailMemoryService implements IEmailMemoryService {
     return { id, ...draft };
   }
 
+  async deleteDraft(id: string): Promise<void> {
+    this.drafts.delete(id);
+  }
+
   async storeEmail(email: EmailMessage): Promise<void> {
     try {
       // Store the email

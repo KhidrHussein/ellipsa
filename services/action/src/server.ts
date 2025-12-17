@@ -73,12 +73,16 @@ class MemoryServiceClient implements IEmailMemoryService {
       metadata: {},
       attachments: email.attachments?.map(attachment => ({
         ...attachment,
-        content: attachment.content instanceof Buffer 
+        content: attachment.content instanceof Buffer
           ? new Uint8Array(attachment.content.buffer)
           : attachment.content
       }))
     } as ExtendedEmailMessage;
     this.emails.set(email.id, processedEmail);
+  }
+
+  async deleteDraft(id: string): Promise<void> {
+    this.drafts.delete(id);
   }
 
   async storeEmailSummary(summary: EmailSummary): Promise<void> {
@@ -93,13 +97,13 @@ class MemoryServiceClient implements IEmailMemoryService {
   async getEmail(id: string): Promise<EmailMessage | null> {
     const email = this.emails.get(id);
     if (!email) return null;
-    
+
     // Ensure attachments content is Uint8Array
     return {
       ...email,
       attachments: email.attachments?.map(attachment => ({
         ...attachment,
-        content: attachment.content instanceof Uint8Array 
+        content: attachment.content instanceof Uint8Array
           ? Buffer.from(attachment.content.buffer)
           : attachment.content
       }))
@@ -109,8 +113,8 @@ class MemoryServiceClient implements IEmailMemoryService {
   async searchEmails(query: string): Promise<EmailSummary[]> {
     const queryLower = query.toLowerCase();
     return Array.from(this.emails.values())
-      .filter(email => 
-        email.subject?.toLowerCase().includes(queryLower) || 
+      .filter(email =>
+        email.subject?.toLowerCase().includes(queryLower) ||
         email.text?.toLowerCase().includes(queryLower) ||
         email.html?.toLowerCase().includes(queryLower)
       )
@@ -181,10 +185,10 @@ async function initializeServices(app: express.Express): Promise<Services> {
   });
   const memoryService: IEmailMemoryService = new MemoryServiceClient();
   const processingService = new EmailProcessingService(promptService, memoryService);
-  
+
   // Create Gmail service without initializing it yet
   const emailService = GmailEmailService.create(processingService, memoryService);
-  
+
   // Create the services object
   const services: Services = {
     emailService,
@@ -193,31 +197,31 @@ async function initializeServices(app: express.Express): Promise<Services> {
     emailAutomationService: null as any, // Will be set up after OAuth
     metrics,
   };
-  
+
   // Set up routes
   const emailRouter = createEmailRouter(services.emailService, services.processingService);
   app.use('/api/emails', emailRouter);
-  
+
   // OAuth callback route
   app.get('/oauth2callback', async (req, res) => {
     const code = req.query.code as string;
-    
+
     if (!code) {
       return res.status(400).send('Authorization code is required');
     }
-    
+
     try {
       const oauth2Client = oauthService.getClient();
-      
+
       // Exchange the authorization code for tokens
       const { tokens } = await oauth2Client.getToken(code);
-      
+
       // Store the tokens
       oauth2Client.setCredentials(tokens);
-      
+
       // Now that we have tokens, initialize the Gmail service
       await emailService.connect();
-      
+
       // Initialize email automation service after successful authentication
       const emailAutomationService = await createEmailAutomation({
         emailService,
@@ -227,13 +231,13 @@ async function initializeServices(app: express.Express): Promise<Services> {
         checkInterval: 5 * 60 * 1000, // 5 minutes
         maxEmailsPerCheck: 10,
       });
-      
+
       // Start the email automation service
       emailAutomationService.start();
-      
+
       // Update the services object with the automation service
       services.emailAutomationService = emailAutomationService;
-      
+
       console.log('Successfully authenticated with Gmail and started email automation');
       return res.send('Successfully authenticated! You can close this window and return to the application.');
     } catch (error) {
@@ -241,7 +245,7 @@ async function initializeServices(app: express.Express): Promise<Services> {
       return res.status(500).send('Authentication failed. Please try again.');
     }
   });
-  
+
   // Add a simple health check endpoint
   app.get('/health', (req, res) => {
     const oauth2Client = oauthService.getClient();
@@ -252,7 +256,7 @@ async function initializeServices(app: express.Express): Promise<Services> {
     };
     res.json(status);
   });
-  
+
   // Add a route to get the OAuth URL
   app.get('/auth/url', async (req, res) => {
     try {
@@ -281,20 +285,20 @@ async function initializeServices(app: express.Express): Promise<Services> {
 // Start the server
 async function startServer() {
   const app = express();
-  
+
   // Parse JSON bodies
   app.use(express.json());
-  
+
   try {
     const services = await initializeServices(app);
-    
+
     // Start listening
     const PORT = process.env.PORT || 3000;
     app.listen(PORT, () => {
       console.log(`Server is running on port ${PORT}`);
       console.log(`OAuth URL: http://localhost:${PORT}/auth/url`);
     });
-    
+
     return services;
   } catch (error) {
     console.error('Failed to initialize services:', error);

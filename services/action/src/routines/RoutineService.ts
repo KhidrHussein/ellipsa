@@ -1,9 +1,10 @@
 import schedule from 'node-schedule';
-import { IEmailService, EmailSummary } from '../email/types/email.types.js';
+import { EmailSummary } from '../email/types/email.types.js';
+import type { IEmailService } from '../email/services/EmailService.interface.js';
 import { CalendarProvider } from '../providers/CalendarProvider.js';
 import { IEmailMemoryService } from '../email/services/IEmailMemoryService.js';
 import { ActionExecutor } from '../core/ActionExecutor.js';
-import { MemoryClient } from '@ellipsa/shared';
+import { MemoryClient, PromptClient } from '@ellipsa/shared';
 
 import { TokenService } from '../services/oauth/TokenService.js';
 
@@ -16,6 +17,7 @@ export class RoutineService {
         private memoryService: IEmailMemoryService,
         private actionExecutor: ActionExecutor,
         private memoryClient: MemoryClient,
+        private promptClient: PromptClient,
         private tokenService: TokenService
     ) { }
 
@@ -144,15 +146,102 @@ ${todaysEvents.slice(0, 5).map(e => `- ${e.summary} at ${e.start?.dateTime ? new
     }
 
     private async runEndOfDay() {
-        // 1. Check for tomorrow's first meeting
+        console.log('[RoutineService] End of Day check running.');
+
+        // 0. Determine Active User
+        let userId = 'user';
+        const user = await this.tokenService.findUserWithProvider('google');
+        if (user) {
+            userId = user.userId;
+        }
+
+        // 1. Fetch User Focus
+        let userFocus = 'No specific focus set.';
+        try {
+            const prefsRes = await this.memoryClient.getUserPreferences(userId);
+            if (prefsRes?.data?.preferences?.primaryFocus) {
+                userFocus = prefsRes.data.preferences.primaryFocus;
+            }
+        } catch (e) {
+            console.warn('[RoutineService] Failed to fetch user focus', e);
+        }
+
+        // 2. Review Today's Progress (Tasks)
+        // Fetch tasks completed today? MemoryClient.getTasks({ status: 'completed' })
+        // We'll perform a generic fetch and filter by date if the API doesn't support date filtering.
+        let completedTasksCount = 0;
+        let pendingTasksCount = 0;
+        try {
+            // @ts-ignore - Assuming getTasks exists based on usage in other files or standard patterns
+            const tasksRes = await this.memoryClient.getTasks({ limit: 50 }); // Fetch recent tasks
+            const tasks = tasksRes.data || [];
+
+            const today = new Date().toDateString();
+
+            // Simple filter for now
+            const completed = tasks.filter((t: any) => t.status === 'completed');
+            const pending = tasks.filter((t: any) => t.status === 'pending');
+
+            completedTasksCount = completed.length;
+            pendingTasksCount = pending.length;
+        } catch (e) {
+            console.warn('[RoutineService] Failed to fetch tasks', e);
+        }
+
+        // 3. Check Tomorrow's Schedule
         const tomorrow = new Date();
         tomorrow.setDate(tomorrow.getDate() + 1);
         const tomorrowStart = new Date(tomorrow);
         tomorrowStart.setHours(0, 0, 0, 0);
         const tomorrowEnd = new Date(tomorrow);
-        tomorrowEnd.setHours(12, 0, 0, 0); // Check morning only
+        tomorrowEnd.setHours(23, 59, 59, 999);
 
-        console.log('[RoutineService] End of Day check running.');
-        // Logic to check first meeting would go here
+        let tomorrowEvents: any[] = [];
+        try {
+            tomorrowEvents = await this.calendarProvider.getEventsForRange(tomorrowStart, tomorrowEnd);
+        } catch (e) {
+            console.warn('[RoutineService] Failed to fetch tomorrow events', e);
+        }
+
+        // 4. Create Evening Briefing Task (Narrative from LLM)
+        let description = '';
+        try {
+            const briefing = await this.promptClient.generateBriefing({
+                focus: userFocus,
+                completed_count: completedTasksCount,
+                pending_count: pendingTasksCount,
+                tomorrow_schedule: tomorrowEvents.map(e => `- ${e.summary} at ${e.start?.dateTime ? new Date(e.start.dateTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'All Day'}`).join('\n') || 'No meetings scheduled.'
+            });
+            description = briefing.briefing_content;
+        } catch (error) {
+            console.error('[RoutineService] LLM Briefing failed, falling back to manual.', error);
+            // Fallback logic
+            description = [
+                `**End of Day Review**`,
+                `Your strategic focus: *" ${userFocus} "*`,
+                ``,
+                `**Today's Progress**`,
+                `- Completed Tasks: ${completedTasksCount}`,
+                `- Pending Actions: ${pendingTasksCount}`,
+            ].join('\n');
+        }
+
+        try {
+            await this.memoryClient.createTask({
+                title: `Evening Briefing - ${new Date().toLocaleDateString()}`,
+                description: description,
+                status: 'pending',
+                priority: 'medium',
+                source: 'assistant',
+                due_date: new Date().toISOString(), // Due now
+                metadata: {
+                    type: 'evening_briefing',
+                    user_id: userId
+                }
+            });
+            console.log('[RoutineService] Evening Briefing Task created.');
+        } catch (error) {
+            console.error('[RoutineService] Failed to create Evening Briefing:', error);
+        }
     }
 }

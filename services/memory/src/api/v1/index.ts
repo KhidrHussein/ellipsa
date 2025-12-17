@@ -7,11 +7,14 @@ import { createEventsRouter } from './events';
 import { createEntitiesRouter } from './entities';
 import { createTasksRouter } from './tasks';
 import { createUserRouter } from './user';
+import { createDraftsRouter } from './drafts';
+import { DraftModel } from '../../models/DraftModel';
 
 export function createV1Router(
   eventModel: EventModel,
   entityModel: EntityModel,
   taskModel: TaskModel,
+  draftModel: DraftModel,
   retrievalService: RetrievalService
 ): Router {
   const router = Router();
@@ -35,6 +38,7 @@ export function createV1Router(
   router.use('/entities', createEntitiesRouter(entityModel, eventModel));
   router.use('/tasks', createTasksRouter(taskModel));
   router.use('/user', createUserRouter(entityModel));
+  router.use('/drafts', createDraftsRouter(draftModel));
 
   // Search endpoint
   router.post('/search', async (req, res) => {

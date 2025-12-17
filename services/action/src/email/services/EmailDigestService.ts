@@ -1,6 +1,6 @@
-import { IEmailService } from './EmailService.interface';
-import { EmailProcessingService } from './EmailProcessingService';
-import { EmailSummary, DraftResponse, EmailSweepOptions } from '../types';
+import { IEmailService } from './EmailService.interface.js';
+import { EmailProcessingService } from './EmailProcessingService.js';
+import { EmailSummary, DraftResponse, EmailSweepOptions } from '../types.js';
 import { scheduleJob } from 'node-schedule';
 
 export class EmailDigestService {
@@ -10,7 +10,7 @@ export class EmailDigestService {
     private emailService: IEmailService,
     private processingService: EmailProcessingService,
     private schedule: string = '0 9 * * *' // 9 AM daily by default
-  ) {}
+  ) { }
 
   async start(): Promise<void> {
     if (this.isRunning) {
@@ -23,7 +23,7 @@ export class EmailDigestService {
 
     // Initial run
     await this.runDigest();
-    
+
     // Schedule periodic runs
     scheduleJob(this.schedule, async () => {
       await this.runDigest();
@@ -40,7 +40,7 @@ export class EmailDigestService {
 
     console.log('Running email digest...');
     const startTime = Date.now();
-    
+
     try {
       // 1. Fetch unprocessed emails
       const options: EmailSweepOptions = {
@@ -60,7 +60,7 @@ export class EmailDigestService {
 
       // 2. Process and summarize emails
       const summaries: EmailSummary[] = [];
-      const errors: Array<{id: string, error: string}> = [];
+      const errors: Array<{ id: string, error: string }> = [];
 
       for (const email of emails) {
         try {
@@ -76,8 +76,8 @@ export class EmailDigestService {
       }
 
       // 3. Generate response drafts for emails that need them
-      const drafts: Array<{summary: EmailSummary, draft: DraftResponse}> = [];
-      
+      const drafts: Array<{ summary: EmailSummary, draft: DraftResponse }> = [];
+
       for (const summary of summaries) {
         if (this.requiresResponse(summary)) {
           try {
@@ -114,19 +114,19 @@ export class EmailDigestService {
   private requiresResponse(summary: EmailSummary): boolean {
     // Customize this logic based on your requirements
     return (
-      summary.actionRequired || 
-      summary.priority === 'high' || 
+      summary.actionRequired ||
+      summary.priority === 'high' ||
       (summary.priority === 'medium' && summary.categories.includes('action_required'))
     );
   }
 
   private generateDigest(
     summaries: EmailSummary[],
-    drafts: Array<{summary: EmailSummary, draft: DraftResponse}>,
-    errors: Array<{id: string, error: string}>
+    drafts: Array<{ summary: EmailSummary, draft: DraftResponse }>,
+    errors: Array<{ id: string, error: string }>
   ): string {
     const formatDate = (date: Date) => date.toLocaleString();
-    
+
     const digest = [
       `# 📧 Email Digest - ${new Date().toLocaleDateString()}`,
       `**Generated at**: ${formatDate(new Date())}`,
@@ -184,8 +184,8 @@ export class EmailDigestService {
   }
 
   private async sendDigest(
-    digest: string, 
-    drafts: Array<{draft: DraftResponse}>
+    digest: string,
+    drafts: Array<{ draft: DraftResponse }>
   ): Promise<void> {
     try {
       // For now, just log the digest to console
@@ -197,9 +197,9 @@ export class EmailDigestService {
       // 1. Send the digest via email
       // 2. Store drafts in the database
       // 3. Send notifications if needed
-      
+
       console.log(`Digest generated successfully. ${drafts.length} drafts created.`);
-      
+
     } catch (error) {
       console.error('Error sending digest:', error);
       throw error;

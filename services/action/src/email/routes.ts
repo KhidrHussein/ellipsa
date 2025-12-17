@@ -1,8 +1,8 @@
 import { Router } from 'express';
-import { EmailController } from './controllers/EmailController';
-import { IEmailService } from './services/EmailService.interface';
-import { createDigestRouter } from './routes/digest.routes';
-import { EmailProcessingService } from './services/EmailProcessingService';
+import { EmailController } from './controllers/EmailController.js';
+import { IEmailService } from './services/EmailService.interface.js';
+import { createDigestRouter } from './routes/digest.routes.js';
+import { EmailProcessingService } from './services/EmailProcessingService.js';
 
 export function createEmailRouter(
   emailService: IEmailService,
@@ -24,7 +24,7 @@ export function createEmailRouter(
       const pendingActions = drafts.map((draft: any) => ({
         id: draft.id,
         type: 'email',
-        title: `Email to ${draft.to?.map((t: any) => t.email || t).join(', ') || 'Unknown'}`,
+        title: `Email to ${draft.to?.map((t: any) => t.address || t.email || (typeof t === 'string' ? t : 'Unknown')).join(', ') || 'Unknown'}`,
         description: draft.subject || 'No subject',
         preview: draft.text?.substring(0, 150) || draft.html?.substring(0, 150) || '',
         status: 'pending_approval',

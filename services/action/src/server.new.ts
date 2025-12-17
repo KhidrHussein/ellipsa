@@ -37,7 +37,7 @@ import { EmailMetrics } from './email/monitoring/EmailMetrics.js';
 import { oauthService } from './email/services/OAuthService.js';
 import type { EmailMessage, EmailSummary, DraftResponse, EmailAttachment } from './email/types/email.types.js';
 import { Buffer } from 'buffer';
-import { MemoryClient } from '@ellipsa/shared';
+import { MemoryClient, PromptClient } from '@ellipsa/shared';
 import { RoutineService } from './routines/RoutineService.js';
 
 // Get directory name in ES modules
@@ -96,6 +96,10 @@ class MemoryServiceClient implements IEmailMemoryService {
             }))
         } as ExtendedEmailMessage;
         this.emails.set(email.id, processedEmail);
+    }
+
+    async deleteDraft(id: string): Promise<void> {
+        this.drafts.delete(id);
     }
 
     async storeEmailSummary(summary: EmailSummary): Promise<void> {
@@ -216,6 +220,7 @@ async function initializeServices(app: express.Express): Promise<Services> {
 
     // Initialize Memory Client
     const memoryClient = new MemoryClient(process.env.MEMORY_SERVICE_URL || 'http://localhost:4001');
+    const promptClient = new PromptClient(process.env.PROMPT_SERVICE_URL || 'http://localhost:4003');
 
     const actionHistoryService = new ActionHistoryService(memoryClient);
     const actionExecutor = new ActionExecutor(actionRegistry, safetyValidator, actionHistoryService);
@@ -335,7 +340,26 @@ async function initializeServices(app: express.Express): Promise<Services> {
         console.log('[Server] Calendar provider waiting for authentication');
     }
 
-    const routineService = new RoutineService(emailService, calendarProvider, memoryService, actionExecutor, memoryClient, tokenService);
+    const routineService = new RoutineService(emailService, calendarProvider, memoryService, actionExecutor, memoryClient, promptClient, tokenService);
+
+    // Start routines
+    routineService.start();
+
+    // Initialize & Start Email Automation
+    console.log('[Server] Initializing EmailAutomationService...');
+    const emailAutomationService = await createEmailAutomation({
+        emailService,
+        promptService,
+        memoryService: memoryService as any, // Cast to any to satisfy type if needed (MemoryServiceClient vs EmailMemoryService)
+        metrics,
+        checkInterval: 10 * 60 * 1000, // 10 minutes
+        maxEmailsPerCheck: 10,
+        autoRespond: false // Set to true to enable auto-response
+    });
+
+    // Start the automation service immediately
+    // It will handle connection internally
+    emailAutomationService.start();
 
     const services: Services = {
         actionExecutor,
@@ -347,7 +371,7 @@ async function initializeServices(app: express.Express): Promise<Services> {
         emailService,
         processingService,
         memoryService,
-        emailAutomationService: null,
+        emailAutomationService,
         metrics,
         routineService
     };

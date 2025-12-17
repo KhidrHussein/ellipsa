@@ -81,6 +81,15 @@ export class MemoryConsolidator {
             if (extraction.entities && extraction.entities.length > 0) {
                 await this.storeFacts(extraction.entities);
                 console.log(`[MemoryConsolidator] Consolidated ${extraction.entities.length} new facts.`);
+
+                // 4. Create Memory Summary
+                await this.createMemorySummary({
+                    scope_id: 'user', // Default to global user for now
+                    period_start: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
+                    period_end: new Date().toISOString(),
+                    summary_text: extraction.summary || `Daily consolidation of ${conversations.length} events.`,
+                    facts_count: extraction.entities.length
+                });
             }
 
         } catch (error) {
@@ -118,6 +127,39 @@ export class MemoryConsolidator {
             }
         } catch (error) {
             console.error('[MemoryConsolidator] Failed to store facts', error);
+        } finally {
+            await session.close();
+        }
+    }
+
+    private async createMemorySummary(data: {
+        scope_id: string,
+        period_start: string,
+        period_end: string,
+        summary_text: string,
+        facts_count: number
+    }) {
+        const session = this.neo4jDriver.session();
+        try {
+            await session.run(`
+                CREATE (s:MemorySummary {
+                    id: randomUUID(),
+                    scope_id: $scope_id,
+                    period_start: datetime($period_start),
+                    period_end: datetime($period_end),
+                    summary_text: $summary_text,
+                    facts_count: $facts_count,
+                    created_at: datetime()
+                })
+                WITH s
+                MATCH (u:User {id: $scope_id}) // Assuming User node exists with this ID, or we link to global
+                // If we don't have a rigid User node, we might skip linking or link to a generic 'User' node
+                // For now, let's just create the summary node which is queryable by time.
+                RETURN s
+            `, data);
+            console.log('[MemoryConsolidator] MemorySummary node created.');
+        } catch (error) {
+            console.error('[MemoryConsolidator] Failed to create MemorySummary:', error);
         } finally {
             await session.close();
         }

@@ -528,6 +528,11 @@ export class GmailEmailService implements IEmailService {
         await this.memoryService.updateEmailStatus(draft.inReplyTo, 'replied');
       }
 
+      // Delete the draft from memory as it is now sent
+      if (draft.id) {
+        await this.memoryService.deleteDraft(draft.id);
+      }
+
       return {
         success: true,
         messageId: response.data.id || undefined,

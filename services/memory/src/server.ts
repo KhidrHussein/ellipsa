@@ -10,6 +10,7 @@ import { RetrievalService } from './services/RetrievalService';
 import { EventModel } from './models/EventModel';
 import { EntityModel } from './models/EntityModel';
 import { TaskModel } from './models/TaskModel';
+import { DraftModel } from './models/DraftModel';
 import { WebSocketService } from './services/WebSocketService';
 import { EventProcessingService } from './services/EventProcessingService';
 import { initializeDatabases, closeConnections } from './db/init';
@@ -51,6 +52,7 @@ class MemoryServer {
   private eventModel!: EventModel;
   private entityModel!: EntityModel;
   private taskModel!: TaskModel;
+  private draftModel!: DraftModel;
   private retrievalService!: RetrievalService;
   private webSocketService!: WebSocketService;
   private eventProcessingService!: EventProcessingService;
@@ -137,6 +139,8 @@ class MemoryServer {
       this.knex,
       this.neo4jSession
     );
+
+    this.draftModel = new DraftModel(this.knex);
   }
 
   private async initializeServices() {
@@ -243,6 +247,7 @@ class MemoryServer {
       this.eventModel,
       this.entityModel,
       this.taskModel,
+      this.draftModel,
       this.retrievalService
     ));
 

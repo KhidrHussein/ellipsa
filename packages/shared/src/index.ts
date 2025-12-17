@@ -3,6 +3,7 @@ import { z } from "zod";
 // Export service clients
 export { ServiceClient } from './clients/ServiceClient.js';
 export { MemoryClient } from './clients/MemoryClient.js';
+export { PromptClient } from './clients/PromptClient.js';
 export type {
   MemoryEvent,
   RetrieveOptions,

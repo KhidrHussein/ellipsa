@@ -65,6 +65,33 @@ export class MemoryClient extends ServiceClient {
     });
   }
 
+  async retrieve(query: string, options: Partial<RetrieveOptions> = {}): Promise<RetrieveResult[]> {
+    const result = await this.retrieveMemories({
+      query,
+      ...options
+    });
+    return result.results || [];
+  }
+
+  async getTasks(filters: { status?: string; limit?: number } = {}): Promise<{ data: Task[] }> {
+    const params = new URLSearchParams();
+    if (filters.status) params.append('status', filters.status);
+    if (filters.limit) params.append('limit', filters.limit.toString());
+
+    return this.request({
+      method: 'GET',
+      url: `/tasks?${params.toString()}`,
+    });
+  }
+
+  async getUserPreferences(userId?: string): Promise<{ data: { preferences: any; userId: string } }> {
+    return this.request({
+      method: 'GET',
+      url: '/user/preferences',
+      headers: userId ? { 'x-user-id': userId } : undefined
+    });
+  }
+
   async getEntity(id: string): Promise<{
     entity: Entity;
     recent_events: Event[];
@@ -87,6 +114,44 @@ export class MemoryClient extends ServiceClient {
       method: 'POST',
       url: '/tasks',
       data: task,
+    });
+  }
+
+  // Drafts
+  async createDraft(draft: any): Promise<any> {
+    return this.request({
+      method: 'POST',
+      url: '/drafts',
+      data: draft,
+    });
+  }
+
+  async getDraft(id: string): Promise<any> {
+    return this.request({
+      method: 'GET',
+      url: `/drafts/${id}`,
+    });
+  }
+
+  async getDrafts(status: string = 'draft'): Promise<{ data: any[] }> {
+    return this.request({
+      method: 'GET',
+      url: `/drafts?status=${status}`,
+    });
+  }
+
+  async updateDraft(id: string, updates: any): Promise<any> {
+    return this.request({
+      method: 'PUT',
+      url: `/drafts/${id}`,
+      data: updates,
+    });
+  }
+
+  async deleteDraft(id: string): Promise<void> {
+    return this.request({
+      method: 'DELETE',
+      url: `/drafts/${id}`,
     });
   }
 }
