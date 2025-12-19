@@ -9,6 +9,9 @@
     "sourceMap": true,
     "composite": true,
     "paths": {
+      "@ellipsa/shared": [
+        "../../packages/shared/src/index.ts"
+      ],
       "@ellipsa/shared/*": [
         "../../packages/shared/src/*"
       ],

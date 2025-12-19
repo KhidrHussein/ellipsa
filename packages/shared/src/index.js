@@ -2,6 +2,7 @@ import { z } from "zod";
 // Export service clients
 export { ServiceClient } from './clients/ServiceClient.js';
 export { MemoryClient } from './clients/MemoryClient.js';
+export { PromptClient } from './clients/PromptClient.js';
 // Export utilities
 export { logger } from './utils/logger.js';
 // Existing schema exports
@@ -43,3 +44,4 @@ export const EventSchema = z.object({
     tasks: z.array(TaskSchema).default([])
 });
 export * from './prompts.js';
+//# sourceMappingURL=index.js.map

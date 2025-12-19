@@ -1,6 +1,7 @@
 import { z } from "zod";
 export { ServiceClient } from './clients/ServiceClient.js';
 export { MemoryClient } from './clients/MemoryClient.js';
+export { PromptClient } from './clients/PromptClient.js';
 export type { MemoryEvent, RetrieveOptions, RetrieveResult } from './clients/MemoryClient.js';
 export { logger } from './utils/logger.js';
 export type { INotification, INotificationService } from './notification/INotificationService.js';
@@ -15,25 +16,25 @@ export declare const EntitySchema: z.ZodObject<{
     created_at: z.ZodOptional<z.ZodString>;
     last_seen_at: z.ZodOptional<z.ZodString>;
 }, "strip", z.ZodTypeAny, {
-    metadata?: Record<string, any>;
-    type?: string;
-    id?: string;
-    canonical_name?: string;
-    aliases?: string[];
-    relationship_strength?: number;
-    default_persona?: string;
-    created_at?: string;
-    last_seen_at?: string;
+    id: string;
+    canonical_name: string;
+    type: string;
+    aliases: string[];
+    metadata: Record<string, any>;
+    relationship_strength?: number | undefined;
+    default_persona?: string | undefined;
+    created_at?: string | undefined;
+    last_seen_at?: string | undefined;
 }, {
-    metadata?: Record<string, any>;
-    type?: string;
-    id?: string;
-    canonical_name?: string;
-    aliases?: string[];
-    relationship_strength?: number;
-    default_persona?: string;
-    created_at?: string;
-    last_seen_at?: string;
+    id: string;
+    canonical_name: string;
+    type: string;
+    aliases?: string[] | undefined;
+    metadata?: Record<string, any> | undefined;
+    relationship_strength?: number | undefined;
+    default_persona?: string | undefined;
+    created_at?: string | undefined;
+    last_seen_at?: string | undefined;
 }>;
 export type Entity = z.infer<typeof EntitySchema>;
 export declare const TaskSchema: z.ZodObject<{
@@ -43,29 +44,32 @@ export declare const TaskSchema: z.ZodObject<{
     status: z.ZodDefault<z.ZodEnum<["pending", "in_progress", "completed", "failed"]>>;
     priority: z.ZodDefault<z.ZodEnum<["low", "medium", "high"]>>;
     due_date: z.ZodOptional<z.ZodString>;
+    source: z.ZodOptional<z.ZodEnum<["user", "system", "chat", "email", "assistant"]>>;
     created_at: z.ZodOptional<z.ZodString>;
     updated_at: z.ZodOptional<z.ZodString>;
     metadata: z.ZodDefault<z.ZodRecord<z.ZodString, z.ZodAny>>;
 }, "strip", z.ZodTypeAny, {
-    status?: "failed" | "pending" | "in_progress" | "completed";
-    title?: string;
-    metadata?: Record<string, any>;
-    id?: string;
-    created_at?: string;
-    description?: string;
-    priority?: "low" | "medium" | "high";
-    due_date?: string;
-    updated_at?: string;
+    id: string;
+    status: "pending" | "in_progress" | "completed" | "failed";
+    metadata: Record<string, any>;
+    title: string;
+    priority: "low" | "medium" | "high";
+    created_at?: string | undefined;
+    description?: string | undefined;
+    due_date?: string | undefined;
+    source?: "user" | "system" | "chat" | "email" | "assistant" | undefined;
+    updated_at?: string | undefined;
 }, {
-    status?: "failed" | "pending" | "in_progress" | "completed";
-    title?: string;
-    metadata?: Record<string, any>;
-    id?: string;
-    created_at?: string;
-    description?: string;
-    priority?: "low" | "medium" | "high";
-    due_date?: string;
-    updated_at?: string;
+    id: string;
+    title: string;
+    status?: "pending" | "in_progress" | "completed" | "failed" | undefined;
+    metadata?: Record<string, any> | undefined;
+    created_at?: string | undefined;
+    description?: string | undefined;
+    priority?: "low" | "medium" | "high" | undefined;
+    due_date?: string | undefined;
+    source?: "user" | "system" | "chat" | "email" | "assistant" | undefined;
+    updated_at?: string | undefined;
 }>;
 export type Task = z.infer<typeof TaskSchema>;
 export declare const EventSchema: z.ZodObject<{
@@ -80,13 +84,13 @@ export declare const EventSchema: z.ZodObject<{
         name: z.ZodOptional<z.ZodString>;
         metadata: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodAny>>;
     }, "strip", z.ZodTypeAny, {
-        metadata?: Record<string, any>;
-        name?: string;
-        entity_id?: string;
+        entity_id: string;
+        metadata?: Record<string, any> | undefined;
+        name?: string | undefined;
     }, {
-        metadata?: Record<string, any>;
-        name?: string;
-        entity_id?: string;
+        entity_id: string;
+        metadata?: Record<string, any> | undefined;
+        name?: string | undefined;
     }>, "many">>;
     tasks: z.ZodDefault<z.ZodArray<z.ZodObject<{
         id: z.ZodString;
@@ -95,76 +99,81 @@ export declare const EventSchema: z.ZodObject<{
         status: z.ZodDefault<z.ZodEnum<["pending", "in_progress", "completed", "failed"]>>;
         priority: z.ZodDefault<z.ZodEnum<["low", "medium", "high"]>>;
         due_date: z.ZodOptional<z.ZodString>;
+        source: z.ZodOptional<z.ZodEnum<["user", "system", "chat", "email", "assistant"]>>;
         created_at: z.ZodOptional<z.ZodString>;
         updated_at: z.ZodOptional<z.ZodString>;
         metadata: z.ZodDefault<z.ZodRecord<z.ZodString, z.ZodAny>>;
     }, "strip", z.ZodTypeAny, {
-        status?: "failed" | "pending" | "in_progress" | "completed";
-        title?: string;
-        metadata?: Record<string, any>;
-        id?: string;
-        created_at?: string;
-        description?: string;
-        priority?: "low" | "medium" | "high";
-        due_date?: string;
-        updated_at?: string;
+        id: string;
+        status: "pending" | "in_progress" | "completed" | "failed";
+        metadata: Record<string, any>;
+        title: string;
+        priority: "low" | "medium" | "high";
+        created_at?: string | undefined;
+        description?: string | undefined;
+        due_date?: string | undefined;
+        source?: "user" | "system" | "chat" | "email" | "assistant" | undefined;
+        updated_at?: string | undefined;
     }, {
-        status?: "failed" | "pending" | "in_progress" | "completed";
-        title?: string;
-        metadata?: Record<string, any>;
-        id?: string;
-        created_at?: string;
-        description?: string;
-        priority?: "low" | "medium" | "high";
-        due_date?: string;
-        updated_at?: string;
+        id: string;
+        title: string;
+        status?: "pending" | "in_progress" | "completed" | "failed" | undefined;
+        metadata?: Record<string, any> | undefined;
+        created_at?: string | undefined;
+        description?: string | undefined;
+        priority?: "low" | "medium" | "high" | undefined;
+        due_date?: string | undefined;
+        source?: "user" | "system" | "chat" | "email" | "assistant" | undefined;
+        updated_at?: string | undefined;
     }>, "many">>;
 }, "strip", z.ZodTypeAny, {
-    metadata?: Record<string, any>;
-    type?: string;
-    id?: string;
-    content?: string;
-    start_time?: string | Date;
-    end_time?: string | Date;
-    participants?: {
-        metadata?: Record<string, any>;
-        name?: string;
-        entity_id?: string;
+    id: string;
+    type: string;
+    metadata: Record<string, any>;
+    content: string;
+    start_time: string | Date;
+    participants: {
+        entity_id: string;
+        metadata?: Record<string, any> | undefined;
+        name?: string | undefined;
     }[];
-    tasks?: {
-        status?: "failed" | "pending" | "in_progress" | "completed";
-        title?: string;
-        metadata?: Record<string, any>;
-        id?: string;
-        created_at?: string;
-        description?: string;
-        priority?: "low" | "medium" | "high";
-        due_date?: string;
-        updated_at?: string;
+    tasks: {
+        id: string;
+        status: "pending" | "in_progress" | "completed" | "failed";
+        metadata: Record<string, any>;
+        title: string;
+        priority: "low" | "medium" | "high";
+        created_at?: string | undefined;
+        description?: string | undefined;
+        due_date?: string | undefined;
+        source?: "user" | "system" | "chat" | "email" | "assistant" | undefined;
+        updated_at?: string | undefined;
     }[];
+    end_time?: string | Date | undefined;
 }, {
-    metadata?: Record<string, any>;
-    type?: string;
-    id?: string;
-    content?: string;
-    start_time?: string | Date;
-    end_time?: string | Date;
+    id: string;
+    type: string;
+    content: string;
+    start_time: string | Date;
+    metadata?: Record<string, any> | undefined;
+    end_time?: string | Date | undefined;
     participants?: {
-        metadata?: Record<string, any>;
-        name?: string;
-        entity_id?: string;
-    }[];
+        entity_id: string;
+        metadata?: Record<string, any> | undefined;
+        name?: string | undefined;
+    }[] | undefined;
     tasks?: {
-        status?: "failed" | "pending" | "in_progress" | "completed";
-        title?: string;
-        metadata?: Record<string, any>;
-        id?: string;
-        created_at?: string;
-        description?: string;
-        priority?: "low" | "medium" | "high";
-        due_date?: string;
-        updated_at?: string;
-    }[];
+        id: string;
+        title: string;
+        status?: "pending" | "in_progress" | "completed" | "failed" | undefined;
+        metadata?: Record<string, any> | undefined;
+        created_at?: string | undefined;
+        description?: string | undefined;
+        priority?: "low" | "medium" | "high" | undefined;
+        due_date?: string | undefined;
+        source?: "user" | "system" | "chat" | "email" | "assistant" | undefined;
+        updated_at?: string | undefined;
+    }[] | undefined;
 }>;
 export type Event = z.infer<typeof EventSchema>;
 export type PaginationOptions = {
@@ -173,4 +182,5 @@ export type PaginationOptions = {
     orderBy?: string;
     orderDirection?: 'asc' | 'desc';
 };
+export * from './prompts.js';
 //# sourceMappingURL=index.d.ts.map

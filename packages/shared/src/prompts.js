@@ -40,3 +40,4 @@ Respond with JSON:
     }
   ]
 }`;
+//# sourceMappingURL=prompts.js.map

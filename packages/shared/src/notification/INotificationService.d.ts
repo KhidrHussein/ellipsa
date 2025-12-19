@@ -16,6 +16,7 @@ export interface DraftResponseData {
     inReplyTo?: string;
     references?: string[];
     emailId?: string;
+    draftId?: string;
 }
 export interface INotificationService {
     addNotification(notification: INotification): Promise<string>;

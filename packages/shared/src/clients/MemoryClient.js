@@ -24,6 +24,31 @@ export class MemoryClient extends ServiceClient {
             data: options,
         });
     }
+    async retrieve(query, options = {}) {
+        const result = await this.retrieveMemories({
+            query,
+            ...options
+        });
+        return result.results || [];
+    }
+    async getTasks(filters = {}) {
+        const params = new URLSearchParams();
+        if (filters.status)
+            params.append('status', filters.status);
+        if (filters.limit)
+            params.append('limit', filters.limit.toString());
+        return this.request({
+            method: 'GET',
+            url: `/tasks?${params.toString()}`,
+        });
+    }
+    async getUserPreferences(userId) {
+        return this.request({
+            method: 'GET',
+            url: '/user/preferences',
+            headers: userId ? { 'x-user-id': userId } : undefined
+        });
+    }
     async getEntity(id) {
         return this.request({
             method: 'GET',
@@ -43,4 +68,38 @@ export class MemoryClient extends ServiceClient {
             data: task,
         });
     }
+    // Drafts
+    async createDraft(draft) {
+        return this.request({
+            method: 'POST',
+            url: '/drafts',
+            data: draft,
+        });
+    }
+    async getDraft(id) {
+        return this.request({
+            method: 'GET',
+            url: `/drafts/${id}`,
+        });
+    }
+    async getDrafts(status = 'draft') {
+        return this.request({
+            method: 'GET',
+            url: `/drafts?status=${status}`,
+        });
+    }
+    async updateDraft(id, updates) {
+        return this.request({
+            method: 'PUT',
+            url: `/drafts/${id}`,
+            data: updates,
+        });
+    }
+    async deleteDraft(id) {
+        return this.request({
+            method: 'DELETE',
+            url: `/drafts/${id}`,
+        });
+    }
 }
+//# sourceMappingURL=MemoryClient.js.map

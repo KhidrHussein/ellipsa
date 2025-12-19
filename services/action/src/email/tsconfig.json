@@ -2,13 +2,22 @@
   "extends": "../../tsconfig.json",
   "compilerOptions": {
     "outDir": "../../dist/email",
-    "rootDir": ".",
+    "rootDir": "..",
     "baseUrl": ".",
     "composite": true,
     "paths": {
-      "@ellipsa/shared/*": ["../../../packages/shared/src/*"],
-      "@ellipsa/action/*": ["../*"],
-      "@ellipsa/action-email/*": ["./*"]
+      "@ellipsa/shared": [
+        "../../../../packages/shared/src/index.ts"
+      ],
+      "@ellipsa/shared/*": [
+        "../../../../packages/shared/src/*"
+      ],
+      "@ellipsa/action/*": [
+        "../*"
+      ],
+      "@ellipsa/action-email/*": [
+        "./*"
+      ]
     },
     "typeRoots": [
       "../../node_modules/@types",
@@ -18,6 +27,12 @@
     "checkJs": false,
     "noImplicitAny": false
   },
-  "include": [".", "../../types"],
-  "exclude": ["node_modules", "dist"]
+  "include": [
+    "..",
+    "../../types"
+  ],
+  "exclude": [
+    "node_modules",
+    "dist"
+  ]
 }
