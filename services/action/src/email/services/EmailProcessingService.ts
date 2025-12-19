@@ -172,6 +172,136 @@ export class EmailProcessingService {
     }
   }
 
+  async processEmailBatch(emails: EmailMessage[]): Promise<EmailSummary[]> {
+    const summaries: EmailSummary[] = [];
+    const toBeEvaluated: any[] = [];
+    const indexMap = new Map<string, number>();
+
+    // 1. Process each email individually first (Extract data, Summarize)
+    // We do this in parallel but limited concurrency could be applied if needed
+    // For now, let's assume we can do this loop.
+    for (const email of emails) {
+      try {
+        // Store raw
+        await this.memoryService.storeEmail(email);
+
+        // Check age
+        const oneYearAgo = new Date();
+        oneYearAgo.setDate(oneYearAgo.getDate() - 365);
+        if (email.date < oneYearAgo) {
+          // ... (Skip old emails logic - simplified for batch)
+          const summary: EmailSummary = {
+            id: email.id,
+            threadId: email.threadId,
+            subject: email.subject,
+            from: email.from,
+            date: email.date,
+            summary: 'Auto-processed: Old email.',
+            actionRequired: false,
+            priority: 'low',
+            categories: ['old', 'archived'],
+            suggestedActions: ['ARCHIVE', 'MARK_AS_READ'],
+            metadata: { source: 'system_auto_archive', processedAt: new Date().toISOString() }
+          };
+          await this.memoryService.storeEmailSummary(summary);
+          summaries.push(summary);
+          continue;
+        }
+
+        // Extract usage & Summary
+        const content = email.text || email.html || '';
+        let summaryText = '';
+        let extractedData: any = { summary: '', entities: [] };
+
+        if (typeof this.promptService.summarize === 'function') {
+          const result = await this.promptService.summarize(content);
+          summaryText = result.summary;
+          extractedData.summary = result.summary;
+        } else {
+          summaryText = content.substring(0, 200) + '...';
+          extractedData.summary = summaryText;
+        }
+
+        // Prepare for batch evaluation
+        const partialSummary: any = {
+          id: email.id,
+          subject: email.subject,
+          from: email.from,
+          summary: summaryText,
+          metadata: {
+            ...extractedData,
+            contentSnippet: content.substring(0, 500)
+          }
+        };
+
+        // We can't fully create EmailSummary yet without AI decision, but we can store intermediate state
+        toBeEvaluated.push(partialSummary);
+        indexMap.set(email.id, summaries.length);
+        summaries.push(partialSummary as EmailSummary); // Placeholder
+
+      } catch (err) {
+        console.error(`Failed to pre-process email ${email.id}`, err);
+      }
+    }
+
+    // 2. Batch AI Evaluation
+    if (this.emailLLMService && toBeEvaluated.length > 0) {
+      const decisions = await this.emailLLMService.evaluateActionBatch(toBeEvaluated);
+
+      // 3. Merge decisions back
+      for (const item of toBeEvaluated) {
+        const decision = decisions[item.id];
+        const originalEmail = emails.find(e => e.id === item.id);
+
+        // Recalculate local heuristics
+        const suggestedActions = this.determineSuggestedActions(item.metadata, item.summary, originalEmail!);
+        const categoriesList = this.extractCategories(item.metadata, item.summary);
+
+        let recommendation = decision;
+
+        // Logics for auto-drafting/merging
+        if (decision) {
+          const isAutomated = ['notification', 'social', 'newsletter', 'purchase'].some(cat => categoriesList.includes(cat));
+          if (decision.action === 'REPLY' && !isAutomated && originalEmail) {
+            if (!suggestedActions.includes('REPLY')) suggestedActions.push('REPLY');
+            // Auto-draft queue (fire and forget for now, or parallel await)
+            this.draftResponse(originalEmail, { additionalContext: decision.draftIntent })
+              .catch(err => console.error('Background draft gen failed', err));
+          } else if (decision.action === 'ARCHIVE' || isAutomated) {
+            if (!suggestedActions.includes('ARCHIVE')) suggestedActions.push('ARCHIVE');
+          }
+        }
+
+        // Update the summary object in the array
+        const idx = indexMap.get(item.id);
+        if (idx !== undefined) {
+          summaries[idx] = {
+            id: item.id,
+            threadId: originalEmail?.threadId!,
+            subject: item.subject,
+            from: item.from,
+            date: originalEmail?.date!,
+            summary: item.summary,
+            actionRequired: this.determineActionRequired(item.metadata, item.summary),
+            priority: this.determinePriority(item.metadata, item.summary),
+            categories: categoriesList,
+            suggestedActions: suggestedActions,
+            recommendation: recommendation,
+            metadata: {
+              ...item.metadata,
+              source: 'email_processing_batch',
+              processedAt: new Date().toISOString()
+            }
+          };
+          // Store
+          await this.memoryService.storeEmailSummary(summaries[idx]);
+        }
+      }
+    }
+
+    return summaries;
+  }
+
   async draftResponse(
     email: EmailMessage,
     context: {

@@ -420,6 +420,19 @@ export class GmailEmailService implements IEmailService {
         maxResults: options.maxResults || options.limit || 10,
       });
 
+      console.log(`[GmailEmailService] Fetched ${emails.length} emails. Processing batch...`);
+
+      try {
+        const summaries = await this.processingService.processEmailBatch(emails);
+        result.summaries = summaries;
+        result.processed = summaries.length;
+      } catch (error) {
+        console.error('Batch processing failed', error);
+        // Fallback? Or just log.
+        result.errors.push({ id: 'batch', error: error instanceof Error ? error.message : 'Batch error' });
+      }
+
+      /*
       for (const email of emails) {
         try {
           const summary = await this.summarizeEmail(email);
@@ -432,6 +445,7 @@ export class GmailEmailService implements IEmailService {
           });
         }
       }
+      */
     } catch (error) {
       console.error('Error performing email sweep:', error);
       throw new Error(`Failed to perform email sweep: ${error instanceof Error ? error.message : 'Unknown error'}`);
@@ -528,9 +542,22 @@ export class GmailEmailService implements IEmailService {
         await this.memoryService.updateEmailStatus(draft.inReplyTo, 'replied');
       }
 
-      // Delete the draft from memory as it is now sent
+      // Delete the draft from memory AND Gmail as it is now sent
       if (draft.id) {
         await this.memoryService.deleteDraft(draft.id);
+
+        // Delete from Gmail if it exists there
+        try {
+          await this.withRetry(() =>
+            this.gmail!.users.drafts.delete({
+              userId: 'me',
+              id: draft.id!
+            })
+          );
+          console.log(`[GmailEmailService] Deleted sent draft ${draft.id} from Gmail`);
+        } catch (e) {
+          console.warn(`[GmailEmailService] Failed to delete sent draft ${draft.id} from Gmail (it might have been deleted automatically)`, e);
+        }
       }
 
       return {
@@ -548,18 +575,60 @@ export class GmailEmailService implements IEmailService {
    */
   async getPendingDrafts(): Promise<DraftResponse[]> {
     try {
-      // Access the drafts from memory service
+      await this.ensureConnected();
+
+      // Fetch drafts from Gmail
+      const response = await this.withRetry(() =>
+        this.gmail!.users.drafts.list({
+          userId: 'me',
+          maxResults: 10 // Limit pending count
+        })
+      );
+
+      const drafts = response.data.drafts || [];
+      const pendingDrafts: DraftResponse[] = [];
+
+      // Process each draft to get full details
+      for (const draftMeta of drafts) {
+        if (!draftMeta.id) continue;
+
+        try {
+          // Get full draft details
+          const fullDraft = await this.withRetry(() =>
+            this.gmail!.users.drafts.get({
+              userId: 'me',
+              id: draftMeta.id!,
+              format: 'full'
+            })
+          );
+
+          if (!fullDraft.data.message) continue;
+
+          const message = this.parseGmailMessage(fullDraft.data.message);
+
+          pendingDrafts.push({
+            id: draftMeta.id,
+            to: message.to.map(t => ({ address: t.address, name: t.name })),
+            subject: message.subject,
+            text: message.text,
+            html: message.html,
+            createdAt: message.date.toISOString(),
+            threadId: message.threadId,
+            inReplyTo: message.threadId // loose approximation for threaded replies
+          });
+        } catch (e) {
+          console.error(`Failed to fetch details for draft ${draftMeta.id}`, e);
+        }
+      }
+
+      return pendingDrafts;
+    } catch (error) {
+      console.error('Error getting pending drafts from Gmail:', error);
+      // Fallback to memory if Gmail fails (legacy behavior)
       const memService = this.memoryService as any;
       if (memService.drafts && memService.drafts instanceof Map) {
         return Array.from(memService.drafts.values());
       }
-      // If memory service has a getDrafts method, use it
-      if (typeof memService.getDrafts === 'function') {
-        return await memService.getDrafts();
-      }
-      return [];
-    } catch (error) {
-      console.error('Error getting pending drafts:', error);
       return [];
     }
   }
@@ -600,6 +669,30 @@ export class GmailEmailService implements IEmailService {
         throw error;
       }
       return { success: false };
+    }
+  }
+
+  async deleteDraft(id: string): Promise<void> {
+    await this.ensureConnected();
+
+    try {
+      // Delete from memory
+      if (this.memoryService.drafts instanceof Map) {
+        this.memoryService.deleteDraft(id);
+      }
+
+      // Delete from Gmail
+      await this.withRetry(() =>
+        this.gmail!.users.drafts.delete({
+          userId: 'me',
+          id,
+        })
+      );
+
+      console.log(`[GmailEmailService] Deleted draft ${id} from Gmail`);
+    } catch (error) {
+      console.error(`Error deleting draft ${id}:`, error);
+      throw new Error(`Failed to delete draft: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }
 

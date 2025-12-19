@@ -316,7 +316,7 @@ async function initializeServices(app: express.Express): Promise<Services> {
     const memoryService: IEmailMemoryService = new MemoryServiceClient();
 
     // Initialize EmailLLMService
-    const emailLLMService = new EmailLLMService(process.env.OPENAI_API_KEY || '');
+    const emailLLMService = new EmailLLMService(promptClient);
     const processingService = new EmailProcessingService(promptService, memoryService, emailLLMService);
 
     console.log('[Server] Initializing GmailEmailService...');
@@ -467,6 +467,7 @@ function setupActionRoutes(app: express.Express, services: Services) {
                     to: draft.to,
                     subject: draft.subject,
                     threadId: draft.threadId,
+                    body: draft.text || draft.html || '', // Include full body for review
                 }
             }));
 

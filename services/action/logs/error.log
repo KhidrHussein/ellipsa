@@ -282,3 +282,17 @@
   "statusText": "Not Found",
   "data": "<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n<meta charset=\"utf-8\">\n<title>Error</title>\n</head>\n<body>\n<pre>Cannot POST /tasks</pre>\n</body>\n</html>\n"
 }
+2025-12-19 10:23:28 [[31merror[39m]: 	[31mUnhandled Rejection at:[39m
+2025-12-19 10:33:34 [[31merror[39m]: 	[31mUnhandled Rejection at:[39m
+2025-12-19 10:43:32 [[31merror[39m]: 	[31mUnhandled Rejection at:[39m
+2025-12-19 10:53:31 [[31merror[39m]: 	[31mUnhandled Rejection at:[39m
+2025-12-19 11:03:32 [[31merror[39m]: 	[31mUnhandled Rejection at:[39m
+2025-12-19 11:13:31 [[31merror[39m]: 	[31mUnhandled Rejection at:[39m
+2025-12-19 11:23:32 [[31merror[39m]: 	[31mUnhandled Rejection at:[39m
+2025-12-19 11:33:32 [[31merror[39m]: 	[31mUnhandled Rejection at:[39m
+2025-12-19 11:43:31 [[31merror[39m]: 	[31mUnhandled Rejection at:[39m
+2025-12-19 13:03:04 [[31merror[39m]: 	[31m[PromptService] Request failed:[39m
+{
+  "url": "/prompt/v1/email/evaluate-batch",
+  "method": "POST"
+}

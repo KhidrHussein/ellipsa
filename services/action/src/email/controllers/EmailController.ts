@@ -1,9 +1,9 @@
 import { Request, Response } from 'express';
-import { IEmailService } from '../services/EmailService.interface';
-import { EmailMessage, EmailSweepOptions } from '../types';
+import { IEmailService } from '../services/EmailService.interface.js';
+import { EmailMessage, EmailSweepOptions } from '../types.js';
 
 export class EmailController {
-  constructor(private readonly emailService: IEmailService) {}
+  constructor(private readonly emailService: IEmailService) { }
 
   async performSweep(req: Request, res: Response) {
     try {
@@ -16,7 +16,7 @@ export class EmailController {
       };
 
       const result = await this.emailService.performSweep(options);
-      
+
       res.status(200).json({
         success: true,
         data: result,
@@ -44,7 +44,7 @@ export class EmailController {
 
       const email = await this.emailService.getMessage(id);
       const summary = await this.emailService.summarizeEmail(email);
-      
+
       res.status(200).json({
         success: true,
         data: summary,
@@ -63,7 +63,7 @@ export class EmailController {
   async draftResponse(req: Request, res: Response) {
     try {
       const { emailId, additionalContext } = req.body;
-      
+
       if (!emailId) {
         return res.status(400).json({
           success: false,
@@ -72,15 +72,24 @@ export class EmailController {
       }
 
       const email = await this.emailService.getMessage(emailId);
-      
+
       // In a real implementation, you would fetch conversation history here
       const conversationHistory: EmailMessage[] = [];
-      
+
       const draft = await this.emailService.draftResponse(email, {
         conversationHistory,
         additionalContext,
       });
-      
+
+      // Save draft to Gmail
+      const savedDraft = await this.emailService.createDraft(draft);
+      if (savedDraft.success && savedDraft.id) {
+        draft.id = savedDraft.id;
+        console.log(`[EmailController] Saved draft to Gmail: ${savedDraft.id}`);
+      } else {
+        console.warn('[EmailController] Failed to save draft to Gmail');
+      }
+
       res.status(200).json({
         success: true,
         data: draft,
@@ -99,7 +108,7 @@ export class EmailController {
   async sendEmail(req: Request, res: Response) {
     try {
       const { to, subject, body, threadId, inReplyTo, references } = req.body;
-      
+
       if (!to || !subject || !body) {
         return res.status(400).json({
           success: false,
@@ -115,7 +124,7 @@ export class EmailController {
         inReplyTo,
         references,
       });
-      
+
       res.status(200).json({
         success: result.success,
         messageId: result.messageId,
@@ -143,7 +152,7 @@ export class EmailController {
       }
 
       const email = await this.emailService.getMessage(id);
-      
+
       res.status(200).json({
         success: true,
         data: email,
@@ -154,6 +163,32 @@ export class EmailController {
       res.status(500).json({
         success: false,
         error: 'Failed to get email',
+        details: errorMessage,
+      });
+    }
+  }
+  // Delete draft
+  async deleteDraft(req: Request, res: Response) {
+    try {
+      const { id } = req.params;
+      if (!id) {
+        return res.status(400).json({
+          success: false,
+          error: 'Draft ID is required',
+        });
+      }
+
+      await this.emailService.deleteDraft(id);
+
+      res.status(200).json({
+        success: true,
+      });
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+      console.error('Error deleting draft:', error);
+      res.status(500).json({
+        success: false,
+        error: 'Failed to delete draft',
         details: errorMessage,
       });
     }

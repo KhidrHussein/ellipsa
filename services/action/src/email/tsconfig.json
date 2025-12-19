@@ -2,7 +2,6 @@
   "extends": "../../tsconfig.json",
   "compilerOptions": {
     "outDir": "../../dist/email",
-    "rootDir": "..",
     "baseUrl": ".",
     "composite": true,
     "paths": {
@@ -29,7 +28,8 @@
   },
   "include": [
     "..",
-    "../../types"
+    "../../types",
+    "../../../../packages/shared/src/**/*"
   ],
   "exclude": [
     "node_modules",

@@ -442,3 +442,185 @@
   "statusText": "Not Found",
   "data": "<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n<meta charset=\"utf-8\">\n<title>Error</title>\n</head>\n<body>\n<pre>Cannot POST /tasks</pre>\n</body>\n</html>\n"
 }
+2025-12-19 08:58:18 [[32minfo[39m]: 	[32m[MemoryService] Request: GET /events?type=action_execution&limit=50&metadata%5Bstatus%5D=pending_approval[39m
+2025-12-19 08:58:21 [[32minfo[39m]: 	[32m[MemoryService] Request: GET /events?type=action_execution&limit=50&metadata%5Bstatus%5D=pending_approval[39m
+2025-12-19 09:08:43 [[32minfo[39m]: 	[32m[MemoryService] Request: GET /events?type=action_execution&limit=50&metadata%5Bstatus%5D=pending_approval[39m
+2025-12-19 09:08:45 [[32minfo[39m]: 	[32m[MemoryService] Request: GET /events?type=action_execution&limit=50&metadata%5Bstatus%5D=pending_approval[39m
+2025-12-19 09:09:36 [[32minfo[39m]: 	[32m[MemoryService] Request: GET /events?type=action_execution&limit=50&metadata%5Bstatus%5D=pending_approval[39m
+2025-12-19 09:09:38 [[32minfo[39m]: 	[32m[MemoryService] Request: GET /events?type=action_execution&limit=50&metadata%5Bstatus%5D=pending_approval[39m
+2025-12-19 09:10:22 [[32minfo[39m]: 	[32m[MemoryService] Request: GET /events?type=action_execution&limit=50&metadata%5Bstatus%5D=pending_approval[39m
+2025-12-19 09:10:25 [[32minfo[39m]: 	[32m[MemoryService] Request: GET /events?type=action_execution&limit=50&metadata%5Bstatus%5D=pending_approval[39m
+2025-12-19 09:11:12 [[32minfo[39m]: 	[32m[MemoryService] Request: GET /events?type=action_execution&limit=50&metadata%5Bstatus%5D=pending_approval[39m
+2025-12-19 09:11:16 [[32minfo[39m]: 	[32m[MemoryService] Request: GET /events?type=action_execution&limit=50&metadata%5Bstatus%5D=pending_approval[39m
+2025-12-19 09:31:21 [[32minfo[39m]: 	[32m[MemoryService] Request: GET /events?type=action_execution&limit=50&metadata%5Bstatus%5D=pending_approval[39m
+2025-12-19 09:31:24 [[32minfo[39m]: 	[32m[MemoryService] Request: GET /events?type=action_execution&limit=50&metadata%5Bstatus%5D=pending_approval[39m
+2025-12-19 09:31:30 [[32minfo[39m]: 	[32m[MemoryService] Request: GET /events?type=action_execution&limit=50&metadata%5Bstatus%5D=pending_approval[39m
+2025-12-19 09:31:33 [[32minfo[39m]: 	[32m[MemoryService] Request: GET /events?type=action_execution&limit=50&metadata%5Bstatus%5D=pending_approval[39m
+2025-12-19 09:32:04 [[32minfo[39m]: 	[32m[MemoryService] Request: GET /events?type=action_execution&limit=50&metadata%5Bstatus%5D=pending_approval[39m
+2025-12-19 09:32:06 [[32minfo[39m]: 	[32m[MemoryService] Request: GET /events?type=action_execution&limit=50&metadata%5Bstatus%5D=pending_approval[39m
+2025-12-19 09:32:25 [[32minfo[39m]: 	[32m[MemoryService] Request: GET /events?type=action_execution&limit=50&metadata%5Bstatus%5D=pending_approval[39m
+2025-12-19 09:32:27 [[32minfo[39m]: 	[32m[MemoryService] Request: GET /events?type=action_execution&limit=50&metadata%5Bstatus%5D=pending_approval[39m
+2025-12-19 09:43:44 [[32minfo[39m]: 	[32m[MemoryService] Request: GET /events?type=action_execution&limit=50&metadata%5Bstatus%5D=pending_approval[39m
+2025-12-19 09:43:46 [[32minfo[39m]: 	[32m[MemoryService] Request: GET /events?type=action_execution&limit=50&metadata%5Bstatus%5D=pending_approval[39m
+2025-12-19 09:43:53 [[32minfo[39m]: 	[32m[MemoryService] Request: GET /events?type=action_execution&limit=50&metadata%5Bstatus%5D=pending_approval[39m
+2025-12-19 09:43:56 [[32minfo[39m]: 	[32m[MemoryService] Request: GET /events?type=action_execution&limit=50&metadata%5Bstatus%5D=pending_approval[39m
+2025-12-19 09:46:59 [[32minfo[39m]: 	[32m[MemoryService] Request: GET /events?type=action_execution&limit=50&metadata%5Bstatus%5D=pending_approval[39m
+2025-12-19 09:47:04 [[32minfo[39m]: 	[32m[MemoryService] Request: GET /events?type=action_execution&limit=50&metadata%5Bstatus%5D=pending_approval[39m
+2025-12-19 09:50:31 [[32minfo[39m]: 	[32m[MemoryService] Request: GET /events?type=action_execution&limit=50&metadata%5Bstatus%5D=pending_approval[39m
+2025-12-19 09:50:34 [[32minfo[39m]: 	[32m[MemoryService] Request: GET /events?type=action_execution&limit=50&metadata%5Bstatus%5D=pending_approval[39m
+2025-12-19 09:50:45 [[32minfo[39m]: 	[32m[MemoryService] Request: GET /events?type=action_execution&limit=50&metadata%5Bstatus%5D=pending_approval[39m
+2025-12-19 09:50:48 [[32minfo[39m]: 	[32m[MemoryService] Request: GET /events?type=action_execution&limit=50&metadata%5Bstatus%5D=pending_approval[39m
+2025-12-19 09:54:09 [[32minfo[39m]: 	[32m[MemoryService] Request: GET /events?type=action_execution&limit=50&metadata%5Bstatus%5D=pending_approval[39m
+2025-12-19 09:54:12 [[32minfo[39m]: 	[32m[MemoryService] Request: GET /events?type=action_execution&limit=50&metadata%5Bstatus%5D=pending_approval[39m
+2025-12-19 10:23:28 [[31merror[39m]: 	[31mUnhandled Rejection at:[39m
+2025-12-19 10:33:34 [[31merror[39m]: 	[31mUnhandled Rejection at:[39m
+2025-12-19 10:43:32 [[31merror[39m]: 	[31mUnhandled Rejection at:[39m
+2025-12-19 10:53:31 [[31merror[39m]: 	[31mUnhandled Rejection at:[39m
+2025-12-19 11:03:32 [[31merror[39m]: 	[31mUnhandled Rejection at:[39m
+2025-12-19 11:13:31 [[31merror[39m]: 	[31mUnhandled Rejection at:[39m
+2025-12-19 11:23:32 [[31merror[39m]: 	[31mUnhandled Rejection at:[39m
+2025-12-19 11:33:32 [[31merror[39m]: 	[31mUnhandled Rejection at:[39m
+2025-12-19 11:43:31 [[31merror[39m]: 	[31mUnhandled Rejection at:[39m
+2025-12-19 11:59:05 [[32minfo[39m]: 	[32m[MemoryService] Request: GET /events?type=action_execution&limit=50&metadata%5Bstatus%5D=pending_approval[39m
+2025-12-19 11:59:07 [[32minfo[39m]: 	[32m[MemoryService] Request: GET /events?type=action_execution&limit=50&metadata%5Bstatus%5D=pending_approval[39m
+2025-12-19 12:25:27 [[32minfo[39m]: 	[32m[PromptService] Request: POST /prompt/v1/email/evaluate[39m
+2025-12-19 12:25:34 [[33mwarn[39m]: 	[33m[PromptService] Retry 1/3 for /prompt/v1/email/evaluate[39m
+2025-12-19 12:25:36 [[32minfo[39m]: 	[32m[PromptService] Request: POST /prompt/v1/email/evaluate[39m
+2025-12-19 12:25:39 [[32minfo[39m]: 	[32m[PromptService] Request: POST /prompt/v1/email/evaluate[39m
+2025-12-19 12:25:40 [[32minfo[39m]: 	[32m[PromptService] Request: POST /prompt/v1/email/evaluate[39m
+2025-12-19 12:25:41 [[32minfo[39m]: 	[32m[PromptService] Request: POST /prompt/v1/email/evaluate[39m
+2025-12-19 12:25:42 [[32minfo[39m]: 	[32m[PromptService] Request: POST /prompt/v1/email/evaluate[39m
+2025-12-19 12:25:44 [[32minfo[39m]: 	[32m[PromptService] Request: POST /prompt/v1/email/evaluate[39m
+2025-12-19 12:25:45 [[32minfo[39m]: 	[32m[PromptService] Request: POST /prompt/v1/email/evaluate[39m
+2025-12-19 12:25:47 [[32minfo[39m]: 	[32m[PromptService] Request: POST /prompt/v1/email/evaluate[39m
+2025-12-19 12:25:48 [[32minfo[39m]: 	[32m[PromptService] Request: POST /prompt/v1/email/evaluate[39m
+2025-12-19 12:25:50 [[32minfo[39m]: 	[32m[PromptService] Request: POST /prompt/v1/email/evaluate[39m
+2025-12-19 12:26:41 [[32minfo[39m]: 	[32m[MemoryService] Request: GET /events?type=action_execution&limit=50&metadata%5Bstatus%5D=pending_approval[39m
+2025-12-19 12:26:42 [[32minfo[39m]: 	[32m[MemoryService] Request: GET /events?type=action_execution&limit=50&metadata%5Bstatus%5D=pending_approval[39m
+2025-12-19 12:27:11 [[32minfo[39m]: 	[32m[MemoryService] Request: GET /events?type=action_execution&limit=50&metadata%5Bstatus%5D=pending_approval[39m
+2025-12-19 12:27:41 [[32minfo[39m]: 	[32m[MemoryService] Request: GET /events?type=action_execution&limit=50&metadata%5Bstatus%5D=pending_approval[39m
+2025-12-19 12:28:11 [[32minfo[39m]: 	[32m[MemoryService] Request: GET /events?type=action_execution&limit=50&metadata%5Bstatus%5D=pending_approval[39m
+2025-12-19 12:28:42 [[32minfo[39m]: 	[32m[MemoryService] Request: GET /events?type=action_execution&limit=50&metadata%5Bstatus%5D=pending_approval[39m
+2025-12-19 12:29:11 [[32minfo[39m]: 	[32m[MemoryService] Request: GET /events?type=action_execution&limit=50&metadata%5Bstatus%5D=pending_approval[39m
+2025-12-19 12:29:41 [[32minfo[39m]: 	[32m[MemoryService] Request: GET /events?type=action_execution&limit=50&metadata%5Bstatus%5D=pending_approval[39m
+2025-12-19 12:30:11 [[32minfo[39m]: 	[32m[MemoryService] Request: GET /events?type=action_execution&limit=50&metadata%5Bstatus%5D=pending_approval[39m
+2025-12-19 12:30:41 [[32minfo[39m]: 	[32m[MemoryService] Request: GET /events?type=action_execution&limit=50&metadata%5Bstatus%5D=pending_approval[39m
+2025-12-19 12:31:11 [[32minfo[39m]: 	[32m[MemoryService] Request: GET /events?type=action_execution&limit=50&metadata%5Bstatus%5D=pending_approval[39m
+2025-12-19 12:31:41 [[32minfo[39m]: 	[32m[MemoryService] Request: GET /events?type=action_execution&limit=50&metadata%5Bstatus%5D=pending_approval[39m
+2025-12-19 12:32:11 [[32minfo[39m]: 	[32m[MemoryService] Request: GET /events?type=action_execution&limit=50&metadata%5Bstatus%5D=pending_approval[39m
+2025-12-19 12:32:42 [[32minfo[39m]: 	[32m[MemoryService] Request: GET /events?type=action_execution&limit=50&metadata%5Bstatus%5D=pending_approval[39m
+2025-12-19 12:33:11 [[32minfo[39m]: 	[32m[MemoryService] Request: GET /events?type=action_execution&limit=50&metadata%5Bstatus%5D=pending_approval[39m
+2025-12-19 12:33:41 [[32minfo[39m]: 	[32m[MemoryService] Request: GET /events?type=action_execution&limit=50&metadata%5Bstatus%5D=pending_approval[39m
+2025-12-19 12:34:11 [[32minfo[39m]: 	[32m[MemoryService] Request: GET /events?type=action_execution&limit=50&metadata%5Bstatus%5D=pending_approval[39m
+2025-12-19 12:34:41 [[32minfo[39m]: 	[32m[MemoryService] Request: GET /events?type=action_execution&limit=50&metadata%5Bstatus%5D=pending_approval[39m
+2025-12-19 12:35:11 [[32minfo[39m]: 	[32m[MemoryService] Request: GET /events?type=action_execution&limit=50&metadata%5Bstatus%5D=pending_approval[39m
+2025-12-19 12:35:41 [[32minfo[39m]: 	[32m[MemoryService] Request: GET /events?type=action_execution&limit=50&metadata%5Bstatus%5D=pending_approval[39m
+2025-12-19 12:36:12 [[32minfo[39m]: 	[32m[MemoryService] Request: GET /events?type=action_execution&limit=50&metadata%5Bstatus%5D=pending_approval[39m
+2025-12-19 12:36:41 [[32minfo[39m]: 	[32m[MemoryService] Request: GET /events?type=action_execution&limit=50&metadata%5Bstatus%5D=pending_approval[39m
+2025-12-19 12:37:11 [[32minfo[39m]: 	[32m[MemoryService] Request: GET /events?type=action_execution&limit=50&metadata%5Bstatus%5D=pending_approval[39m
+2025-12-19 12:37:41 [[32minfo[39m]: 	[32m[MemoryService] Request: GET /events?type=action_execution&limit=50&metadata%5Bstatus%5D=pending_approval[39m
+2025-12-19 12:38:11 [[32minfo[39m]: 	[32m[MemoryService] Request: GET /events?type=action_execution&limit=50&metadata%5Bstatus%5D=pending_approval[39m
+2025-12-19 12:38:41 [[32minfo[39m]: 	[32m[MemoryService] Request: GET /events?type=action_execution&limit=50&metadata%5Bstatus%5D=pending_approval[39m
+2025-12-19 12:39:11 [[32minfo[39m]: 	[32m[MemoryService] Request: GET /events?type=action_execution&limit=50&metadata%5Bstatus%5D=pending_approval[39m
+2025-12-19 12:39:41 [[32minfo[39m]: 	[32m[MemoryService] Request: GET /events?type=action_execution&limit=50&metadata%5Bstatus%5D=pending_approval[39m
+2025-12-19 12:40:11 [[32minfo[39m]: 	[32m[MemoryService] Request: GET /events?type=action_execution&limit=50&metadata%5Bstatus%5D=pending_approval[39m
+2025-12-19 12:40:41 [[32minfo[39m]: 	[32m[MemoryService] Request: GET /events?type=action_execution&limit=50&metadata%5Bstatus%5D=pending_approval[39m
+2025-12-19 12:41:11 [[32minfo[39m]: 	[32m[MemoryService] Request: GET /events?type=action_execution&limit=50&metadata%5Bstatus%5D=pending_approval[39m
+2025-12-19 12:41:41 [[32minfo[39m]: 	[32m[MemoryService] Request: GET /events?type=action_execution&limit=50&metadata%5Bstatus%5D=pending_approval[39m
+2025-12-19 12:42:11 [[32minfo[39m]: 	[32m[MemoryService] Request: GET /events?type=action_execution&limit=50&metadata%5Bstatus%5D=pending_approval[39m
+2025-12-19 12:42:41 [[32minfo[39m]: 	[32m[MemoryService] Request: GET /events?type=action_execution&limit=50&metadata%5Bstatus%5D=pending_approval[39m
+2025-12-19 12:43:11 [[32minfo[39m]: 	[32m[MemoryService] Request: GET /events?type=action_execution&limit=50&metadata%5Bstatus%5D=pending_approval[39m
+2025-12-19 12:43:41 [[32minfo[39m]: 	[32m[MemoryService] Request: GET /events?type=action_execution&limit=50&metadata%5Bstatus%5D=pending_approval[39m
+2025-12-19 12:44:11 [[32minfo[39m]: 	[32m[MemoryService] Request: GET /events?type=action_execution&limit=50&metadata%5Bstatus%5D=pending_approval[39m
+2025-12-19 12:44:41 [[32minfo[39m]: 	[32m[MemoryService] Request: GET /events?type=action_execution&limit=50&metadata%5Bstatus%5D=pending_approval[39m
+2025-12-19 12:45:11 [[32minfo[39m]: 	[32m[MemoryService] Request: GET /events?type=action_execution&limit=50&metadata%5Bstatus%5D=pending_approval[39m
+2025-12-19 12:45:41 [[32minfo[39m]: 	[32m[MemoryService] Request: GET /events?type=action_execution&limit=50&metadata%5Bstatus%5D=pending_approval[39m
+2025-12-19 12:46:11 [[32minfo[39m]: 	[32m[MemoryService] Request: GET /events?type=action_execution&limit=50&metadata%5Bstatus%5D=pending_approval[39m
+2025-12-19 12:46:41 [[32minfo[39m]: 	[32m[MemoryService] Request: GET /events?type=action_execution&limit=50&metadata%5Bstatus%5D=pending_approval[39m
+2025-12-19 12:55:58 [[32minfo[39m]: 	[32m[PromptService] Request: POST /prompt/v1/email/evaluate-batch[39m
+2025-12-19 12:56:11 [[32minfo[39m]: 	[32m[MemoryService] Request: GET /events?type=action_execution&limit=50&metadata%5Bstatus%5D=pending_approval[39m
+2025-12-19 12:56:42 [[32minfo[39m]: 	[32m[MemoryService] Request: GET /events?type=action_execution&limit=50&metadata%5Bstatus%5D=pending_approval[39m
+2025-12-19 12:57:12 [[32minfo[39m]: 	[32m[MemoryService] Request: GET /events?type=action_execution&limit=50&metadata%5Bstatus%5D=pending_approval[39m
+2025-12-19 12:57:42 [[32minfo[39m]: 	[32m[MemoryService] Request: GET /events?type=action_execution&limit=50&metadata%5Bstatus%5D=pending_approval[39m
+2025-12-19 12:58:11 [[32minfo[39m]: 	[32m[MemoryService] Request: GET /events?type=action_execution&limit=50&metadata%5Bstatus%5D=pending_approval[39m
+2025-12-19 12:58:41 [[32minfo[39m]: 	[32m[MemoryService] Request: GET /events?type=action_execution&limit=50&metadata%5Bstatus%5D=pending_approval[39m
+2025-12-19 12:59:11 [[32minfo[39m]: 	[32m[MemoryService] Request: GET /events?type=action_execution&limit=50&metadata%5Bstatus%5D=pending_approval[39m
+2025-12-19 12:59:41 [[32minfo[39m]: 	[32m[MemoryService] Request: GET /events?type=action_execution&limit=50&metadata%5Bstatus%5D=pending_approval[39m
+2025-12-19 13:00:11 [[32minfo[39m]: 	[32m[MemoryService] Request: GET /events?type=action_execution&limit=50&metadata%5Bstatus%5D=pending_approval[39m
+2025-12-19 13:00:41 [[32minfo[39m]: 	[32m[MemoryService] Request: GET /events?type=action_execution&limit=50&metadata%5Bstatus%5D=pending_approval[39m
+2025-12-19 13:01:12 [[32minfo[39m]: 	[32m[MemoryService] Request: GET /events?type=action_execution&limit=50&metadata%5Bstatus%5D=pending_approval[39m
+2025-12-19 13:01:41 [[32minfo[39m]: 	[32m[MemoryService] Request: GET /events?type=action_execution&limit=50&metadata%5Bstatus%5D=pending_approval[39m
+2025-12-19 13:02:30 [[32minfo[39m]: 	[32m[PromptService] Request: POST /prompt/v1/email/evaluate-batch[39m
+2025-12-19 13:02:35 [[33mwarn[39m]: 	[33m[PromptService] Retry 1/3 for /prompt/v1/email/evaluate-batch[39m
+2025-12-19 13:02:37 [[32minfo[39m]: 	[32m[PromptService] Request: POST /prompt/v1/email/evaluate-batch[39m
+2025-12-19 13:02:42 [[33mwarn[39m]: 	[33m[PromptService] Retry 2/3 for /prompt/v1/email/evaluate-batch[39m
+2025-12-19 13:02:46 [[32minfo[39m]: 	[32m[PromptService] Request: POST /prompt/v1/email/evaluate-batch[39m
+2025-12-19 13:02:47 [[32minfo[39m]: 	[32m[MemoryService] Request: GET /events?type=action_execution&limit=50&metadata%5Bstatus%5D=pending_approval[39m
+2025-12-19 13:02:51 [[33mwarn[39m]: 	[33m[PromptService] Retry 3/3 for /prompt/v1/email/evaluate-batch[39m
+2025-12-19 13:02:59 [[32minfo[39m]: 	[32m[PromptService] Request: POST /prompt/v1/email/evaluate-batch[39m
+2025-12-19 13:03:04 [[31merror[39m]: 	[31m[PromptService] Request failed:[39m
+{
+  "url": "/prompt/v1/email/evaluate-batch",
+  "method": "POST"
+}
+2025-12-19 13:03:16 [[32minfo[39m]: 	[32m[MemoryService] Request: GET /events?type=action_execution&limit=50&metadata%5Bstatus%5D=pending_approval[39m
+2025-12-19 13:03:47 [[32minfo[39m]: 	[32m[MemoryService] Request: GET /events?type=action_execution&limit=50&metadata%5Bstatus%5D=pending_approval[39m
+2025-12-19 13:04:17 [[32minfo[39m]: 	[32m[MemoryService] Request: GET /events?type=action_execution&limit=50&metadata%5Bstatus%5D=pending_approval[39m
+2025-12-19 13:04:46 [[32minfo[39m]: 	[32m[MemoryService] Request: GET /events?type=action_execution&limit=50&metadata%5Bstatus%5D=pending_approval[39m
+2025-12-19 13:05:16 [[32minfo[39m]: 	[32m[MemoryService] Request: GET /events?type=action_execution&limit=50&metadata%5Bstatus%5D=pending_approval[39m
+2025-12-19 13:05:41 [[32minfo[39m]: 	[32m[MemoryService] Request: GET /events?type=action_execution&limit=50&metadata%5Bstatus%5D=pending_approval[39m
+2025-12-19 13:06:12 [[32minfo[39m]: 	[32m[MemoryService] Request: GET /events?type=action_execution&limit=50&metadata%5Bstatus%5D=pending_approval[39m
+2025-12-19 13:06:42 [[32minfo[39m]: 	[32m[MemoryService] Request: GET /events?type=action_execution&limit=50&metadata%5Bstatus%5D=pending_approval[39m
+2025-12-19 13:07:14 [[32minfo[39m]: 	[32m[MemoryService] Request: GET /events?type=action_execution&limit=50&metadata%5Bstatus%5D=pending_approval[39m
+2025-12-19 13:07:47 [[32minfo[39m]: 	[32m[MemoryService] Request: GET /events?type=action_execution&limit=50&metadata%5Bstatus%5D=pending_approval[39m
+2025-12-19 13:08:11 [[32minfo[39m]: 	[32m[MemoryService] Request: GET /events?type=action_execution&limit=50&metadata%5Bstatus%5D=pending_approval[39m
+2025-12-19 13:08:43 [[32minfo[39m]: 	[32m[MemoryService] Request: GET /events?type=action_execution&limit=50&metadata%5Bstatus%5D=pending_approval[39m
+2025-12-19 13:09:11 [[32minfo[39m]: 	[32m[MemoryService] Request: GET /events?type=action_execution&limit=50&metadata%5Bstatus%5D=pending_approval[39m
+2025-12-19 13:09:45 [[32minfo[39m]: 	[32m[MemoryService] Request: GET /events?type=action_execution&limit=50&metadata%5Bstatus%5D=pending_approval[39m
+2025-12-19 13:10:26 [[32minfo[39m]: 	[32m[MemoryService] Request: GET /events?type=action_execution&limit=50&metadata%5Bstatus%5D=pending_approval[39m
+2025-12-19 13:10:46 [[32minfo[39m]: 	[32m[MemoryService] Request: GET /events?type=action_execution&limit=50&metadata%5Bstatus%5D=pending_approval[39m
+2025-12-19 13:11:12 [[32minfo[39m]: 	[32m[MemoryService] Request: GET /events?type=action_execution&limit=50&metadata%5Bstatus%5D=pending_approval[39m
+2025-12-19 13:11:45 [[32minfo[39m]: 	[32m[MemoryService] Request: GET /events?type=action_execution&limit=50&metadata%5Bstatus%5D=pending_approval[39m
+2025-12-19 13:12:12 [[32minfo[39m]: 	[32m[MemoryService] Request: GET /events?type=action_execution&limit=50&metadata%5Bstatus%5D=pending_approval[39m
+2025-12-19 13:12:41 [[32minfo[39m]: 	[32m[MemoryService] Request: GET /events?type=action_execution&limit=50&metadata%5Bstatus%5D=pending_approval[39m
+2025-12-19 13:13:11 [[32minfo[39m]: 	[32m[MemoryService] Request: GET /events?type=action_execution&limit=50&metadata%5Bstatus%5D=pending_approval[39m
+2025-12-19 13:14:11 [[32minfo[39m]: 	[32m[MemoryService] Request: GET /events?type=action_execution&limit=50&metadata%5Bstatus%5D=pending_approval[39m
+2025-12-19 13:14:19 [[32minfo[39m]: 	[32m[MemoryService] Request: GET /events?type=action_execution&limit=50&metadata%5Bstatus%5D=pending_approval[39m
+2025-12-19 13:14:42 [[32minfo[39m]: 	[32m[MemoryService] Request: GET /events?type=action_execution&limit=50&metadata%5Bstatus%5D=pending_approval[39m
+2025-12-19 13:15:12 [[32minfo[39m]: 	[32m[MemoryService] Request: GET /events?type=action_execution&limit=50&metadata%5Bstatus%5D=pending_approval[39m
+2025-12-19 13:15:42 [[32minfo[39m]: 	[32m[MemoryService] Request: GET /events?type=action_execution&limit=50&metadata%5Bstatus%5D=pending_approval[39m
+2025-12-19 13:16:16 [[32minfo[39m]: 	[32m[MemoryService] Request: GET /events?type=action_execution&limit=50&metadata%5Bstatus%5D=pending_approval[39m
+2025-12-19 13:16:42 [[32minfo[39m]: 	[32m[MemoryService] Request: GET /events?type=action_execution&limit=50&metadata%5Bstatus%5D=pending_approval[39m
+2025-12-19 13:17:12 [[32minfo[39m]: 	[32m[MemoryService] Request: GET /events?type=action_execution&limit=50&metadata%5Bstatus%5D=pending_approval[39m
+2025-12-19 13:17:42 [[32minfo[39m]: 	[32m[MemoryService] Request: GET /events?type=action_execution&limit=50&metadata%5Bstatus%5D=pending_approval[39m
+2025-12-19 13:18:11 [[32minfo[39m]: 	[32m[MemoryService] Request: GET /events?type=action_execution&limit=50&metadata%5Bstatus%5D=pending_approval[39m
+2025-12-19 13:18:41 [[32minfo[39m]: 	[32m[MemoryService] Request: GET /events?type=action_execution&limit=50&metadata%5Bstatus%5D=pending_approval[39m
+2025-12-19 13:19:12 [[32minfo[39m]: 	[32m[MemoryService] Request: GET /events?type=action_execution&limit=50&metadata%5Bstatus%5D=pending_approval[39m
+2025-12-19 13:19:41 [[32minfo[39m]: 	[32m[MemoryService] Request: GET /events?type=action_execution&limit=50&metadata%5Bstatus%5D=pending_approval[39m
+2025-12-19 13:20:12 [[32minfo[39m]: 	[32m[MemoryService] Request: GET /events?type=action_execution&limit=50&metadata%5Bstatus%5D=pending_approval[39m
+2025-12-19 13:20:41 [[32minfo[39m]: 	[32m[MemoryService] Request: GET /events?type=action_execution&limit=50&metadata%5Bstatus%5D=pending_approval[39m
+2025-12-19 13:21:11 [[32minfo[39m]: 	[32m[MemoryService] Request: GET /events?type=action_execution&limit=50&metadata%5Bstatus%5D=pending_approval[39m
+2025-12-19 13:21:41 [[32minfo[39m]: 	[32m[MemoryService] Request: GET /events?type=action_execution&limit=50&metadata%5Bstatus%5D=pending_approval[39m
+2025-12-19 13:22:12 [[32minfo[39m]: 	[32m[MemoryService] Request: GET /events?type=action_execution&limit=50&metadata%5Bstatus%5D=pending_approval[39m
+2025-12-19 13:22:41 [[32minfo[39m]: 	[32m[MemoryService] Request: GET /events?type=action_execution&limit=50&metadata%5Bstatus%5D=pending_approval[39m
+2025-12-19 13:23:11 [[32minfo[39m]: 	[32m[MemoryService] Request: GET /events?type=action_execution&limit=50&metadata%5Bstatus%5D=pending_approval[39m
+2025-12-19 13:23:41 [[32minfo[39m]: 	[32m[MemoryService] Request: GET /events?type=action_execution&limit=50&metadata%5Bstatus%5D=pending_approval[39m
+2025-12-19 13:24:11 [[32minfo[39m]: 	[32m[MemoryService] Request: GET /events?type=action_execution&limit=50&metadata%5Bstatus%5D=pending_approval[39m
+2025-12-19 13:24:41 [[32minfo[39m]: 	[32m[MemoryService] Request: GET /events?type=action_execution&limit=50&metadata%5Bstatus%5D=pending_approval[39m
+2025-12-19 13:25:11 [[32minfo[39m]: 	[32m[MemoryService] Request: GET /events?type=action_execution&limit=50&metadata%5Bstatus%5D=pending_approval[39m
+2025-12-19 13:25:41 [[32minfo[39m]: 	[32m[MemoryService] Request: GET /events?type=action_execution&limit=50&metadata%5Bstatus%5D=pending_approval[39m
+2025-12-19 13:26:11 [[32minfo[39m]: 	[32m[MemoryService] Request: GET /events?type=action_execution&limit=50&metadata%5Bstatus%5D=pending_approval[39m
+2025-12-19 13:26:41 [[32minfo[39m]: 	[32m[MemoryService] Request: GET /events?type=action_execution&limit=50&metadata%5Bstatus%5D=pending_approval[39m
+2025-12-19 13:27:11 [[32minfo[39m]: 	[32m[MemoryService] Request: GET /events?type=action_execution&limit=50&metadata%5Bstatus%5D=pending_approval[39m
+2025-12-19 13:27:41 [[32minfo[39m]: 	[32m[MemoryService] Request: GET /events?type=action_execution&limit=50&metadata%5Bstatus%5D=pending_approval[39m
+2025-12-19 13:28:11 [[32minfo[39m]: 	[32m[MemoryService] Request: GET /events?type=action_execution&limit=50&metadata%5Bstatus%5D=pending_approval[39m
+2025-12-19 13:28:41 [[32minfo[39m]: 	[32m[MemoryService] Request: GET /events?type=action_execution&limit=50&metadata%5Bstatus%5D=pending_approval[39m
+2025-12-19 13:29:11 [[32minfo[39m]: 	[32m[MemoryService] Request: GET /events?type=action_execution&limit=50&metadata%5Bstatus%5D=pending_approval[39m
+2025-12-19 13:29:41 [[32minfo[39m]: 	[32m[MemoryService] Request: GET /events?type=action_execution&limit=50&metadata%5Bstatus%5D=pending_approval[39m
+2025-12-19 13:30:11 [[32minfo[39m]: 	[32m[MemoryService] Request: GET /events?type=action_execution&limit=50&metadata%5Bstatus%5D=pending_approval[39m
+2025-12-19 13:30:41 [[32minfo[39m]: 	[32m[MemoryService] Request: GET /events?type=action_execution&limit=50&metadata%5Bstatus%5D=pending_approval[39m
+2025-12-19 13:31:11 [[32minfo[39m]: 	[32m[MemoryService] Request: GET /events?type=action_execution&limit=50&metadata%5Bstatus%5D=pending_approval[39m
+2025-12-19 13:31:42 [[32minfo[39m]: 	[32m[MemoryService] Request: GET /events?type=action_execution&limit=50&metadata%5Bstatus%5D=pending_approval[39m
+2025-12-19 13:32:11 [[32minfo[39m]: 	[32m[MemoryService] Request: GET /events?type=action_execution&limit=50&metadata%5Bstatus%5D=pending_approval[39m
+2025-12-19 13:32:42 [[32minfo[39m]: 	[32m[MemoryService] Request: GET /events?type=action_execution&limit=50&metadata%5Bstatus%5D=pending_approval[39m
+2025-12-19 13:33:17 [[32minfo[39m]: 	[32m[MemoryService] Request: GET /events?type=action_execution&limit=50&metadata%5Bstatus%5D=pending_approval[39m

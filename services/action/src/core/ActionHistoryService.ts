@@ -93,7 +93,7 @@ export class ActionHistoryService {
         const finalTitle = actionTitle || 'System Action';
 
         // Extract providers used
-        const providers = new Set(plan.plan.map(a => a.provider));
+        const providers = new Set(plan.plan.map(a => (a as any).provider));
 
         // Create participants list (User + Providers)
         const participants = [
@@ -124,12 +124,12 @@ Steps: ${result.steps.length}`;
 
         await this.memoryClient.storeEvent({
             type: 'action_execution',
-            title: `Action: ${finalTitle}`,
             content,
             start_time: result.started_at,
             end_time: result.completed_at,
             participants,
             metadata: {
+                title: `Action: ${finalTitle}`,
                 actionId,
                 status: result.status,
                 goal: finalTitle,
@@ -140,7 +140,8 @@ Steps: ${result.steps.length}`;
                 // Be careful with size, maybe truncate if too large
                 plan_summary: plan.plan.map(p => p.op),
                 error: result.steps.find(s => s.status === 'failed')?.error
-            }
+            },
+            tasks: [] // Required by MemoryEvent type
         });
 
         console.log(`[ActionHistory] Persisted action ${actionId} to Memory Service`);
@@ -161,10 +162,51 @@ Steps: ${result.steps.length}`;
         userId?: string;
         startDate?: Date;
         endDate?: Date;
-        status?: 'completed' | 'failed' | 'partial';
+        status?: 'completed' | 'failed' | 'partial' | 'pending_approval';
         actionType?: string;
         limit?: number;
     }): Promise<ActionHistoryEntry[]> {
+        // If we are querying for pending actions and have a memory client, try to fetch from memory service first (rehydration)
+        if (filters.status === 'pending_approval' && this.memoryClient) {
+            try {
+                // Fetch pending action events
+                const { data: events } = await this.memoryClient.getEvents({
+                    type: 'action_execution',
+                    metadata: { status: 'pending_approval' },
+                    limit: filters.limit || 50
+                });
+
+                // Convert events back to ActionHistoryEntry format and merge/hydrate
+                for (const event of events) {
+                    if (!event.metadata || !event.metadata.actionId) continue;
+
+                    if (!this.history.has(event.metadata.actionId)) {
+                        this.history.set(event.metadata.actionId, {
+                            actionId: event.metadata.actionId,
+                            loggedAt: new Date(event.start_time),
+                            provenance: event.metadata.provenance,
+                            result: {
+                                action_id: event.metadata.actionId,
+                                status: event.metadata.status,
+                                steps: [], // Steps might not be fully persisted or needed for listing
+                                started_at: event.metadata.provenance?.timestamp || new Date().toISOString(),
+                                completed_at: typeof event.end_time === 'string' ? event.end_time : event.end_time?.toISOString(),
+                                metadata: { approvalReason: event.metadata.approvalReason }
+                            },
+                            plan: {
+                                goal: event.metadata.goal,
+                                plan: event.metadata.plan_summary ? event.metadata.plan_summary.map((op: string) => ({ op } as any)) : [],
+                                // If we stored the full plan in metadata, revert it here. 
+                                // For now, we construct a minimal representation enough for the UI.
+                            } as any
+                        });
+                    }
+                }
+            } catch (error) {
+                console.error('[ActionHistory] Failed to rehydrate pending actions:', error);
+            }
+        }
+
         let results = Array.from(this.history.values());
 
         // Apply filters

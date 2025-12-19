@@ -69,6 +69,22 @@ export class PromptClient extends ServiceClient {
         });
     }
 
+    async evaluateEmailBatch(requests: EvaluateEmailRequest[]): Promise<{ decisions: (EvaluateEmailResponse & { id: string })[] }> {
+        return this.request<{ decisions: (EvaluateEmailResponse & { id: string })[] }>({
+            method: 'POST',
+            url: '/prompt/v1/email/evaluate-batch',
+            data: {
+                emails: requests.map(r => ({
+                    id: (r as any).id, // Pass ID through if available or needed
+                    subject: r.subject,
+                    sender: r.sender,
+                    summary: r.summary,
+                    content_snippet: r.content_snippet
+                }))
+            },
+        });
+    }
+
     async generateBriefing(request: BriefingRequest): Promise<BriefingResponse> {
         return this.request<BriefingResponse>({
             method: 'POST',

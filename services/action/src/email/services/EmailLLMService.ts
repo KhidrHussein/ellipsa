@@ -63,7 +63,7 @@ ${msg.text || ''}`)
       const response = await this.promptClient.draftEmail({
         history,
         context: context.additionalContext,
-        sender_name: email.from.name,
+        sender_name: email.from.name || '',
         sender_email: email.from.address,
         subject: email.subject,
         email_content: email.text || email.html?.substring(0, 2000) || 'No content',
@@ -119,6 +119,48 @@ ${msg.text || ''}`)
     } catch (error) {
       console.error('Error evaluating email action:', error);
       return { action: 'NONE', reasoning: 'Error during AI evaluation' };
+    }
+  }
+
+  async evaluateActionBatch(emails: (EmailSummary & { contentSnippet?: string })[]): Promise<Record<string, {
+    action: 'REPLY' | 'ARCHIVE' | 'TASK' | 'NONE';
+    reasoning: string;
+    draftIntent?: string;
+    suggestedTask?: {
+      title: string;
+      description: string;
+      priority: 'high' | 'medium' | 'low';
+      dueDate?: string;
+    };
+  }>> {
+    try {
+      const requests = emails.map(email => ({
+        id: email.id,
+        subject: email.subject,
+        sender: email.from.address,
+        summary: email.summary,
+        content_snippet: email.metadata?.contentSnippet || (email as any).contentSnippet || 'N/A'
+      }));
+
+      const response = await this.promptClient.evaluateEmailBatch(requests as any);
+
+      const resultMap: Record<string, any> = {};
+
+      if (response && response.decisions) {
+        response.decisions.forEach(d => {
+          resultMap[d.id] = {
+            action: d.action || 'NONE',
+            reasoning: d.reasoning || 'No reasoning provided',
+            draftIntent: d.draftIntent,
+            suggestedTask: d.suggestedTask
+          };
+        });
+      }
+
+      return resultMap;
+    } catch (error) {
+      console.error('Error evaluating batch email actions:', error);
+      return {};
     }
   }
 

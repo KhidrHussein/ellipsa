@@ -214,7 +214,10 @@ export class TaskModel extends BaseModel<Task, TaskInput, TaskUpdate> {
         tx.run(countCypher, countParams)
       );
 
-      const totalCount = countResult.records[0]?.get('count').toNumber() || 0;
+      const countVal = countResult.records[0]?.get('count');
+      const totalCount = countVal && typeof countVal === 'object' && 'toNumber' in countVal
+        ? countVal.toNumber()
+        : Number(countVal || 0);
       const totalPages = Math.ceil(totalCount / pageSize);
 
       // Then get the paginated results

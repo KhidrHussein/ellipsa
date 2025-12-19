@@ -45,6 +45,16 @@ export interface IEmailService {
   ): Promise<DraftResponse>;
 
   /**
+   * Create a draft
+   */
+  createDraft(draft: any): Promise<any>;
+
+  /**
+   * Delete a draft
+   */
+  deleteDraft(id: string): Promise<void>;
+
+  /**
    * Send an email
    */
   sendEmail(draft: DraftResponse): Promise<{ success: boolean; messageId?: string }>;

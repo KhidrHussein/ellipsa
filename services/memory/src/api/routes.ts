@@ -118,7 +118,7 @@ export function createRouter(
           pageSize: 50,
           page: 1
         }
-      );
+      ) as any;
 
       res.json({
         entity,
@@ -139,6 +139,43 @@ export function createRouter(
       status: 'ok',
       timestamp: new Date().toISOString()
     });
+  });
+
+  // List events with filters
+  router.get('/events', async (req, res) => {
+    try {
+      const { type, limit, offset } = req.query;
+      const filters: any = {};
+
+      if (type) filters.type = type;
+      // Extract metadata filters from query params (e.g., metadata[status]=pending)
+      Object.keys(req.query).forEach(key => {
+        if (key.startsWith('metadata[')) {
+          const metaKey = key.slice(9, -1);
+          filters[`metadata.${metaKey}`] = req.query[key];
+        }
+      });
+
+      const events = await eventModel.findAll(filters, {
+        pageSize: limit ? parseInt(limit as string) : 50,
+        page: offset ? Math.floor(parseInt(offset as string) / (limit ? parseInt(limit as string) : 50)) + 1 : 1
+      }) as any;
+
+      res.json({
+        data: events.data,
+        meta: {
+          total: events.total,
+          page: events.page,
+          pageSize: events.pageSize
+        }
+      });
+    } catch (error) {
+      console.error('Error listing events:', error);
+      res.status(500).json({
+        error: 'Failed to list events',
+        details: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
   });
 
   return router;

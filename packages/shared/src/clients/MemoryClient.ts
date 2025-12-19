@@ -109,6 +109,23 @@ export class MemoryClient extends ServiceClient {
     });
   }
 
+  async getEvents(filters: { type?: string; metadata?: Record<string, any>; limit?: number } = {}): Promise<{ data: Event[] }> {
+    const params = new URLSearchParams();
+    if (filters.type) params.append('type', filters.type);
+    if (filters.limit) params.append('limit', filters.limit.toString());
+
+    if (filters.metadata) {
+      Object.entries(filters.metadata).forEach(([key, value]) => {
+        params.append(`metadata[${key}]`, String(value));
+      });
+    }
+
+    return this.request({
+      method: 'GET',
+      url: `/events?${params.toString()}`,
+    });
+  }
+
   async createTask(task: Partial<Task>): Promise<{ task_id: string }> {
     return this.request({
       method: 'POST',

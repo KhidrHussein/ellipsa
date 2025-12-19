@@ -369,8 +369,6 @@ export default function App() {
           )}
 
         </div>
-        {/* Sonner Toaster for Nudges */}
-        <Toaster position="top-right" expand richColors />
       </TooltipProvider>
     </ServiceProvider>
   );

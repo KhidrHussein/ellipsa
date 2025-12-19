@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client';
 import App from './App';
 import './styles/globals.css';
 import { realtimeService } from '../services/RealtimeService';
+import { PendingActionsProvider } from './contexts/PendingActionsContext';
 
 // Initialize services
 console.log('[Renderer] Initializing services...');
@@ -13,7 +14,9 @@ if (container) {
     const root = createRoot(container);
     root.render(
         <React.StrictMode>
-            <App />
+            <PendingActionsProvider>
+                <App />
+            </PendingActionsProvider>
         </React.StrictMode>
     );
     console.log('[Renderer] React app mounted');

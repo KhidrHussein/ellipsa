@@ -62,6 +62,9 @@ export function createEmailRouter(
   // Get email summary
   router.get('/summary/:id', (req, res) => emailController.getEmailSummary(req, res));
 
+  // Delete draft
+  router.delete('/draft/:id', (req, res) => emailController.deleteDraft(req, res));
+
   // Draft response
   router.post('/draft', (req, res) => emailController.draftResponse(req, res));
 

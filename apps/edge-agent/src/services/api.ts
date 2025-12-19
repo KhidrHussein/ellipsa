@@ -280,6 +280,14 @@ export class ActionClient extends ServiceClient {
     return response;
   }
 
+  // Delete a draft
+  async deleteDraft(id: string) {
+    return this.request({
+      method: 'DELETE',
+      url: `/api/emails/draft/${id}`, // Fixed: matches server.new.ts mount point
+    });
+  }
+
   // Send an approved email
   async sendEmail(draft: { id: string; to: any[]; subject: string; body: string }) {
     return this.request({
