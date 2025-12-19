@@ -238,3 +238,12 @@
 2025-12-12 11:46:28 [[31merror[39m]: 	[31mUnhandled Rejection at:[39m
 2025-12-12 11:51:19 [[31merror[39m]: 	[31mUnhandled Rejection at:[39m
 2025-12-12 11:56:19 [[31merror[39m]: 	[31mUnhandled Rejection at:[39m
+2025-12-18 01:43:21 [[31merror[39m]: 	[31mUnhandled Rejection at:[39m
+2025-12-18 10:06:00 [[31merror[39m]: 	[31m[MemoryService] Request failed:[39m
+{
+  "url": "/tasks",
+  "method": "POST",
+  "status": 404,
+  "statusText": "Not Found",
+  "data": "<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n<meta charset=\"utf-8\">\n<title>Error</title>\n</head>\n<body>\n<pre>Cannot POST /tasks</pre>\n</body>\n</html>\n"
+}

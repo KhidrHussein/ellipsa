@@ -82,31 +82,39 @@ export class EmailProcessingService {
 
       // 2. Extract structured data
       const content = email.text || email.html || '';
-      const schema = {
-        type: 'object',
-        properties: {
-          // Define your schema here based on what data you want to extract
-          // For example:
-          // sender: { type: 'string' },
-          // date: { type: 'string', format: 'date-time' },
-          // ...
-        }
-      };
-      const [extractedData, summaryText] = await Promise.all([
-        this.promptService.extractStructuredData(content),
-        this.promptService.summarizeContent(content)
-      ]);
 
-      // Ensure we have the expected structure in extractedData
-      const structuredData: {
+      let extractedData: {
         summary: string;
         entities: Array<{ type: string; value: string }>;
-        // Add other expected properties here
-      } = extractedData as any;
+        [key: string]: any;
+      } = { summary: '', entities: [] };
+      let summaryText = '';
+
+      // Check if we are using PromptClient (which has .summarize) or old interface
+      if (typeof this.promptService.summarize === 'function') {
+        const result = await this.promptService.summarize(content);
+        summaryText = result.summary;
+        extractedData.summary = result.summary;
+      } else if (typeof this.promptService.extractStructuredData === 'function') {
+        // Old PromptService interface
+        const [data, sum] = await Promise.all([
+          this.promptService.extractStructuredData(content),
+          this.promptService.summarizeContent(content)
+        ]);
+        extractedData = data as any;
+        summaryText = sum;
+      } else {
+        console.warn('PromptService does not support summarization, using default');
+        summaryText = content.substring(0, 200) + '...';
+        extractedData.summary = summaryText;
+      }
 
       // 3. Evaluate action using AI if available
       let recommendation: any = undefined;
       let suggestedActions = this.determineSuggestedActions(extractedData, summaryText, email);
+
+      // Pre-calculate categories for use in automation check and final summary
+      const categoriesList = this.extractCategories(extractedData, summaryText);
 
       if (this.emailLLMService) {
         const aiEvaluation = await this.emailLLMService.evaluateAction({
@@ -121,7 +129,7 @@ export class EmailProcessingService {
 
         // Merge AI recommendations types
         const isAutomated = ['notification', 'social', 'newsletter', 'purchase'].some(cat =>
-          summary.categories.includes(cat)
+          categoriesList.includes(cat)
         );
 
         if (aiEvaluation.action === 'REPLY' && !isAutomated) {
@@ -144,8 +152,9 @@ export class EmailProcessingService {
         summary: summaryText,
         actionRequired: this.determineActionRequired(extractedData, summaryText),
         priority: this.determinePriority(extractedData, summaryText),
-        categories: this.extractCategories(extractedData, summaryText),
+        categories: categoriesList,
         suggestedActions: suggestedActions,
+
         recommendation: recommendation, // Add recommendation
         metadata: {
           ...extractedData,

@@ -6,6 +6,7 @@ dist/
 .DS_Store
 coverage/
 .tmp/
+*.log
 
 services/action/data/user_tokens.json
 services/action/data/*.json

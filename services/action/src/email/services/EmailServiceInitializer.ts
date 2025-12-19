@@ -49,8 +49,9 @@ export async function initializeEmailServices(): Promise<EmailServices | null> {
 
     // Initialize processing service first
     const processingService = new EmailProcessingService(
-      llmService as any, // Temporary type assertion to fix compilation
-      memoryService as any // Temporary type assertion to fix compilation
+      promptClient as any, // 1st arg: promptService (PromptClient)
+      memoryService as any, // 2nd arg: memoryService
+      llmService // 3rd arg: emailLLMService
     );
 
     // Initialize Gmail service with the processing service
