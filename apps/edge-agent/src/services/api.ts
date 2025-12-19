@@ -273,7 +273,7 @@ export class ActionClient extends ServiceClient {
   async getPendingActions() {
     const response = await this.request({
       method: 'GET',
-      url: '/api/emails/pending',
+      url: '/action/v1/pending',
     });
 
     console.log('[ActionClient.getPendingActions] Fetched:', response?.data?.length || 0, 'pending actions');

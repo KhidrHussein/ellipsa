@@ -448,6 +448,63 @@ function setupActionRoutes(app: express.Express, services: Services) {
     });
 
     /**
+     * GET /action/v1/pending
+     * Get all pending actions (emails + system actions)
+     */
+    app.get('/action/v1/pending', async (req: Request, res: Response) => {
+        try {
+            // 1. Get pending emails
+            const drafts = await services.emailService.getPendingDrafts?.() || [];
+            const emailActions = drafts.map((draft: any) => ({
+                id: draft.id,
+                type: 'email',
+                title: `Email to ${draft.to?.map((t: any) => t.address || t.email || (typeof t === 'string' ? t : 'Unknown')).join(', ') || 'Unknown'}`,
+                description: draft.subject || 'No subject',
+                preview: draft.text?.substring(0, 150) || draft.html?.substring(0, 150) || '',
+                status: 'pending_approval',
+                created_at: draft.createdAt || new Date().toISOString(),
+                metadata: {
+                    to: draft.to,
+                    subject: draft.subject,
+                    threadId: draft.threadId,
+                }
+            }));
+
+            // 2. Get pending system actions
+            const pendingActions = await services.actionHistoryService.queryHistory({
+                status: 'pending_approval'
+            });
+
+            const systemActions = pendingActions.map(action => ({
+                id: action.actionId,
+                type: 'generic',
+                title: action.plan.goal || 'System Action',
+                description: action.plan.plan.map(step => step.op).join(', '),
+                status: 'pending_approval',
+                created_at: action.loggedAt.toISOString(),
+                plan: action.plan.plan, // Include plan for execution
+                metadata: {
+                    ...action.provenance,
+                    approvalReason: action.result.metadata?.approvalReason
+                }
+            }));
+
+            // 3. Combine and return
+            res.json({
+                success: true,
+                data: [...emailActions, ...systemActions],
+                meta: {
+                    count: emailActions.length + systemActions.length,
+                    timestamp: new Date().toISOString()
+                }
+            });
+        } catch (error) {
+            console.error('[Action API] Error getting pending actions:', error);
+            res.status(500).json({ error: 'Failed to get pending actions' });
+        }
+    });
+
+    /**
      * GET /action/v1/actions
      * Get list of available actions
      */

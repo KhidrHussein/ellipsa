@@ -8041,3 +8041,5 @@
 {"level":"info","message":"WebSocket server configured","service":"memory-service","timestamp":"2025-12-18 00:42:51"}
 {"level":"info","message":"Memory Service listening on port 4001","service":"memory-service","timestamp":"2025-12-18 00:42:51"}
 {"level":"info","message":"Memory Service initialized successfully","service":"memory-service","timestamp":"2025-12-18 00:42:51"}
+{"level":"info","message":"SIGINT received. Closing database connections...","service":"memory-service","timestamp":"2025-12-19 08:30:57"}
+{"level":"info","message":"Shutting down...","service":"memory-service","timestamp":"2025-12-19 08:30:57"}
