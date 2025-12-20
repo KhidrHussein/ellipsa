@@ -50,7 +50,7 @@ export interface BriefingResponse {
 
 export class PromptClient extends ServiceClient {
     constructor(baseURL: string = 'http://localhost:4003') {
-        super('PromptService', baseURL);
+        super('PromptService', baseURL, 60000);
     }
 
     async draftEmail(request: DraftEmailRequest): Promise<DraftEmailResponse> {

@@ -70,7 +70,47 @@ export function TimelineView({ onPersonClick, onClose }: TimelineViewProps) {
 
     console.log('[TimelineView] Filtered count:', filtered.length);
 
-    const transformed = filtered.map(event => ({
+    // CONSOLIDATE CONSECUTIVE EVENTS
+    // Group consecutive polling/usage logs (same title & type within 5 mins)
+    const consolidated: typeof events = [];
+
+    // Sort by time descending to ensure correct order for consolidation
+    const sorted = [...filtered].sort((a, b) => new Date(b.start_time).getTime() - new Date(a.start_time).getTime());
+
+    for (const event of sorted) {
+      const last = consolidated[consolidated.length - 1];
+
+      if (last) {
+        // Check matching criteria
+        const isSameType = last.type === event.type;
+        const isSameTitle = last.title === event.title;
+
+        if (isSameType && isSameTitle) {
+          const lastStart = new Date(last.start_time).getTime();
+          const currentEnd = new Date(event.end_time || event.start_time).getTime();
+
+          // Calculate gap between current event end and last event start
+          // Since we are iterating backwards in time (descending), "last" is the NEWER event.
+          // Gap = Start of Newer - End of This(Older)
+          const gap = lastStart - currentEnd;
+
+          // Threshold: 60 minutes (3600000ms)
+          // Also handle overlap (gap < 0)
+          if (gap <= 3600000) {
+            // MERGE: Extend the start time of the consolidated (newer) event 
+            // to the start time of this (older) event.
+            last.start_time = event.start_time;
+            continue; // Skip adding this event as a separate entry
+          }
+        }
+      }
+      // If not merged, add as new entry (clone to avoid mutation issues)
+      consolidated.push({ ...event });
+    }
+
+    console.log('[TimelineView] Consolidated count:', consolidated.length);
+
+    const transformed = consolidated.map(event => ({
       id: event.id,
       type: event.type || 'meeting',
       title: event.title,

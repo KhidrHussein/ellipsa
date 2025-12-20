@@ -2,7 +2,7 @@ import { Knex } from 'knex';
 import { z, type ZodType } from 'zod';
 import { BaseModel } from './BaseModel';
 import type { PaginationOptions, PaginatedResult } from './BaseModel';
-import type { Session, Transaction, ManagedTransaction } from 'neo4j-driver';
+import { type Session, type Transaction, type ManagedTransaction, int } from 'neo4j-driver';
 
 // Extend PaginationOptions to include status filter
 type TaskPaginationOptions = PaginationOptions & {
@@ -228,8 +228,8 @@ export class TaskModel extends BaseModel<Task, TaskInput, TaskUpdate> {
 
       const params: Record<string, unknown> = {
         userId,
-        offset: queryOffset,
-        limit: pageSize
+        offset: int(queryOffset),
+        limit: int(pageSize)
       };
 
       if (status && status.length > 0) {

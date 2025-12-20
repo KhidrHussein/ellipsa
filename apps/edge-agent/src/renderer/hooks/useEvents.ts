@@ -26,7 +26,7 @@ export interface TimelineEvent {
 }
 
 interface UseEventsOptions {
-    type?: 'meeting' | 'email' | 'all';
+    type?: 'meeting' | 'email' | 'task' | 'all';
     limit?: number;
 }
 
@@ -49,19 +49,26 @@ export function useEvents(options: UseEventsOptions = {}): UseEventsResult {
         setError(null);
 
         try {
-            const response = await memoryClient.getEvents({
-                type: options.type !== 'all' ? options.type : undefined,
-                limit: options.limit || 50,
-            });
+            let response;
+            if (options.type === 'task') {
+                response = await memoryClient.getTasks({
+                    limit: options.limit || 50,
+                });
+            } else {
+                response = await memoryClient.getEvents({
+                    type: options.type !== 'all' ? options.type : undefined,
+                    limit: options.limit || 50,
+                });
+            }
 
             if (response.success && response.data) {
                 // Transform backend data to frontend format
                 const transformedEvents = response.data.map((event: any) => ({
                     id: event.id,
-                    type: event.type || 'meeting',
+                    type: event.type || (options.type === 'task' ? 'task' : 'meeting'),
                     title: event.title || event.summary?.slice(0, 50) || 'Untitled Event',
                     summary: event.summary,
-                    start_time: event.start_time,
+                    start_time: event.start_time || event.due_date || event.created_at || new Date().toISOString(),
                     end_time: event.end_time,
                     participants: event.participants || [],
                     metadata: {
