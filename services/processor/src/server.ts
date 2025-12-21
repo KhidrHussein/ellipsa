@@ -143,7 +143,9 @@ async function processInput(ingest: z.infer<typeof IngestSchema>): Promise<Proce
       metadata: ingest.meta || {}
     };
 
-    console.log(`[${new Date().toISOString()}] Processing ${inputType} input`);
+    const userName = ingest.meta?.user_name || 'User';
+
+    console.log(`[${new Date().toISOString()}] Processing ${inputType} input for user: ${userName}`);
 
     // Handle audio input
     if (inputType === 'audio' && ingest.audio_ref) {
@@ -163,7 +165,7 @@ async function processInput(ingest: z.infer<typeof IngestSchema>): Promise<Proce
         messages: [
           {
             role: "system" as const,
-            content: `You are a context processor. Analyze the ${inputType} input and extract structured information. Return a JSON object.
+            content: `You are a context processor for user "${userName}". Analyze the ${inputType} input and extract structured information. Return a JSON object.
             Context: ${JSON.stringify(context, null, 2)}`
           },
           {
@@ -196,7 +198,7 @@ async function processInput(ingest: z.infer<typeof IngestSchema>): Promise<Proce
       id: eventId,
       type: inputType,
       start_ts: new Date().toISOString(),
-      participants: Array.isArray(parsed.participants) ? parsed.participants : ["ent_you"],
+      participants: Array.isArray(parsed.participants) && parsed.participants.length > 0 ? parsed.participants : [userName],
       source_app: typeof ingest.active_window === 'string' ? ingest.active_window : "unknown",
       summary_text: typeof parsed.summary === 'string' ? parsed.summary : `Processed ${inputType} input`,
       action_items: Array.isArray(parsed.tasks) ? parsed.tasks : [],

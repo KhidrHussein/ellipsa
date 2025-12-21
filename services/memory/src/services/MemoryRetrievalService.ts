@@ -62,13 +62,16 @@ export class MemoryRetrievalService {
      * 2. Graph search (relationship strength)
      * 3. Recency-weighted reranking
      */
-    async retrieveRelevantContext(query: string, limit: number = 5): Promise<MemoryBullet[]> {
+    async retrieveRelevantContext(query: string, userId: string, limit: number = 5): Promise<MemoryBullet[]> {
+
         try {
             // 1. Vector search in ChromaDB
-            const vectorResults = await this.vectorSearch(query, limit * 3);
+            const vectorResults = await this.vectorSearch(query, userId, limit * 3);
+
 
             // 2. Graph search in Neo4j (if entities detected)
-            const graphResults = await this.graphSearch(query, limit * 2);
+            const graphResults = await this.graphSearch(query, userId, limit * 2);
+
 
             // 3. Combine and rerank with recency
             const scored = this.rerankWithRecency([...vectorResults, ...graphResults]);
@@ -89,7 +92,8 @@ export class MemoryRetrievalService {
     /**
      * Vector search using ChromaDB semantic similarity
      */
-    private async vectorSearch(query: string, limit: number): Promise<VectorResult[]> {
+    private async vectorSearch(query: string, userId: string, limit: number): Promise<VectorResult[]> {
+
         if (!this.eventsCollection || !this.entitiesCollection) {
             console.warn('[MemoryRetrieval] Collections not initialized');
             return [];
@@ -105,8 +109,10 @@ export class MemoryRetrievalService {
             // Query Events
             const eventResults = await this.eventsCollection.query({
                 queryTexts: [query],
-                nResults: limit
+                nResults: limit,
+                where: { user_id: userId } // CRITICAL: Filter by user
             } as any);
+
 
             if (eventResults.ids && eventResults.ids[0]) {
                 for (let i = 0; i < eventResults.ids[0].length; i++) {
@@ -129,8 +135,10 @@ export class MemoryRetrievalService {
             // Query Entities
             const entityResults = await this.entitiesCollection.query({
                 queryTexts: [query],
-                nResults: limit
+                nResults: limit,
+                where: { user_id: userId } // CRITICAL: Filter by user
             } as any);
+
 
             if (entityResults.ids && entityResults.ids[0]) {
                 console.log(`[MemoryRetrieval] Raw entity results for query "${query}":`, JSON.stringify(entityResults.metadatas?.[0], null, 2));
@@ -172,7 +180,8 @@ export class MemoryRetrievalService {
     /**
      * Graph search using Neo4j to find related entities and events
      */
-    private async graphSearch(query: string, limit: number): Promise<GraphResult[]> {
+    private async graphSearch(query: string, userId: string, limit: number): Promise<GraphResult[]> {
+
         const session: Session = this.neo4jDriver.session();
 
         try {
@@ -185,7 +194,7 @@ export class MemoryRetrievalService {
             // Query Neo4j for events AND entities related to these entities
             // Use UNION to combine results and avoid nested aggregation errors
             const cypher = `
-                MATCH (e:Entity)-[r:RELATED_TO|PART_OF]-(evt:Event)
+                MATCH (e:Entity {user_id: $userId})-[r:RELATED_TO|PART_OF]-(evt:Event {user_id: $userId})
                 WHERE e.name IN $entities
                 RETURN 'event' as type, 
                        evt.id as id, 
@@ -195,7 +204,7 @@ export class MemoryRetrievalService {
 
                 UNION
 
-                MATCH (e:Entity)-[r:RELATED_TO|PART_OF]-(related:Entity)
+                MATCH (e:Entity {user_id: $userId})-[r:RELATED_TO|PART_OF]-(related:Entity {user_id: $userId})
                 WHERE e.name IN $entities
                 RETURN 'entity' as type, 
                        related.id as id, 
@@ -204,7 +213,9 @@ export class MemoryRetrievalService {
                        2 as strength
             `;
 
-            const result = await session.run(cypher, { entities, limit: neo4j.int(limit) });
+
+            const result = await session.run(cypher, { entities, userId, limit: neo4j.int(limit) });
+
 
             // Process rows directly (UNION returns multiple records)
             const graphResults: GraphResult[] = result.records

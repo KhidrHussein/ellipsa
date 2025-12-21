@@ -44,10 +44,19 @@ export class MainProcess {
   private monitorInterval: NodeJS.Timeout | null = null;
   private processorUrl = 'http://localhost:4002/processor/v1/ingest';
   private currentUserId: string = 'user'; // Default to generic user
+  private currentUserName: string = 'You'; // Default friendly name
+  private currentUserEmail: string = '';
 
-  public setUserId(userId: string) {
-    console.log('[Main] Setting current user ID:', userId);
+  public setUserProfile(userId: string, name?: string, email?: string) {
+    console.log('[Main] Setting current user profile:', { userId, name, email });
     this.currentUserId = userId;
+    if (name) this.currentUserName = name;
+    if (email) this.currentUserEmail = email;
+  }
+
+  // Legacy method support
+  public setUserId(userId: string) {
+    this.setUserProfile(userId);
   }
 
   private startWindowMonitor() {
@@ -135,7 +144,9 @@ export class MainProcess {
           source: 'edge-agent-monitor',
           appName: appName,
           url: url,
-          user_id: this.currentUserId // Critical for correct attribution
+          user_id: this.currentUserId, // Critical for correct attribution
+          user_name: this.currentUserName, // Pass the user name for personalized entity creation
+          user_email: this.currentUserEmail
         }
       });
     } catch (error) {
@@ -205,11 +216,14 @@ function handleDeepLink(url: string) {
     const urlObj = new URL(url);
     if (urlObj.hostname === 'auth-success') {
       const userId = urlObj.searchParams.get('userId');
-      if (userId) {
-        console.log('[Main] Auth Success for user:', userId);
+      const name = urlObj.searchParams.get('name');
+      const email = urlObj.searchParams.get('email');
 
-        // Update the monitor with the logged-in user ID
-        mainProcess.setUserId(userId);
+      if (userId) {
+        console.log('[Main] Auth Success for user:', userId, name, email);
+
+        // Update the monitor with the logged-in user profile
+        mainProcess.setUserProfile(userId, name || undefined, email || undefined);
 
         if (mainWindow) {
           if (mainWindow.isMinimized()) mainWindow.restore();
@@ -217,7 +231,8 @@ function handleDeepLink(url: string) {
           // Restore always on top if it was previously set or default behavior
           mainWindow.setAlwaysOnTop(true, 'screen-saver');
 
-          mainWindow.webContents.send('login-success', userId);
+          // Send full profile to renderer
+          mainWindow.webContents.send('login-success', { userId, name, email });
         }
       }
     }

@@ -1,5 +1,5 @@
-import { Action } from '../schemas/action.schema';
-import { ActionDefinition, IActionProvider } from './ActionProvider.interface';
+import { Action } from '../schemas/action.schema.js';
+import { ActionDefinition, IActionProvider } from './ActionProvider.interface.js';
 
 /**
  * Central registry for all available actions

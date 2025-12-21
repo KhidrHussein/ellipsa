@@ -29,9 +29,18 @@ export function LoginScreen({ onLoginSuccess }: LoginScreenProps) {
 
     React.useEffect(() => {
         // @ts-ignore
-        const removeListener = window.ellipsa.onLoginSuccess((userId: string) => {
-            console.log('Login success:', userId);
+        const removeListener = window.ellipsa.onLoginSuccess((profile: { userId: string, name?: string, email?: string } | string) => {
+            console.log('Login success:', profile);
+
+            // Handle both legacy string and new object format
+            const userId = typeof profile === 'string' ? profile : profile.userId;
+            const name = typeof profile === 'string' ? '' : profile.name;
+            const email = typeof profile === 'string' ? '' : profile.email;
+
             localStorage.setItem('user_id', userId);
+            if (name) localStorage.setItem('user_name', name);
+            if (email) localStorage.setItem('user_email', email);
+
             setIsLoading(false);
             onLoginSuccess(userId);
         });

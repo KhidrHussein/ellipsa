@@ -60,7 +60,7 @@ export class RealtimeService extends EventEmitter {
       try {
         const parsed = typeof message === 'string' ? JSON.parse(message) : message;
         this.emit('message', parsed);
-        
+
         // Emit specific message types
         if (parsed.type) {
           this.emit(parsed.type, parsed);
@@ -78,10 +78,22 @@ export class RealtimeService extends EventEmitter {
   }
 
   public sendMessage(
-    type: MessageType, 
-    content: any, 
+    type: MessageType,
+    content: any,
     options: { id?: string; contextId?: string; source?: string; metadata?: Record<string, any> } = {}
   ): void {
+    // Auto-attach user info from localStorage if available (Renderer side)
+    let userInfo: Record<string, any> = {};
+    if (typeof window !== 'undefined' && window.localStorage) {
+      const userId = localStorage.getItem('user_id');
+      const name = localStorage.getItem('user_name');
+      const email = localStorage.getItem('user_email');
+
+      if (userId) userInfo.user_id = userId;
+      if (name) userInfo.user_name = name;
+      if (email) userInfo.user_email = email;
+    }
+
     const message: RealtimeMessage = {
       type,
       content,
@@ -89,7 +101,10 @@ export class RealtimeService extends EventEmitter {
       id: options.id || Math.random().toString(36).substring(2, 11),
       contextId: options.contextId,
       source: options.source,
-      metadata: options.metadata
+      metadata: {
+        ...userInfo,
+        ...options.metadata
+      }
     };
 
     if (this.isConnected) {
@@ -113,7 +128,7 @@ export class RealtimeService extends EventEmitter {
     if (this.reconnectAttempts < this.maxReconnectAttempts) {
       this.reconnectAttempts++;
       console.log(`[RealtimeService] Attempting to reconnect (${this.reconnectAttempts}/${this.maxReconnectAttempts})`);
-      
+
       setTimeout(() => {
         this.connect();
       }, this.reconnectInterval);

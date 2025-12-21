@@ -1,4 +1,4 @@
-import { SafetyConfig } from '../core/SafetyValidator';
+import { SafetyConfig } from '../core/SafetyValidator.js';
 
 /**
  * Default blocklist of known malicious/dangerous domains

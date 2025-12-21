@@ -73,7 +73,10 @@ export class EventProcessingService {
                 let memoryBullets: string[] = [];
                 if (this.memoryRetrievalService) {
                   try {
-                    const memoryResults = await this.memoryRetrievalService.retrieveRelevantContext(truncatedTranscript, 5);
+                    // CRITICAL: Filter by user ID
+                    const userId = metadata.user_id || 'user';
+                    const memoryResults = await this.memoryRetrievalService.retrieveRelevantContext(truncatedTranscript, userId, 5);
+
                     memoryBullets = memoryResults.map(m => m.text);
                     if (memoryBullets.length > 0) {
                       console.log(`[EventProcessing] Retrieved ${memoryBullets.length} memory bullets for context`);
@@ -227,7 +230,7 @@ export class EventProcessingService {
           }
 
           if (extraction.entities?.length > 1) {
-            await this.updateGraphRelationships(event.id, extraction);
+            await this.updateGraphRelationships(event.id, extraction, metadata.user_id || 'user');
           }
 
           resolve({ event, extraction });
@@ -294,15 +297,18 @@ export class EventProcessingService {
           await this.neo4jSession.executeWrite(tx =>
             tx.run(
               `MATCH (e:Event {id: $eventId})
-                 MERGE (ent:Entity {name: $name, type: $type})
+                 MERGE (ent:Entity {name: $name, type: $type, user_id: $userId})
                  MERGE (e)-[r:MENTIONS]->(ent)
                  SET r.context = $context`,
+
               {
                 eventId,
                 name: entity.value,
                 type: safeType,
+                user_id: userId,
                 context: safeContext
               }
+
             )
           );
         }
@@ -333,7 +339,7 @@ export class EventProcessingService {
     }
   }
 
-  private async updateGraphRelationships(eventId: string, extraction: ExtractionResult) {
+  private async updateGraphRelationships(eventId: string, extraction: ExtractionResult, userId: string) {
     const entities = extraction.entities.map(e => e.value);
     const maxEntities = 20;
     const entitiesToProcess = entities.slice(0, maxEntities);
@@ -343,11 +349,13 @@ export class EventProcessingService {
         try {
           await this.neo4jSession.executeWrite(tx =>
             tx.run(
-              `MATCH (e1:Entity {name: $name1}), (e2:Entity {name: $name2})
+              `MATCH (e1:Entity {name: $name1, user_id: $userId}), (e2:Entity {name: $name2, user_id: $userId})
+
                MERGE (e1)-[r:RELATED_TO]-(e2)
                ON CREATE SET r.weight = 1, r.last_updated = datetime()
                ON MATCH SET r.weight = r.weight + 1, r.last_updated = datetime()`,
-              { name1: entitiesToProcess[i], name2: entitiesToProcess[j] }
+              { name1: entitiesToProcess[i], name2: entitiesToProcess[j], userId }
+
             )
           );
         } catch (err) {
@@ -365,7 +373,9 @@ export class EventProcessingService {
       let memoryContext: string[] = [];
       if (this.memoryRetrievalService) {
         try {
-          const memoryResults = await this.memoryRetrievalService.retrieveRelevantContext(text, 15);
+          const userId = metadata.user_id || 'user';
+          const memoryResults = await this.memoryRetrievalService.retrieveRelevantContext(text, userId, 15);
+
           memoryContext = memoryResults.map(m => `[${m.timestamp.toISOString()}] ${m.text}`);
         } catch (error) {
           console.error('[EventProcessing] Error retrieving memory context:', error);
@@ -386,7 +396,9 @@ export class EventProcessingService {
       let activeContext = '';
       if (this.contextInjector) {
         try {
-          activeContext = await this.contextInjector.injectContext(text);
+          const userId = metadata.user_id || 'user';
+          activeContext = await this.contextInjector.injectContext(text, userId);
+
           if (activeContext) {
             console.log('[EventProcessing] Injected Ghost Context:', activeContext);
             // We can prepend this to the screenContext or memoryContext.
@@ -419,6 +431,34 @@ export class EventProcessingService {
         metadata: { ...metadata, role: 'user' }
       });
 
+      // [NEW] Seed User Identity if available
+      if (metadata.user_name && metadata.user_id) {
+        try {
+          // Ensure the user entity exists in the graph with their real name
+          // We use a fixed ID or relation to identify "Self"
+          await this.neo4jSession.executeWrite(tx =>
+            tx.run(
+              `MERGE (u:Entity {user_id: $userId, type: 'person', name: $name})
+                       ON CREATE SET u.created_at = datetime(), u.is_self = true
+                       ON MATCH SET u.last_seen = datetime()
+                       // Also link this event to the user entity
+                       WITH u
+                       MATCH (e:Event {id: $eventId})
+                       MERGE (e)-[:AUTHORED_BY]->(u)
+                      `,
+              {
+                userId: metadata.user_id,
+                name: metadata.user_name,
+                eventId: event.id
+              }
+            )
+          );
+          console.log(`[EventProcessing] Seeded identity for user: ${metadata.user_name}`);
+        } catch (err) {
+          console.error('[EventProcessing] Failed to seed user identity:', err);
+        }
+      }
+
       // Extract entities from user message asynchronously
       this.promptService.extractStructuredData(text).then(async (extraction) => {
         if (extraction.entities && extraction.entities.length > 0) {
@@ -439,7 +479,7 @@ export class EventProcessingService {
 
           // Link entities if multiple are found (heuristic: co-occurrence)
           if (extraction.entities.length > 1) {
-            await this.updateGraphRelationships(event.id, extraction);
+            await this.updateGraphRelationships(event.id, extraction, metadata.user_id || 'user');
           }
         }
       }).catch(err => {

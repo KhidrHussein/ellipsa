@@ -385,3 +385,37 @@
 }
 2025-12-20 16:42:02 [[31merror[39m]: 	[31mUnhandled Rejection at:[39m
 2025-12-20 16:52:04 [[31merror[39m]: 	[31mUnhandled Rejection at:[39m
+2025-12-20 17:00:00 [[31merror[39m]: 	[31m[MemoryService] Request failed:[39m
+{
+  "url": "/user/preferences",
+  "method": "GET",
+  "status": 404,
+  "statusText": "Not Found",
+  "data": "<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n<meta charset=\"utf-8\">\n<title>Error</title>\n</head>\n<body>\n<pre>Cannot GET /user/preferences</pre>\n</body>\n</html>\n"
+}
+2025-12-20 17:00:00 [[31merror[39m]: 	[31m[MemoryService] Request failed:[39m
+{
+  "url": "/tasks?limit=50",
+  "method": "GET",
+  "status": 404,
+  "statusText": "Not Found",
+  "data": "<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n<meta charset=\"utf-8\">\n<title>Error</title>\n</head>\n<body>\n<pre>Cannot GET /tasks</pre>\n</body>\n</html>\n"
+}
+2025-12-20 17:00:19 [[31merror[39m]: 	[31m[PromptService] Request failed:[39m
+{
+  "url": "/prompt/v1/briefing",
+  "method": "POST",
+  "status": 500,
+  "statusText": "Internal Server Error",
+  "data": {
+    "error": "400 Invalid parameter: 'response_format' of type 'json_object' is not supported with this model."
+  }
+}
+2025-12-20 17:00:19 [[31merror[39m]: 	[31m[MemoryService] Request failed:[39m
+{
+  "url": "/tasks",
+  "method": "POST",
+  "status": 404,
+  "statusText": "Not Found",
+  "data": "<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n<meta charset=\"utf-8\">\n<title>Error</title>\n</head>\n<body>\n<pre>Cannot POST /tasks</pre>\n</body>\n</html>\n"
+}

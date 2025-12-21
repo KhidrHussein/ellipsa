@@ -25,7 +25,7 @@ export class OAuthManager {
         return provider.getAuthUrl(state);
     }
 
-    async handleCallback(providerName: string, code: string, state: string): Promise<{ userId: string, token: TokenData }> {
+    async handleCallback(providerName: string, code: string, state: string): Promise<{ userId: string, token: TokenData, userProfile?: { name?: string, email?: string } }> {
         const provider = this.providers.get(providerName);
         if (!provider) {
             throw new Error(`Provider ${providerName} not found`);
@@ -46,7 +46,22 @@ export class OAuthManager {
         // Store token
         await this.tokenService.setToken(userId, providerName, token);
 
-        return { userId, token };
+        // Fetch User Profile if supported
+        let userProfile: { name?: string, email?: string } | undefined;
+        if (provider.getUserProfile) {
+            try {
+                const profile = await provider.getUserProfile(token);
+                userProfile = {
+                    name: profile.name,
+                    email: profile.email
+                };
+                console.log(`[OAuthManager] Fetched profile for user ${userId}: ${profile.email}`);
+            } catch (err) {
+                console.warn(`[OAuthManager] Failed to fetch user profile for ${userId}:`, err);
+            }
+        }
+
+        return { userId, token, userProfile };
     }
 
     async getValidToken(userId: string, providerName: string): Promise<TokenData | null> {

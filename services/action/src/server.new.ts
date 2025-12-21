@@ -790,9 +790,16 @@ async function startServer() {
                 // If no state is provided (legacy legacy flow), we can't easily use OAuthManager which requires state for userId
                 // But the new flow initiated via getAuthUrl DOES provide state.
                 if (state) {
-                    const { userId } = await services.oauthManager.handleCallback('google', code, state);
+                    const { userId, userProfile } = await services.oauthManager.handleCallback('google', code, state);
 
-                    const deepLink = `ellipsa://auth-success?userId=${userId}&provider=google`;
+                    let deepLink = `ellipsa://auth-success?userId=${encodeURIComponent(userId)}&provider=google`;
+                    if (userProfile?.name) {
+                        deepLink += `&name=${encodeURIComponent(userProfile.name)}`;
+                    }
+                    if (userProfile?.email) {
+                        deepLink += `&email=${encodeURIComponent(userProfile.email)}`;
+                    }
+                    console.log('[Server] Redirecting with deepLink:', deepLink);
                     res.send(`
                         <html>
                             <body style="font-family: sans-serif; background: #000; color: #fff; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh;">

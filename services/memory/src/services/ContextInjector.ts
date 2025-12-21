@@ -14,7 +14,7 @@ export class ContextInjector {
      * Injects "Ghost Context" into the interaction by identifying entities in the user prompt
      * and retrieving their immediate relationships from the Knowledge Graph.
      */
-    async injectContext(userPrompt: string): Promise<string> {
+    async injectContext(userPrompt: string, userId: string): Promise<string> {
         // 1. Extract entities from the prompt
         // We use the prompt service's entity extraction capability
         // If not available on interface, we might need to cast or rely on a simpler regex extraction first
@@ -55,8 +55,8 @@ export class ContextInjector {
             return '';
         }
 
-        // 2. Query Memory Graph for immediate neighbors
-        const contextLines = await this.queryGraphForContext(entities);
+        // 2. Query Memory Graph for immediate neighbors, scoped to USER
+        const contextLines = await this.queryGraphForContext(entities, userId);
 
         if (contextLines.length === 0) {
             return '';
@@ -70,19 +70,20 @@ ${contextLines.join('\n')}
 `.trim();
     }
 
-    private async queryGraphForContext(entities: string[]): Promise<string[]> {
+    private async queryGraphForContext(entities: string[], userId: string): Promise<string[]> {
         const session: Session = this.neo4jDriver.session();
         const contextLines: string[] = [];
 
         try {
             // Query for each entity: find related entities and the nature of the relationship
             // We limit to immediate neighbors (1 hop)
+            // CRITICAL: We now match ONLY entities belonging to this user
             const result = await session.run(`
-                MATCH (e:Entity)-[r]-(related:Entity)
+                MATCH (e:Entity {user_id: $userId})-[r]-(related:Entity {user_id: $userId})
                 WHERE e.name IN $entities
                 RETURN e.name as source, type(r) as rel_type, related.name as target, related.type as target_type, r.context as context
                 LIMIT 10
-            `, { entities });
+            `, { entities, userId });
 
             result.records.forEach(record => {
                 const source = record.get('source');
