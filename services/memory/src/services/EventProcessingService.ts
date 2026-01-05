@@ -2,9 +2,10 @@ import { ExtractionResult, IPromptService, AssistanceContext, AssistanceResponse
 import { EventModel } from '../models/EventModel';
 import { EntityModel, EntityType } from '../models/EntityModel';
 import { TaskModel } from '../models/TaskModel';
-import { Session } from 'neo4j-driver';
+import { Driver, Session } from 'neo4j-driver';
 import { TranscriptionService } from './TranscriptionService';
 import { MemoryRetrievalService } from './MemoryRetrievalService';
+import * as path from 'path';
 
 // Define valid types to prevent validation errors
 const VALID_ENTITY_TYPES = [
@@ -19,7 +20,7 @@ export interface EventProcessingServiceOptions {
   eventModel: EventModel;
   entityModel: EntityModel;
   taskModel: TaskModel;
-  neo4jSession: Session;
+  neo4jDriver: Driver;
   memoryRetrievalService?: MemoryRetrievalService;
   contextInjector?: ContextInjector;
 }
@@ -29,8 +30,8 @@ export class EventProcessingService {
   private eventModel: EventModel;
   private entityModel: EntityModel;
   private taskModel: TaskModel;
-  private neo4jSession: Session;
-  private transcriptionService?: TranscriptionService;
+  private neo4jDriver: Driver;
+  public transcriptionService?: TranscriptionService;
   private memoryRetrievalService?: MemoryRetrievalService;
   private contextInjector?: ContextInjector;
   private processingQueue: (() => Promise<void>)[] = [];
@@ -49,7 +50,7 @@ export class EventProcessingService {
     this.eventModel = options.eventModel;
     this.entityModel = options.entityModel;
     this.taskModel = options.taskModel;
-    this.neo4jSession = options.neo4jSession;
+    this.neo4jDriver = options.neo4jDriver;
     this.transcriptionService = options.transcriptionService;
     this.memoryRetrievalService = options.memoryRetrievalService;
     this.contextInjector = options.contextInjector;
@@ -64,7 +65,16 @@ export class EventProcessingService {
           if (metadata.source === 'audio') {
             if (this.transcriptionService) {
               try {
-                const transcript = await this.transcriptionService.transcribe(content);
+                let transcript = '';
+                // [NEW] Check for file path first (Robust Session Mode)
+                if (content && (content.endsWith('.webm') || content.endsWith('.wav') || content.includes(path.sep))) {
+                  // Start/end check is heuristic, existence check inside transcribeFile is definitive
+                  console.log(`[EventProcessing] Detected file path, using transcribeFile: ${content}`);
+                  transcript = await this.transcriptionService.transcribeFile(content);
+                } else {
+                  transcript = await this.transcriptionService.transcribe(content);
+                }
+
                 const truncatedTranscript = transcript.length > 30000
                   ? transcript.substring(0, 30000) + '... [truncated]'
                   : transcript;
@@ -120,7 +130,7 @@ export class EventProcessingService {
                   assistance = await this.promptService.generateAssistance({
                     transcript: truncatedTranscript,
                     screenContext: `${screenContext}\n\n${strategicFocusContext}`.trim(), // Inject focus into screen context as it's a strong context signal
-                    activityType: metadata.activityType || 'general',
+                    activityType: 'question_answering', // Audio input is conversational - always use Q&A prompt
                     memoryBullets: [strategicFocusContext, ...memoryBullets].filter(Boolean), // Also add to memory bullets for redundancy
                     recentHistory: this.recentHistory.map(h => `${h.role}: ${h.content}`)
                   });
@@ -157,6 +167,25 @@ export class EventProcessingService {
                   // Fallback if no assistance generated
                   extraction.summary = extraction.summary || 'Audio processed';
                   shouldNotify = false;
+                }
+
+                // [NEW] Proactive Action Execution (Auto-Drafting)
+                if (assistance.actionPlan) {
+                  console.log('[EventProcessing] Proactive Action Plan detected:', JSON.stringify(assistance.actionPlan));
+                  // Only execute if high confidence
+                  if ((assistance.confidence || 0) >= 0.8) {
+                    try {
+                      console.log('[EventProcessing] Auto-Executing proactive plan...');
+                      await this.executeActionPlan(assistance.actionPlan);
+                      extraction.summary += "\n\n(Auto-drafted action successfully)";
+                      shouldNotify = true; // Always notify if we did something active
+                    } catch (actErr) {
+                      console.error('[EventProcessing] Proactive action execution failed:', actErr);
+                      extraction.summary += `\n\n(Attempted auto-draft but failed: ${actErr instanceof Error ? actErr.message : String(actErr)})`;
+                    }
+                  } else {
+                    console.log('[EventProcessing] Confidence too low for auto-execution (< 0.8)');
+                  }
                 }
 
                 // Store notification status in metadata
@@ -210,6 +239,70 @@ export class EventProcessingService {
               : content;
 
             extraction = await this.promptService.extractStructuredData(truncatedContent);
+          } else if (metadata.source === 'transcribed' && metadata.type === 'realtime_audio') {
+            // REAL-TIME AUDIO TRANSCRIPTION - already transcribed, use Q&A processing
+            // This is the path for live spoken questions during Observe Mode
+            console.log('[EventProcessing] Processing real-time transcribed audio with Q&A prompt');
+
+            // Retrieve relevant memory context
+            let memoryBullets: string[] = [];
+            if (this.memoryRetrievalService) {
+              try {
+                const userId = metadata.user_id || 'user';
+                const memoryResults = await this.memoryRetrievalService.retrieveRelevantContext(content, userId, 5);
+                memoryBullets = memoryResults.map(m => m.text);
+              } catch (memError) {
+                console.error('[EventProcessing] Error retrieving memory for real-time audio:', memError);
+              }
+            }
+
+            // Get screen context from cache
+            let screenContext = '';
+            if (this.screenContextCache) {
+              const age = Date.now() - this.screenContextCache.timestamp;
+              if (age < this.SCREEN_CONTEXT_TTL) {
+                screenContext = this.screenContextCache.content;
+              }
+            }
+
+            // Generate Q&A response using question_answering activity type
+            const assistance = await this.promptService.generateAssistance({
+              transcript: content, // Already transcribed text
+              screenContext,
+              activityType: 'question_answering', // This triggers GPT-4.1 + Q&A prompt
+              memoryBullets,
+              recentHistory: this.recentHistory.map(h => `${h.role}: ${h.content}`)
+            });
+
+            // Q&A prompt returns 'suggested_answer', general prompt returns 'message'
+            const responseMessage = (assistance as any).suggested_answer || assistance.message || '';
+
+            // Update history
+            if (responseMessage && responseMessage.trim()) {
+              this.recentHistory.push({ role: 'assistant', content: responseMessage });
+              if (this.recentHistory.length > this.MAX_HISTORY_LENGTH) {
+                this.recentHistory.shift();
+              }
+            }
+
+            extraction = {
+              summary: responseMessage || 'Audio processed',
+              entities: [],
+              action_items: (assistance.action_items || []).map(item => ({
+                text: item.text,
+                priority: item.priority || 'medium' as const
+              })),
+              suggestions: [],
+              confidence: assistance.confidence || 0.5,
+              sentiment: 'neutral'
+            };
+
+            // Log the response for debugging
+            const shouldNotify = (assistance.confidence || 0) >= 0.3 && responseMessage && responseMessage.trim().length > 10;
+            if (shouldNotify) {
+              console.log(`[EventProcessing] Q&A response ready: "${responseMessage.substring(0, 60)}..." (confidence: ${assistance.confidence})`);
+            }
+            metadata.assistance_confidence = assistance.confidence;
           } else {
             // Other event types
             const truncatedContent = content.length > 30000
@@ -226,7 +319,7 @@ export class EventProcessingService {
           }
 
           if (extraction.action_items?.length && extraction.action_items.length > 0) {
-            await this.processActionItems(extraction.action_items, event.id);
+            await this.processActionItems(extraction.action_items, event.id, metadata.user_id || 'user');
           }
 
           if (extraction.entities?.length > 1) {
@@ -293,24 +386,25 @@ export class EventProcessingService {
           },
         });
 
-        if (this.neo4jSession) {
-          await this.neo4jSession.executeWrite(tx =>
+        const session = this.neo4jDriver.session();
+        try {
+          await session.executeWrite(tx =>
             tx.run(
               `MATCH (e:Event {id: $eventId})
                  MERGE (ent:Entity {name: $name, type: $type, user_id: $userId})
                  MERGE (e)-[r:MENTIONS]->(ent)
                  SET r.context = $context`,
-
               {
                 eventId,
                 name: entity.value,
                 type: safeType,
-                user_id: userId,
+                userId: userId,
                 context: safeContext
               }
-
             )
           );
+        } finally {
+          await session.close();
         }
       } catch (error) {
         console.error(`Failed to process entity "${entity.value}":`, error);
@@ -318,10 +412,11 @@ export class EventProcessingService {
     }
   }
 
-  private async processActionItems(actionItems: any[] = [], eventId: string) {
+  private async processActionItems(actionItems: any[] = [], eventId: string, userId: string) {
     for (const item of actionItems) {
       try {
         await this.taskModel.create({
+          user_id: userId,
           title: item.text?.substring(0, 100) || 'Untitled Task',
           description: item.text || '',
           due_date: item.due_date ? new Date(item.due_date) : undefined,
@@ -344,24 +439,30 @@ export class EventProcessingService {
     const maxEntities = 20;
     const entitiesToProcess = entities.slice(0, maxEntities);
 
-    for (let i = 0; i < entitiesToProcess.length; i++) {
-      for (let j = i + 1; j < entitiesToProcess.length; j++) {
-        try {
-          await this.neo4jSession.executeWrite(tx =>
-            tx.run(
-              `MATCH (e1:Entity {name: $name1, user_id: $userId}), (e2:Entity {name: $name2, user_id: $userId})
+    if (entitiesToProcess.length < 2) return;
 
-               MERGE (e1)-[r:RELATED_TO]-(e2)
-               ON CREATE SET r.weight = 1, r.last_updated = datetime()
-               ON MATCH SET r.weight = r.weight + 1, r.last_updated = datetime()`,
-              { name1: entitiesToProcess[i], name2: entitiesToProcess[j], userId }
-
-            )
-          );
-        } catch (err) {
-          console.error('Error updating graph relationships:', err);
+    const session = this.neo4jDriver.session();
+    try {
+      for (let i = 0; i < entitiesToProcess.length; i++) {
+        for (let j = i + 1; j < entitiesToProcess.length; j++) {
+          try {
+            await session.executeWrite(tx =>
+              tx.run(
+                `MATCH (e1:Entity {name: $name1, user_id: $userId}), (e2:Entity {name: $name2, user_id: $userId})
+  
+                 MERGE (e1)-[r:RELATED_TO]-(e2)
+                 ON CREATE SET r.weight = 1, r.last_updated = datetime()
+                 ON MATCH SET r.weight = r.weight + 1, r.last_updated = datetime()`,
+                { name1: entitiesToProcess[i], name2: entitiesToProcess[j], userId }
+              )
+            );
+          } catch (err) {
+            console.error('Error updating graph relationships:', err);
+          }
         }
       }
+    } finally {
+      await session.close();
     }
   }
 
@@ -369,18 +470,78 @@ export class EventProcessingService {
     try {
       console.log(`[EventProcessing] Processing user message: "${text}"`);
 
-      // 1. Retrieve relevant memory context
-      let memoryContext: string[] = [];
-      if (this.memoryRetrievalService) {
+      // [MOVED] Seed User Identity FIRST to ensure it is available for retrieval
+      if (metadata.user_name && metadata.user_id) {
+        const session = this.neo4jDriver.session();
         try {
-          const userId = metadata.user_id || 'user';
-          const memoryResults = await this.memoryRetrievalService.retrieveRelevantContext(text, userId, 15);
-
-          memoryContext = memoryResults.map(m => `[${m.timestamp.toISOString()}] ${m.text}`);
-        } catch (error) {
-          console.error('[EventProcessing] Error retrieving memory context:', error);
+          await session.executeWrite(tx =>
+            tx.run(
+              `MERGE (u:Entity {user_id: $userId})
+                       ON CREATE SET 
+                         u.created_at = datetime(), 
+                         u.is_self = true, 
+                         u.type = 'person',
+                         u.name = $name,
+                         u.email = $email,
+                         u.description = 'User Email: ' + $email
+                       ON MATCH SET 
+                         u.last_seen = datetime(),
+                         u.is_self = true,
+                         u.email = $email,
+                         u.description = 'User Email: ' + $email,
+                         u.name = CASE 
+                           WHEN $name IS NOT NULL AND NOT toLower($name) IN ['you', 'user', 'unknown'] THEN $name 
+                           ELSE u.name 
+                         END
+                       RETURN u
+                      `,
+              {
+                userId: metadata.user_id,
+                name: metadata.user_name,
+                email: metadata.user_email || ''
+              }
+            )
+          );
+          // console.log(`[EventProcessing] Seeded identity for user: ${metadata.user_name}`);
+        } catch (err) {
+          console.error('[EventProcessing] Failed to seed user identity:', err);
+        } finally {
+          await session.close();
         }
       }
+
+      // 1. Retrieve relevant memory context and inject active context in PARALLEL
+      let memoryContext: string[] = [];
+      let activeContext = '';
+
+      const memoryPromise = (async () => {
+        if (this.memoryRetrievalService) {
+          try {
+            const userId = metadata.user_id || 'user';
+            const memoryResults = await this.memoryRetrievalService.retrieveRelevantContext(text, userId, 15);
+            memoryContext = memoryResults.map(m => `[${m.timestamp.toISOString()}] ${m.text}`);
+          } catch (error) {
+            console.error('[EventProcessing] Error retrieving memory context:', error);
+          }
+        }
+      })();
+
+      const contextPromise = (async () => {
+        if (this.contextInjector) {
+          try {
+            const userId = metadata.user_id || 'user';
+            activeContext = await this.contextInjector.injectContext(text, userId);
+            if (activeContext) {
+              console.log('[EventProcessing] Injected Ghost Context:', activeContext);
+            }
+          } catch (ciError) {
+            console.warn('[EventProcessing] Context injection failed:', ciError);
+          }
+        }
+      })();
+
+      // Wait for both to complete
+      await Promise.all([memoryPromise, contextPromise]);
 
       // 2. Get screen context
       let screenContext = '';
@@ -391,24 +552,9 @@ export class EventProcessingService {
         }
       }
 
-      // [NEW] Ghost Threading / Context Injection
-      // If ContextInjector is available, we inject "active context" from the Graph
-      let activeContext = '';
-      if (this.contextInjector) {
-        try {
-          const userId = metadata.user_id || 'user';
-          activeContext = await this.contextInjector.injectContext(text, userId);
-
-          if (activeContext) {
-            console.log('[EventProcessing] Injected Ghost Context:', activeContext);
-            // We can prepend this to the screenContext or memoryContext.
-            // Since the prompt templates usually put screenContext prominently, let's append it there
-            // marked clearly as Active Context.
-            screenContext = `${screenContext}\n\n${activeContext}`;
-          }
-        } catch (ciError) {
-          console.warn('[EventProcessing] Context injection failed:', ciError);
-        }
+      // Merge active context into screen context for the prompt
+      if (activeContext) {
+        screenContext = `${screenContext}\n\n${activeContext}`;
       }
 
       // 3. Generate response using Prompt Service
@@ -431,32 +577,18 @@ export class EventProcessingService {
         metadata: { ...metadata, role: 'user' }
       });
 
-      // [NEW] Seed User Identity if available
-      if (metadata.user_name && metadata.user_id) {
-        try {
-          // Ensure the user entity exists in the graph with their real name
-          // We use a fixed ID or relation to identify "Self"
-          await this.neo4jSession.executeWrite(tx =>
-            tx.run(
-              `MERGE (u:Entity {user_id: $userId, type: 'person', name: $name})
-                       ON CREATE SET u.created_at = datetime(), u.is_self = true
-                       ON MATCH SET u.last_seen = datetime()
-                       // Also link this event to the user entity
-                       WITH u
-                       MATCH (e:Event {id: $eventId})
-                       MERGE (e)-[:AUTHORED_BY]->(u)
-                      `,
-              {
-                userId: metadata.user_id,
-                name: metadata.user_name,
-                eventId: event.id
-              }
-            )
-          );
-          console.log(`[EventProcessing] Seeded identity for user: ${metadata.user_name}`);
-        } catch (err) {
-          console.error('[EventProcessing] Failed to seed user identity:', err);
-        }
+      // [MOVED] Identity seeding was here, moved to top.
+      // We still need to link the event to the user, which we can do after event creation
+      if (metadata.user_id) {
+        // Link event to user asynchronously to not block response
+        const session = this.neo4jDriver.session();
+        session.run(
+          `MATCH (u:Entity {user_id: $userId})
+             MATCH (e:Event {id: $eventId})
+             MERGE (e)-[:AUTHORED_BY]->(u)`,
+          { userId: metadata.user_id, eventId: event.id }
+        ).catch(e => console.error("Failed to link event to user", e))
+          .finally(() => session.close());
       }
 
       // Extract entities from user message asynchronously
@@ -910,6 +1042,35 @@ export class EventProcessingService {
       throw new Error('Action requires approval (pending_approval). Please check the server logs.');
     }
   }
+
+  async processSessionAudio(filePath: string, metadata: any) {
+    if (!this.transcriptionService) {
+      throw new Error('TranscriptionService not initialized');
+    }
+    console.log(`[EventProcessing] Processing session audio: ${filePath}`);
+    try {
+      const transcript = await this.transcriptionService.transcribeFile(filePath);
+
+      // Feed into standard processing pipeline
+      // CRITICAL: Use source: 'transcribed' to skip double-transcription
+      // The transcript is already plain text, NOT audio data
+      const result = await this.processEvent(transcript, {
+        ...metadata,
+        source: 'transcribed', // NOT 'audio' - prevent double-transcription!
+        type: 'meeting_session' // Distinguish type
+      });
+
+      // Session summaries are stored for Timeline/Briefing use.
+      // We do NOT force notification here; only proactive help triggers Toast.
+      // The standard shouldNotify logic from processEvent will apply.
+
+      return result;
+    } catch (error) {
+      console.error('[EventProcessing] Session audio processing failed:', error);
+      throw error;
+    }
+  }
+
 
   private async processQueue() {
     if (this.isProcessing || !this.processingQueue.length) return;

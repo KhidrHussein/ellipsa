@@ -21,46 +21,12 @@ export function ObserveModeOverlay({ isActive }: ObserveModeOverlayProps) {
       return;
     }
 
-    // Simulate transcript updates
-    const transcriptInterval = setInterval(() => {
-      const mockSegments = [
-        "So regarding the Q4 budget...",
-        "Alice mentioned we're over by 15%",
-        "Bob said he'll have numbers by next week",
-        "We need to reallocate the marketing spend",
-        "The forecast looks concerning for October",
-      ];
-      
-      setTranscriptSegments((prev) => {
-        const next = [...prev, mockSegments[prev.length % mockSegments.length]];
-        return next.slice(-3); // Keep last 3
-      });
-    }, 4000);
-
-    // Simulate entity detection
-    const entityInterval = setInterval(() => {
-      const mockEntities = ['Alice Jones', 'Bob Chen', 'Q4 Budget', 'Marketing'];
-      setDetectedEntities(mockEntities);
-    }, 3000);
-
-    // Simulate context updates
-    const contextInterval = setInterval(() => {
-      const contexts = [
-        'Zoom Meeting - Budget Review',
-        'Google Meet - Project X',
-        'Microsoft Teams - Weekly Sync',
-      ];
-      setCurrentContext(contexts[Math.floor(Math.random() * contexts.length)]);
-      setConfidence(0.75 + Math.random() * 0.2);
-    }, 5000);
-
-    setCurrentContext('Zoom Meeting - Budget Review');
-    setConfidence(0.85);
+    // We no longer simulate mock data. 
+    // Real updates should come via props or context in a future iteration.
+    // For now, valid empty state is better than fake data.
 
     return () => {
-      clearInterval(transcriptInterval);
-      clearInterval(entityInterval);
-      clearInterval(contextInterval);
+      // clear any intervals if they existed
     };
   }, [isActive]);
 

@@ -6,6 +6,7 @@ import sharp from 'sharp';
 import { v4 as uuidv4 } from 'uuid';
 import { EventService } from '../services/EventService';
 import { LLMService } from '../services/LLMService';
+import { filterService } from '../services/FilterService';
 
 // Remove global declaration as it's not needed
 
@@ -178,8 +179,9 @@ export class ScreenCapture {
     console.log(`[ScreenCapture] Starting screen capture with interval: ${interval}ms`);
 
     if (this.isCapturing) {
-      console.warn('[ScreenCapture] Screen capture is already running');
-      return false;
+      console.warn('[ScreenCapture] Screen capture is already running, restarting interval...');
+      if (this.captureInterval) clearInterval(this.captureInterval);
+      // Fall through to restart logic
     }
 
     if (!mainWindow) {
@@ -407,6 +409,12 @@ export class ScreenCapture {
 
       // Update the application context
       this.updateApplicationContext(captureMetadata, textContent);
+
+      // Check filter service
+      if (filterService.shouldBlock(captureMetadata.windowTitle, captureMetadata.appName, captureMetadata.url)) {
+        console.log(`[ScreenCapture] Capture blocked by filter: "${captureMetadata.windowTitle}" (${captureMetadata.appName})`);
+        return null; // Silent block (or maybe notify renderer that it was blocked?)
+      }
 
       try {
         // Send to event service for processing by the backend

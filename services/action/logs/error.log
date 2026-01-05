@@ -419,3 +419,160 @@
   "statusText": "Not Found",
   "data": "<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n<meta charset=\"utf-8\">\n<title>Error</title>\n</head>\n<body>\n<pre>Cannot POST /tasks</pre>\n</body>\n</html>\n"
 }
+2025-12-21 14:15:57 [[31merror[39m]: 	[31m[MemoryService] Request failed:[39m
+{
+  "url": "/events?type=action_execution&limit=50&metadata%5Bstatus%5D=pending_approval",
+  "method": "GET"
+}
+2025-12-21 16:21:58 [[31merror[39m]: 	[31m[MemoryService] Request failed:[39m
+{
+  "url": "/events?type=action_execution&limit=50&metadata%5Bstatus%5D=pending_approval",
+  "method": "GET"
+}
+2025-12-21 16:22:16 [[31merror[39m]: 	[31m[MemoryService] Circuit breaker opened[39m
+2025-12-21 16:22:16 [[31merror[39m]: 	[31m[MemoryService] Request failed:[39m
+{
+  "url": "/events?type=action_execution&limit=50&metadata%5Bstatus%5D=pending_approval",
+  "method": "GET"
+}
+2025-12-21 16:39:41 [[31merror[39m]: 	[31m[MemoryService] Request failed:[39m
+{
+  "url": "/events?type=action_execution&limit=50&metadata%5Bstatus%5D=pending_approval",
+  "method": "GET"
+}
+2025-12-21 16:41:15 [[31merror[39m]: 	[31m[MemoryService] Request failed:[39m
+{
+  "url": "/events?type=action_execution&limit=50&metadata%5Bstatus%5D=pending_approval",
+  "method": "GET"
+}
+2025-12-21 16:41:30 [[31merror[39m]: 	[31m[MemoryService] Circuit breaker opened[39m
+2025-12-21 16:41:30 [[31merror[39m]: 	[31m[MemoryService] Request failed:[39m
+{
+  "url": "/events?type=action_execution&limit=50&metadata%5Bstatus%5D=pending_approval",
+  "method": "GET"
+}
+2025-12-21 16:42:04 [[31merror[39m]: 	[31m[MemoryService] Circuit breaker opened[39m
+2025-12-21 16:42:04 [[31merror[39m]: 	[31m[MemoryService] Request failed:[39m
+{
+  "url": "/events?type=action_execution&limit=50&metadata%5Bstatus%5D=pending_approval",
+  "method": "GET"
+}
+2025-12-21 16:42:28 [[31merror[39m]: 	[31m[MemoryService] Circuit breaker opened[39m
+2025-12-21 16:42:28 [[31merror[39m]: 	[31m[MemoryService] Request failed:[39m
+{
+  "url": "/events?type=action_execution&limit=50&metadata%5Bstatus%5D=pending_approval",
+  "method": "GET"
+}
+2025-12-21 17:00:00 [[31merror[39m]: 	[31m[MemoryService] Request failed:[39m
+{
+  "url": "/user/preferences",
+  "method": "GET",
+  "status": 404,
+  "statusText": "Not Found",
+  "data": "<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n<meta charset=\"utf-8\">\n<title>Error</title>\n</head>\n<body>\n<pre>Cannot GET /user/preferences</pre>\n</body>\n</html>\n"
+}
+2025-12-21 17:00:00 [[31merror[39m]: 	[31m[MemoryService] Request failed:[39m
+{
+  "url": "/tasks?limit=50",
+  "method": "GET",
+  "status": 404,
+  "statusText": "Not Found",
+  "data": "<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n<meta charset=\"utf-8\">\n<title>Error</title>\n</head>\n<body>\n<pre>Cannot GET /tasks</pre>\n</body>\n</html>\n"
+}
+2025-12-24 09:08:23 [[31merror[39m]: 	[31mUnhandled Rejection at:[39m
+2025-12-24 13:24:24 [[31merror[39m]: 	[31mUnhandled Rejection at:[39m
+2025-12-24 13:42:09 [[31merror[39m]: 	[31mUnhandled Rejection at:[39m
+2025-12-24 13:48:01 [[31merror[39m]: 	[31mUnhandled Rejection at:[39m
+2025-12-24 17:00:01 [[31merror[39m]: 	[31m[MemoryService] Request failed:[39m
+{
+  "url": "/user/preferences",
+  "method": "GET",
+  "status": 404,
+  "statusText": "Not Found",
+  "data": "<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n<meta charset=\"utf-8\">\n<title>Error</title>\n</head>\n<body>\n<pre>Cannot GET /user/preferences</pre>\n</body>\n</html>\n"
+}
+2025-12-24 17:00:01 [[31merror[39m]: 	[31m[MemoryService] Request failed:[39m
+{
+  "url": "/tasks?limit=50",
+  "method": "GET",
+  "status": 404,
+  "statusText": "Not Found",
+  "data": "<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n<meta charset=\"utf-8\">\n<title>Error</title>\n</head>\n<body>\n<pre>Cannot GET /tasks</pre>\n</body>\n</html>\n"
+}
+2025-12-24 17:00:20 [[31merror[39m]: 	[31m[PromptService] Request failed:[39m
+{
+  "url": "/prompt/v1/briefing",
+  "method": "POST",
+  "status": 500,
+  "statusText": "Internal Server Error",
+  "data": {
+    "error": "400 Invalid parameter: 'response_format' of type 'json_object' is not supported with this model."
+  }
+}
+2025-12-24 17:00:20 [[31merror[39m]: 	[31m[MemoryService] Request failed:[39m
+{
+  "url": "/tasks",
+  "method": "POST",
+  "status": 404,
+  "statusText": "Not Found",
+  "data": "<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n<meta charset=\"utf-8\">\n<title>Error</title>\n</head>\n<body>\n<pre>Cannot POST /tasks</pre>\n</body>\n</html>\n"
+}
+2025-12-24 17:01:48 [[31merror[39m]: 	[31mUnhandled Rejection at:[39m
+2025-12-24 17:08:26 [[31merror[39m]: 	[31mUnhandled Rejection at:[39m
+2025-12-24 17:12:50 [[31merror[39m]: 	[31mUnhandled Rejection at:[39m
+2025-12-24 17:21:40 [[31merror[39m]: 	[31mUnhandled Rejection at:[39m
+2025-12-24 17:27:48 [[31merror[39m]: 	[31mUnhandled Rejection at:[39m
+2025-12-24 17:32:47 [[31merror[39m]: 	[31mUnhandled Rejection at:[39m
+2025-12-24 17:36:00 [[31merror[39m]: 	[31mUnhandled Rejection at:[39m
+2025-12-24 17:47:14 [[31merror[39m]: 	[31mUnhandled Rejection at:[39m
+2025-12-24 17:49:31 [[31merror[39m]: 	[31mUnhandled Rejection at:[39m
+2025-12-25 09:00:10 [[31merror[39m]: 	[31m[MemoryService] Request failed:[39m
+{
+  "url": "/tasks",
+  "method": "POST",
+  "status": 404,
+  "statusText": "Not Found",
+  "data": "<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n<meta charset=\"utf-8\">\n<title>Error</title>\n</head>\n<body>\n<pre>Cannot POST /tasks</pre>\n</body>\n</html>\n"
+}
+2025-12-25 13:24:56 [[31merror[39m]: 	[31m[MemoryService] Request failed:[39m
+{
+  "url": "/events?type=action_execution&limit=50&metadata%5Bstatus%5D=pending_approval",
+  "method": "GET"
+}
+2025-12-25 17:00:00 [[31merror[39m]: 	[31m[MemoryService] Request failed:[39m
+{
+  "url": "/user/preferences",
+  "method": "GET",
+  "status": 404,
+  "statusText": "Not Found",
+  "data": "<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n<meta charset=\"utf-8\">\n<title>Error</title>\n</head>\n<body>\n<pre>Cannot GET /user/preferences</pre>\n</body>\n</html>\n"
+}
+2025-12-25 17:00:00 [[31merror[39m]: 	[31m[MemoryService] Request failed:[39m
+{
+  "url": "/tasks?limit=50",
+  "method": "GET",
+  "status": 404,
+  "statusText": "Not Found",
+  "data": "<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n<meta charset=\"utf-8\">\n<title>Error</title>\n</head>\n<body>\n<pre>Cannot GET /tasks</pre>\n</body>\n</html>\n"
+}
+2025-12-25 17:00:20 [[31merror[39m]: 	[31m[PromptService] Request failed:[39m
+{
+  "url": "/prompt/v1/briefing",
+  "method": "POST",
+  "status": 500,
+  "statusText": "Internal Server Error",
+  "data": {
+    "error": "400 Invalid parameter: 'response_format' of type 'json_object' is not supported with this model."
+  }
+}
+2025-12-25 17:00:20 [[31merror[39m]: 	[31m[MemoryService] Request failed:[39m
+{
+  "url": "/tasks",
+  "method": "POST",
+  "status": 404,
+  "statusText": "Not Found",
+  "data": "<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n<meta charset=\"utf-8\">\n<title>Error</title>\n</head>\n<body>\n<pre>Cannot POST /tasks</pre>\n</body>\n</html>\n"
+}
+2026-01-05 07:40:26 [[31merror[39m]: 	[31mUnhandled Rejection at:[39m
+2026-01-05 07:48:42 [[31merror[39m]: 	[31mUnhandled Rejection at:[39m
+2026-01-05 07:53:20 [[31merror[39m]: 	[31mUnhandled Rejection at:[39m

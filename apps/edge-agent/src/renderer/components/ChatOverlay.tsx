@@ -33,6 +33,12 @@ export function ChatOverlay({ onClose }: ChatOverlayProps) {
   useEffect(() => {
     if (lastMessage) {
       if (lastMessage.type === 'assistant_message') {
+        // [FILTER] Ignore proactive event notifications (which have eventId)
+        // Only show messages explicitly meant for chat (from user_message flow)
+        if (lastMessage.metadata?.eventId) {
+          return;
+        }
+
         setIsThinking(false);
         setMessages(prev => [...prev, {
           id: Date.now().toString(),

@@ -37,8 +37,9 @@ function formatTimeRange(startTime: string, endTime?: string): string {
 
 export function TimelineView({ onPersonClick, onClose }: TimelineViewProps) {
   const [filter, setFilter] = useState<'all' | 'meetings' | 'tasks'>('all');
+  // For 'meetings', fetch all events and filter client-side to include both 'meeting' and 'meeting_session'
   const { events, loading, error } = useEvents({
-    type: filter === 'all' ? undefined : filter === 'meetings' ? 'meeting' : 'task',
+    type: filter === 'tasks' ? 'task' : undefined,
     limit: 50
   });
 
@@ -46,11 +47,14 @@ export function TimelineView({ onPersonClick, onClose }: TimelineViewProps) {
   const excludedEventTypes = ['assistant_message', 'process_event', 'user_message', 'system', 'error'];
 
   // Event types that are meaningful to show
-  const meaningfulEventTypes = ['meeting', 'calendar', 'calendar_event', 'email', 'task', 'call', 'note', 'window', 'app_usage', 'goal_feedback', 'action_execution'];
+  const meaningfulEventTypes = ['meeting', 'meeting_session', 'calendar', 'calendar_event', 'email', 'task', 'call', 'note', 'window', 'app_usage', 'goal_feedback', 'action_execution'];
 
   // Transform events for display, filtering out system events
   const displayEvents = useMemo(() => {
     console.log('[TimelineView] Filtering events. Total:', events.length, 'Filter:', filter);
+
+    // Meeting types for the 'meetings' filter tab
+    const meetingTypes = ['meeting', 'meeting_session', 'calendar', 'calendar_event'];
 
     const filtered = events.filter(event => {
       const eventType = event.type?.toLowerCase() || '';
@@ -59,6 +63,11 @@ export function TimelineView({ onPersonClick, onClose }: TimelineViewProps) {
 
       // HIDE LEGACY LOGS: Filter out "No goal specified" logs from UI as requested
       if (event.title?.includes("Action: No goal specified")) return false;
+
+      // Apply 'meetings' filter tab
+      if (filter === 'meetings') {
+        return meetingTypes.includes(eventType);
+      }
 
       // If we have a defined list of meaningful types and this isn't one, check if it looks like a meeting
       if (!meaningfulEventTypes.includes(eventType)) {

@@ -12,6 +12,7 @@ import { createEmailRouter } from './email/routes.js';
 import { createEmailAutomation } from './email/EmailAutomationService.js';
 import { EmailMetrics } from './email/monitoring/EmailMetrics.js';
 import { oauthService } from './email/services/OAuthService.js';
+import { TokenService } from './services/oauth/TokenService.js';
 import type { EmailMessage, EmailSummary, DraftResponse, EmailAddress, EmailAttachment } from './email/types/email.types.js';
 import { Buffer } from 'buffer';
 
@@ -185,9 +186,10 @@ async function initializeServices(app: express.Express): Promise<Services> {
   });
   const memoryService: IEmailMemoryService = new MemoryServiceClient();
   const processingService = new EmailProcessingService(promptService, memoryService);
+  const tokenService = new TokenService(path.join(__dirname, '../data'));
 
-  // Create Gmail service without initializing it yet
-  const emailService = GmailEmailService.create(processingService, memoryService);
+  // Create Gmail service with TokenService for persistence
+  const emailService = GmailEmailService.create(processingService, memoryService, tokenService);
 
   // Create the services object
   const services: Services = {
@@ -205,6 +207,7 @@ async function initializeServices(app: express.Express): Promise<Services> {
   // OAuth callback route
   app.get('/oauth2callback', async (req, res) => {
     const code = req.query.code as string;
+    console.log('[Server] Received OAuth callback with code length:', code ? code.length : 0);
 
     if (!code) {
       return res.status(400).send('Authorization code is required');
@@ -219,6 +222,16 @@ async function initializeServices(app: express.Express): Promise<Services> {
       // Store the tokens
       oauth2Client.setCredentials(tokens);
 
+      // Persist tokens using TokenService
+      const userId = 'user'; // Default user for now
+      await tokenService.setToken(userId, 'google', {
+        accessToken: tokens.access_token!,
+        refreshToken: tokens.refresh_token || undefined,
+        expiresAt: tokens.expiry_date || undefined,
+        tokenType: tokens.token_type || undefined,
+        scope: tokens.scope || undefined
+      });
+
       // Now that we have tokens, initialize the Gmail service
       await emailService.connect();
 
@@ -230,6 +243,12 @@ async function initializeServices(app: express.Express): Promise<Services> {
         metrics,
         checkInterval: 5 * 60 * 1000, // 5 minutes
         maxEmailsPerCheck: 10,
+        onAuthError: (error) => {
+          console.error('\n\n=============================================================');
+          console.error('CRITICAL: GOOGLE AUTH INVALID - REQUEST RE-LOGIN');
+          console.error('Please go to: http://localhost:4004/auth/url');
+          console.error('=============================================================\n\n');
+        }
       });
 
       // Start the email automation service

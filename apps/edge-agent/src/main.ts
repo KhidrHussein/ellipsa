@@ -11,6 +11,7 @@ import { processorClient } from './services/ProcessorClient.js';
 import { memoryClient } from './services/MemoryClient.js';
 import { initializeLLMService } from './services/LLMService';
 import { setupLLMHandlers } from './services/llmHandlers';
+import { filterService } from './services/FilterService';
 
 // Initialize screen capture
 const screenCapture = new ScreenCapture();
@@ -52,6 +53,18 @@ export class MainProcess {
     this.currentUserId = userId;
     if (name) this.currentUserName = name;
     if (email) this.currentUserEmail = email;
+  }
+
+  public getUserId(): string {
+    return this.currentUserId;
+  }
+
+  public getUserName(): string {
+    return this.currentUserName;
+  }
+
+  public getUserEmail(): string {
+    return this.currentUserEmail;
   }
 
   // Legacy method support
@@ -130,6 +143,12 @@ export class MainProcess {
   }
 
   private async sendWindowIngest(windowTitle: string, appName: string = 'unknown', url?: string) {
+    // Check filter service
+    if (filterService.shouldBlock(windowTitle, appName, url)) {
+      console.log(`[Main] Window monitor blocked by filter: "${windowTitle}" (${appName})`);
+      return;
+    }
+
     try {
       await axios.post(this.processorUrl, {
         id: `ingest_${Date.now()}`,
@@ -149,6 +168,26 @@ export class MainProcess {
           user_email: this.currentUserEmail
         }
       });
+
+      // [NEW] Also send to EventService for real-time context fusion in Memory Service
+      // This populates the screenContextCache in EventProcessingService
+      if (eventService) {
+        await eventService.captureEvent({
+          type: 'process_event', // Uses the standard ingestion channel
+          source: 'screen',     // Marked as screen to trigger caching
+          data: {
+            content: `Active Window: ${windowTitle} (${appName})`,
+            metadata: {
+              timestamp: new Date().toISOString(),
+              windowTitle,
+              appName,
+              url,
+              source: 'screen'
+            }
+          }
+        });
+      }
+
     } catch (error) {
       console.error('[Main] Failed to send window ingest:', error instanceof Error ? error.message : String(error));
     }
@@ -322,6 +361,15 @@ ipcMain.handle('process-audio', async (event, { audioData, timestamp, size, samp
         wsUrl: 'ws://localhost:4001',
         onError: (error) => console.error('EventService error:', error)
       });
+
+      // [NEW] Forward assistant messages to renderer
+      // This is crucial because main process sends the audio, so generic broadcast won't reach renderer with full content
+      eventService.on('assistant_message', (data: any) => {
+        console.log('[Main] Received assistant message from backend:', data);
+        if (mainWindow && !mainWindow.isDestroyed()) {
+          mainWindow.webContents.send('assistant_message', data);
+        }
+      });
     }
 
     // Send to backend
@@ -334,8 +382,11 @@ ipcMain.handle('process-audio', async (event, { audioData, timestamp, size, samp
           timestamp: new Date(timestamp).toISOString(),
           size,
           sampleRate,
-          format: 'webm/opus'
-        }
+          format: 'webm/opus',
+          user_name: mainProcess.getUserName(),
+          user_email: mainProcess.getUserEmail()
+        },
+        user_id: mainProcess.getUserId()
       }
     });
 
@@ -343,6 +394,86 @@ ipcMain.handle('process-audio', async (event, { audioData, timestamp, size, samp
   } catch (error) {
     console.error('Error processing audio in main process:', error);
     return false;
+  }
+});
+
+// [NEW] Session Audio Recording Handlers
+const sessionStreams = new Map<string, fs.WriteStream>();
+
+ipcMain.on('start-session-recording', async (event, { sessionId }) => {
+  try {
+    const recordingsDir = path.join(app.getPath('userData'), 'recordings');
+    if (!fs.existsSync(recordingsDir)) {
+      fs.mkdirSync(recordingsDir, { recursive: true });
+    }
+
+    const filePath = path.join(recordingsDir, `${sessionId}.webm`);
+    const stream = fs.createWriteStream(filePath);
+    sessionStreams.set(sessionId, stream);
+
+    console.log(`[Main] Started session recording: ${sessionId} -> ${filePath}`);
+  } catch (error) {
+    console.error(`[Main] Failed to start session recording ${sessionId}:`, error);
+  }
+});
+
+ipcMain.on('save-session-chunk', async (event, { sessionId, chunk }) => {
+  const stream = sessionStreams.get(sessionId);
+  if (stream) {
+    try {
+      const buffer = Buffer.from(chunk, 'base64');
+      // Debug: Log header of each chunk
+      const header = buffer.subarray(0, 4).toString('hex').toLowerCase();
+      console.log(`[Main] Session chunk for ${sessionId}: size=${buffer.length}, header=${header}`);
+      stream.write(buffer);
+    } catch (error) {
+      console.error(`[Main] Failed to write chunk for ${sessionId}:`, error);
+    }
+  }
+});
+
+ipcMain.on('finish-session-recording', async (event) => {
+  // Find the most recent active session or pass sessionId if possible (simplified here to close all for safety, or we assume one active session)
+  // Ideally, renderer passes sessionId, but finish-session usually implies the current one.
+  // We'll iterate all for now as typically only one exists.
+  for (const [sessionId, stream] of sessionStreams.entries()) {
+    try {
+      stream.end();
+      sessionStreams.delete(sessionId);
+
+      const filePath = path.join(app.getPath('userData'), 'recordings', `${sessionId}.webm`);
+      console.log(`[Main] Finished session recording: ${filePath}`);
+
+      if (!eventService) {
+        eventService = new EventService({
+          wsUrl: 'ws://localhost:4001',
+          onError: (err) => console.error('EventService error:', err) // Re-instantiate if needed
+        });
+
+        eventService.on('assistant_message', (data: any) => {
+          console.log('[Main] Received assistant message (Session) from backend:', data);
+          if (mainWindow && !mainWindow.isDestroyed()) {
+            mainWindow.webContents.send('assistant_message', data);
+          }
+        });
+      }
+
+      // Send to backend for processing
+      await eventService.captureEvent({
+        type: 'process_session_audio',
+        source: 'audio',
+        data: {
+          filePath,
+          timestamp: new Date().toISOString(),
+          sessionId,
+          user_id: mainProcess.getUserId()
+        }
+      });
+      console.log(`[Main] Sent session audio path to backend: ${sessionId}`);
+
+    } catch (error) {
+      console.error(`[Main] Error finishing session ${sessionId}:`, error);
+    }
   }
 });
 
@@ -1166,9 +1297,10 @@ ipcMain.on('set-window-pos', (_, { x, y }: { x: number; y: number }) => {
 });
 
 // Handle user ID update from renderer (e.g. on app launch if already logged in)
-ipcMain.on('set-user-id', (_event, userId: string) => {
-  console.log('[Main] Received user ID update from renderer:', userId);
-  mainProcess.setUserId(userId);
+// Handle user profile update from renderer (e.g. on app launch if already logged in)
+ipcMain.on('set-user-profile', (_event, { userId, name, email }: { userId: string; name?: string; email?: string }) => {
+  console.log('[Main] Received user profile update from renderer:', { userId, name, email });
+  mainProcess.setUserProfile(userId, name, email);
 });
 
 // Function to get display at point

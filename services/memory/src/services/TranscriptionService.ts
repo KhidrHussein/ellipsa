@@ -56,4 +56,36 @@ export class TranscriptionService {
             }
         }
     }
+
+    async transcribeFile(filePath: string): Promise<string> {
+        try {
+            logger.info(`Transcribing audio file: ${filePath}`);
+
+            if (!fs.existsSync(filePath)) {
+                throw new Error(`File not found: ${filePath}`);
+            }
+
+            // Validate WebM header before sending to OpenAI
+            const fd = fs.openSync(filePath, 'r');
+            const headerBuffer = Buffer.alloc(4);
+            fs.readSync(fd, headerBuffer, 0, 4, 0);
+            fs.closeSync(fd);
+            const header = headerBuffer.toString('hex').toLowerCase();
+            if (header !== '1a45dfa3') {
+                logger.warn(`Invalid WebM header in file ${filePath}: ${header}. Expected 1a45dfa3.`);
+                throw new Error(`Invalid audio format detected. Header: ${header}. Expected WebM (1a45dfa3).`);
+            }
+
+            const transcription = await this.openai.audio.transcriptions.create({
+                file: fs.createReadStream(filePath),
+                model: 'whisper-1',
+                language: 'en',
+            });
+
+            return transcription.text;
+        } catch (error) {
+            logger.error('Error transcribing audio file:', error);
+            throw error;
+        }
+    }
 }

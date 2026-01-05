@@ -70,7 +70,7 @@ export interface ElectronAPI {
   // Auth
   startGoogleLogin: () => Promise<void>;
   onLoginSuccess: (callback: (userId: string) => void) => () => void;
-  setUserId: (userId: string) => void;
+  setUserProfile: (profile: { userId: string; name?: string; email?: string }) => void;
 }
 
 // FloatingAssistantUI class interface

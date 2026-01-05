@@ -128,6 +128,14 @@ export class WebSocketClient extends EventEmitter {
           // If it's not JSON, use the raw data
           data = event.data;
         }
+      } else if (Buffer.isBuffer(event.data)) {
+        // Node.js Buffer (main process WebSocket)
+        try {
+          data = JSON.parse(event.data.toString('utf-8'));
+        } catch (e) {
+          console.error('[WebSocketClient] Failed to parse Buffer as JSON:', e);
+          data = event.data;
+        }
       } else if (event.data instanceof ArrayBuffer || event.data instanceof Blob) {
         // Handle binary data if needed
         data = event.data;

@@ -16,12 +16,13 @@ export class EmailAutomationService {
       checkInterval: number;
       maxEmailsPerCheck: number;
       autoRespond: boolean;
-    } = { 
-      checkInterval: 5 * 60 * 1000, // 5 minutes
-      maxEmailsPerCheck: 10,
-      autoRespond: false
-    }
-  ) {}
+      onAuthError?: (error: Error) => void;
+    } = {
+        checkInterval: 5 * 60 * 1000, // 5 minutes
+        maxEmailsPerCheck: 10,
+        autoRespond: false
+      }
+  ) { }
 
   /**
    * Start the email automation service
@@ -34,13 +35,13 @@ export class EmailAutomationService {
 
     console.log('Starting email automation service...');
     this.isRunning = true;
-    
+
     // Initial check
     await this.checkEmails();
-    
+
     // Set up periodic checking
     this.intervalId = setInterval(
-      () => this.checkEmails(), 
+      () => this.checkEmails(),
       this.config.checkInterval
     );
   }
@@ -50,14 +51,14 @@ export class EmailAutomationService {
    */
   stop() {
     if (!this.isRunning) return;
-    
+
     console.log('Stopping email automation service...');
-    
+
     if (this.intervalId) {
       clearInterval(this.intervalId);
       this.intervalId = undefined;
     }
-    
+
     this.isRunning = false;
   }
 
@@ -71,7 +72,7 @@ export class EmailAutomationService {
 
     try {
       console.log('Checking for new emails...');
-      
+
       // Connect to email service if not already connected
       try {
         await this.emailService.connect();
@@ -80,7 +81,7 @@ export class EmailAutomationService {
         this.metrics.recordError(error as Error);
         return;
       }
-      
+
       // Fetch unread emails
       const emails = await this.emailService.fetchEmails({
         unreadOnly: true,
@@ -92,11 +93,11 @@ export class EmailAutomationService {
       // Process each email
       for (const email of emails) {
         const processStartTime = Date.now();
-        
+
         try {
           // Process and summarize the email
           const summary = await this.processingService.processEmail(email);
-          
+
           // Display email summary
           console.log('\n' + '='.repeat(80));
           console.log(`📧 Email Summary - ${email.subject}`);
@@ -107,22 +108,22 @@ export class EmailAutomationService {
           console.log(`🏷️  Categories: ${summary.categories.join(', ') || 'None'}`);
           console.log('\n📝 Summary:');
           console.log(summary.summary);
-          
+
           if (summary.actionRequired) {
             console.log('\n🚨 ACTION REQUIRED: This email requires your attention!');
-            
+
             const conversationHistory = await this.processingService["memoryService"].getConversationHistory(email.threadId);
-            
+
             const draft = await this.processingService.draftResponse(email, {
               conversationHistory,
               additionalContext: 'Please draft a helpful response.'
             });
-            
+
             console.log('\n📝 Drafted response:');
-            console.log('-' .repeat(40));
+            console.log('-'.repeat(40));
             console.log(draft.body);
-            console.log('-' .repeat(40));
-            
+            console.log('-'.repeat(40));
+
             if (this.config.autoRespond) {
               await this.emailService.sendEmail(draft);
               console.log('\n✅ Response sent successfully!');
@@ -132,29 +133,39 @@ export class EmailAutomationService {
           } else {
             console.log('\nℹ️  No action required - marked as read.');
           }
-          
+
           // Mark as read after processing
           await this.emailService.markAsRead?.(email.id);
-          
+
           processedCount++;
           const processTime = Date.now() - processStartTime;
           this.metrics.recordProcessingTime(processTime);
           console.log(`\n⏱️  Processed in ${processTime}ms`);
           console.log('='.repeat(80) + '\n');
-          
+
         } catch (error) {
           errorCount++;
           console.error(`Error processing email ${email.id}:`, error);
           this.metrics.recordError(error as Error);
         }
       }
-      
+
       const totalTime = Date.now() - checkStartTime;
       console.log(`Processed ${processedCount} emails in ${totalTime}ms (${errorCount} errors)`);
-      
-    } catch (error) {
+
+    } catch (error: any) {
       console.error('Error in email check:', error);
       this.metrics.recordError(error as Error);
+
+      // Check for auth errors and trigger callback
+      const errorMessage = error?.message || '';
+      if (this.config.onAuthError && (
+        errorMessage.includes('invalid_grant') ||
+        errorMessage.includes('Authentication token is invalid') ||
+        errorMessage.includes('No refresh token')
+      )) {
+        this.config.onAuthError(error);
+      }
     }
   }
 }
@@ -170,9 +181,10 @@ export async function createEmailAutomation(config: {
   checkInterval?: number;
   maxEmailsPerCheck?: number;
   autoRespond?: boolean;
+  onAuthError?: (error: Error) => void;
 }) {
   const metrics = config.metrics || new EmailMetrics();
-  
+
   const processingService = new EmailProcessingService(
     config.promptService,
     config.memoryService
@@ -185,7 +197,8 @@ export async function createEmailAutomation(config: {
     {
       checkInterval: config.checkInterval ?? 5 * 60 * 1000, // 5 minutes
       maxEmailsPerCheck: config.maxEmailsPerCheck ?? 10,
-      autoRespond: config.autoRespond ?? false
+      autoRespond: config.autoRespond ?? false,
+      onAuthError: config.onAuthError
     }
   );
 }

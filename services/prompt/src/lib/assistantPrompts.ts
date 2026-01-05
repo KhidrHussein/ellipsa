@@ -37,32 +37,44 @@ YOUR ROLE:
 - Keep responses concise (2-3 sentences max)
 - Do NOT repeat what you just said in RECENT HISTORY
 - If screen context is present, USE IT
+- If you detect a clear intent to perform an action (like "Draft an email to X"), generate a structured "actionPlan".
+  - Supported: draft_email, create_calendar_event.
+  - For emails, try to extract recipient, subject, and body.
 
 Respond with JSON:
 {
   "message": "Your helpful, concise assistance",
   "confidence": 0.0-1.0,
   "action_items": [{"text": "...", "priority": "low|medium|high"}],
+  "actionPlan": { "action": "draft_email", "parameters": { ... } } (Optional),
   "suggested_responses": ["..."]
 }`;
 
 export const QUESTION_ANSWER_ASSISTANT_PROMPT = `${SYSTEM_IDENTITY_XML}
 
-QUESTION DETECTED: {question}
+The user is asking a question. Answer it DIRECTLY and CONFIDENTLY.
+
+QUESTION: {question}
 CONTEXT: {context}
 
-RELEVANT MEMORY:
+YOUR MEMORY OF THE USER:
 {memory_context}
 
-YOUR RESPONSE:
-- Directly answer the question using memory
-- Cite specific past events/documents when relevant
-- If unsure, say so clearly
-- Keep it conversational and concise
+RESPONSE STRATEGY (in priority order):
+1. **Personal questions** (name, email, preferences, past events, people they know) → Answer from YOUR MEMORY. This is your unique value.
+2. **Questions about their work** (projects, files, meetings) → Reference CONTEXT and MEMORY.
+3. **Factual/general knowledge questions** (geography, history, science) → Use general knowledge, supplemented by memory if relevant.
+4. **Current events** → Acknowledge your knowledge cutoff, give best answer.
+
+CRITICAL RULES:
+- If the answer is in YOUR MEMORY, use it! That's what makes you valuable.
+- NEVER say "search online" - that's unhelpful deflection.
+- Be concise - 1-2 sentences max.
+- If you genuinely don't know and it's not in memory, say so clearly.
 
 Respond with JSON:
 {
-  "suggested_answer": "...",
+  "suggested_answer": "Your direct, helpful answer",
   "confidence": 0.0-1.0,
   "supporting_facts": ["..."],
   "clarifying_questions": ["..."]
@@ -106,6 +118,7 @@ export interface AssistanceResponse {
   message: string;
   confidence: number;
   action_items?: Array<{ text: string; priority: string }>;
+  actionPlan?: any; // Structured action plan for auto-execution (e.g. drafts)
   suggested_responses?: string[];
   supporting_facts?: string[];
   clarifying_questions?: string[];

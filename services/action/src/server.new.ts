@@ -323,6 +323,17 @@ async function initializeServices(app: express.Express): Promise<Services> {
     // Pass tokenService to GmailEmailService
     const emailService = GmailEmailService.create(processingService, memoryService, tokenService);
 
+    // [FIX] Check if we have a logged-in user and switch context immediately
+    try {
+        const googleUser = await tokenService.findUserWithProvider('google');
+        if (googleUser && googleUser.userId !== 'user') {
+            console.log(`[Server] Found existing Google session for '${googleUser.userId}'. initializing EmailService with this ID.`);
+            await emailService.setUserId(googleUser.userId);
+        }
+    } catch (error) {
+        console.warn('[Server] Failed to restore email session:', error);
+    }
+
     // Initialize and register Gmail Provider
     console.log('[Server] Initializing GmailProvider...');
     const gmailProvider = new GmailProvider(emailService);
@@ -708,6 +719,11 @@ function setupActionRoutes(app: express.Express, services: Services) {
                             await services.tokenService.setToken(realUserId, provider, token);
                             userId = realUserId;
                         }
+
+                        // [FIX] Update the EmailService to use this new user ID immediately
+                        if (services.emailService) {
+                            await services.emailService.setUserId(userId);
+                        }
                     } catch (err) {
                         console.error('[Auth API] Failed to fetch user profile:', err);
                     }
@@ -791,6 +807,12 @@ async function startServer() {
                 // But the new flow initiated via getAuthUrl DOES provide state.
                 if (state) {
                     const { userId, userProfile } = await services.oauthManager.handleCallback('google', code, state);
+
+                    // [FIX] Ensure the EmailService switches to the new user ID immediately for legacy route too
+                    if (services.emailService) {
+                        console.log(`[Server/Legacy] Connecting EmailService for user '${userId}'`);
+                        await services.emailService.setUserId(userId);
+                    }
 
                     let deepLink = `ellipsa://auth-success?userId=${encodeURIComponent(userId)}&provider=google`;
                     if (userProfile?.name) {

@@ -165,7 +165,7 @@ class MemoryServer {
     await memoryRetrievalService.initialize();
 
     // Initialize Context Injector
-    const contextInjector = new ContextInjector(neo4jDriver, promptService as any);
+    const contextInjector = new ContextInjector(neo4jDriver, promptService as any, memoryRetrievalService);
 
     // Initialize Memory Consolidator
     const memoryConsolidator = new MemoryConsolidator(neo4jDriver, promptService as any);
@@ -185,7 +185,7 @@ class MemoryServer {
       eventModel: this.eventModel,
       entityModel: this.entityModel,
       taskModel: this.taskModel,
-      neo4jSession: this.neo4jSession,
+      neo4jDriver: this.neo4jDriver,
       transcriptionService: transcriptionService,
       memoryRetrievalService: memoryRetrievalService,
       contextInjector: contextInjector

@@ -61,7 +61,9 @@ export function createTasksRouter(taskModel: TaskModel): Router {
     try {
       const taskData = req.body;
 
+      const headerUserId = req.headers['x-user-id'] as string;
       const task = await taskModel.create({
+        user_id: headerUserId || 'user',
         title: taskData.title || taskData.text || 'Untitled task',
         description: taskData.description,
         status: taskData.status || 'pending',

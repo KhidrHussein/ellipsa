@@ -93,17 +93,51 @@ if (!window.electron) {
           }
         };
 
-        // Start recording and schedule stop after 5 seconds
+        // Start recording and schedule stop after 10 seconds
         mediaRecorder.start();
         setTimeout(() => {
           if (mediaRecorder.state === 'recording') {
             mediaRecorder.stop();
           }
-        }, 5000);
+        }, 10000);
       };
 
       // Start the first segment
       startSegment();
+
+      // [NEW] Start Full Session Recorder
+      let sessionRecorder: MediaRecorder | null = null;
+      try {
+        sessionRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm;codecs=opus' });
+
+        // Notify main process to start a new session file
+        const sessionId = `session_${Date.now()}`;
+        console.log(`[Preload] ========== SESSION RECORDING START: ${sessionId} ==========`);
+        ipcRenderer.send('start-session-recording', { sessionId });
+
+        sessionRecorder.ondataavailable = async (event) => {
+          if (event.data.size > 0) {
+            const blob = event.data;
+            const buffer = await blob.arrayBuffer();
+            const uint8Array = new Uint8Array(buffer);
+            // Convert to base64 for safe IPC transmission
+            const base64 = btoa(
+              uint8Array.reduce((data, byte) => data + String.fromCharCode(byte), '')
+            );
+
+            ipcRenderer.send('save-session-chunk', {
+              sessionId,
+              chunk: base64
+            });
+          }
+        };
+
+        // Record in 5s chunks to stream to file frequently
+        sessionRecorder.start(5000);
+        console.log('[Preload] Started full session recording');
+      } catch (err) {
+        console.error('[Preload] Failed to start session recorder:', err);
+      }
 
       // Return cleanup function
       return () => {
@@ -117,6 +151,18 @@ if (!window.electron) {
 
         if (currentRecorder && currentRecorder.state !== 'inactive') {
           currentRecorder.stop();
+        }
+
+        if (sessionRecorder && sessionRecorder.state !== 'inactive') {
+          console.log('[Preload] ========== SESSION RECORDING STOP ==========');
+          sessionRecorder.stop();
+          // Give it a moment to flush the last chunk then finish
+          setTimeout(() => {
+            console.log('[Preload] ========== SENDING finish-session-recording IPC ==========');
+            ipcRenderer.send('finish-session-recording');
+          }, 500);
+        } else {
+          console.log('[Preload] ========== SESSION RECORDER NOT ACTIVE, state:', sessionRecorder?.state, '==========');
         }
 
         stream.getTracks().forEach(track => track.stop());
@@ -187,7 +233,7 @@ if (!window.electron) {
     getObserveStatus: () => ipcRenderer.invoke('get-observe-status') as Promise<{ observing: boolean }>,
     setObserveStatus: (observing: boolean) => ipcRenderer.invoke('set-observe-status', observing) as Promise<void>,
     onObserveStatus: (callback: (status: boolean) => void) => {
-      const handler = (_: IpcRendererEvent, status: boolean) => callback(status);
+      const handler = (_: IpcRendererEvent, payload: { observing: boolean }) => callback(payload.observing);
       ipcRenderer.on('observe-status', handler);
       return () => ipcRenderer.removeListener('observe-status', handler);
     },
@@ -236,7 +282,7 @@ if (!window.electron) {
       ipcRenderer.on('login-success', handler);
       return () => ipcRenderer.removeListener('login-success', handler);
     },
-    setUserId: (userId: string) => ipcRenderer.send('set-user-id', userId),
+    setUserProfile: (profile: { userId: string; name?: string; email?: string }) => ipcRenderer.send('set-user-profile', profile),
 
     // External links
     openExternal: async (url: string) => { ipcRenderer.send('open-external', { url }); }

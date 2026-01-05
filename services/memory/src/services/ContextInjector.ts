@@ -1,13 +1,16 @@
 import { Driver as Neo4jDriver, Session } from 'neo4j-driver';
 import { IPromptService } from './interfaces/IPromptService';
+import { MemoryRetrievalService } from './MemoryRetrievalService';
 
 export class ContextInjector {
     private neo4jDriver: Neo4jDriver;
     private promptService: IPromptService;
+    private memoryRetrievalService?: MemoryRetrievalService;
 
-    constructor(neo4jDriver: Neo4jDriver, promptService: IPromptService) {
+    constructor(neo4jDriver: Neo4jDriver, promptService: IPromptService, memoryRetrievalService?: MemoryRetrievalService) {
         this.neo4jDriver = neo4jDriver;
         this.promptService = promptService;
+        this.memoryRetrievalService = memoryRetrievalService;
     }
 
     /**
@@ -15,54 +18,24 @@ export class ContextInjector {
      * and retrieving their immediate relationships from the Knowledge Graph.
      */
     async injectContext(userPrompt: string, userId: string): Promise<string> {
-        // 1. Extract entities from the prompt
-        // We use the prompt service's entity extraction capability
-        // If not available on interface, we might need to cast or rely on a simpler regex extraction first
-        // But let's assume we can get entities.
-        let entities: string[] = [];
+        // [OPTIMIZATION: VECTOR SEARCH]
+        // 1. Identify relevant entities using Semantic Vector Search (via ChromaDB)
+        const distinctEntities: string[] = await this.performVectorSearch(userPrompt, userId);
 
-        // Try to assume promptService has extractStructuredData or similar
-        // For now, let's use a regex fallback for immediate speed, 
-        // or better, if the promptService has a method exposed.
-        // Checking PromptService interface... it usually returns ExtractionResult.
+        // 2. Query Memory Graph for immediate neighbors
+        const contextLines = await this.queryGraphWithText(userPrompt, distinctEntities, userId);
 
-        try {
-            // 1. Extract entities from the prompt using LLM if possible
-            if (userPrompt.length > 10) {
-                // Use a specialized system prompt for entity extraction if needed, or default
-                // We utilize the PromptService's entity extraction capability
-                const extraction = await this.promptService.extractStructuredData(
-                    userPrompt,
-                    undefined,
-                    "You are an Entity Extractor. Extract key people, places, and concepts from the text."
-                );
-
-                if (extraction.entities) {
-                    entities = extraction.entities.map(e => e.value);
-                }
-            } else {
-                // Keep regex for very short prompts to save latency
-                const matches = userPrompt.match(/\b[A-Z][a-z]+(?:\s+[A-Z][a-z]+)*\b/g);
-                if (matches) {
-                    entities = Array.from(new Set(matches));
-                }
-            }
-        } catch (e) {
-            console.warn('[ContextInjector] Entity extraction failed', e);
+        // 3. [IDENTITY FIX] Explicitly fetch "Self" entity context
+        const selfContext = await this.getSelfContext(userId);
+        if (selfContext) {
+            contextLines.unshift(selfContext);
         }
-
-        if (entities.length === 0) {
-            return '';
-        }
-
-        // 2. Query Memory Graph for immediate neighbors, scoped to USER
-        const contextLines = await this.queryGraphForContext(entities, userId);
 
         if (contextLines.length === 0) {
             return '';
         }
 
-        // 3. Format output
+        // 4. Format output
         return `
 <active_context>
 ${contextLines.join('\n')}
@@ -70,31 +43,52 @@ ${contextLines.join('\n')}
 `.trim();
     }
 
-    private async queryGraphForContext(entities: string[], userId: string): Promise<string[]> {
+    private async performVectorSearch(userPrompt: string, userId: string): Promise<string[]> {
+        if (!this.memoryRetrievalService) return [];
+        try {
+            return await this.memoryRetrievalService.searchEntities(userPrompt, userId, 5);
+        } catch (err) {
+            console.warn('[ContextInjector] Vector search failed', err);
+            return [];
+        }
+    }
+
+    private async queryGraphWithText(text: string, entityNames: string[], userId: string): Promise<string[]> {
         const session: Session = this.neo4jDriver.session();
         const contextLines: string[] = [];
 
         try {
-            // Query for each entity: find related entities and the nature of the relationship
-            // We limit to immediate neighbors (1 hop)
-            // CRITICAL: We now match ONLY entities belonging to this user
-            const result = await session.run(`
-                MATCH (e:Entity {user_id: $userId})-[r]-(related:Entity {user_id: $userId})
-                WHERE e.name IN $entities
-                RETURN e.name as source, type(r) as rel_type, related.name as target, related.type as target_type, r.context as context
-                LIMIT 10
-            `, { entities, userId });
+            // HYBRID QUERY: Vector-guided OR Text-based fallback
+            let query = '';
+            let params: any = { userId };
+
+            if (entityNames.length > 0) {
+                query = `
+                    MATCH (e:Entity {user_id: $userId})
+                    WHERE e.name IN $entityNames
+                    MATCH (e)-[r]-(related:Entity {user_id: $userId})
+                    RETURN e.name as source, type(r) as rel_type, related.name as target, related.type as target_type, r.context as context
+                    LIMIT 15
+                 `;
+                params.entityNames = entityNames;
+            } else {
+                query = `
+                    MATCH (e:Entity {user_id: $userId})
+                    WHERE toLower($text) CONTAINS toLower(e.name)
+                    MATCH (e)-[r]-(related:Entity {user_id: $userId})
+                    RETURN e.name as source, type(r) as rel_type, related.name as target, related.type as target_type, r.context as context
+                    LIMIT 10
+                `;
+                params.text = text;
+            }
+
+            const result = await session.run(query, params);
 
             result.records.forEach(record => {
                 const source = record.get('source');
                 const relType = record.get('rel_type');
                 const target = record.get('target');
                 const context = record.get('context') || '';
-
-                // Format: "- Sarah (Relationship: Sister, Context: Lives in Tokyo)"
-                // Or more natural: "- [Source] is [Rel] to [Target] ("context")"
-
-                // Clean up relationship type (e.g. RELATED_TO -> Related To)
                 const readableRel = relType.replace(/_/g, ' ').toLowerCase();
 
                 let line = `- ${source} ${readableRel} ${target}`;
@@ -111,5 +105,37 @@ ${contextLines.join('\n')}
         }
 
         return contextLines;
+    }
+
+    private async getSelfContext(userId: string): Promise<string | null> {
+        const session: Session = this.neo4jDriver.session();
+        try {
+            const query = `
+                MATCH (u:Entity {user_id: $userId})
+                WHERE u.is_self = true OR u.name = 'User' OR u.name = 'Me'
+                RETURN u.name as name, u.description as description, u.email as email
+                LIMIT 1
+            `;
+            const result = await session.run(query, { userId });
+
+            if (result.records.length > 0) {
+                const record = result.records[0];
+                const name = record.get('name');
+                const description = record.get('description');
+                const email = record.get('email');
+
+                let info = `- Self Identity: ${name}`;
+                if (email) info += ` (Email: ${email})`;
+                if (description) info += `. ${description}`;
+
+                return info;
+            }
+            return null;
+        } catch (error) {
+            console.error('[ContextInjector] Failed to fetch Self entity:', error);
+            return null;
+        } finally {
+            await session.close();
+        }
     }
 }

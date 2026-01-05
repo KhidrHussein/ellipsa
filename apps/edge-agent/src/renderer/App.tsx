@@ -37,14 +37,17 @@ export default function App() {
   useEffect(() => {
     // Check for user_id first
     const userId = localStorage.getItem('user_id');
+    const userName = localStorage.getItem('user_name') || undefined;
+    const userEmail = localStorage.getItem('user_email') || undefined;
+
     if (!userId) {
       setView('login');
       return;
     }
 
-    // Sync user ID with Main process
+    // Sync user profile with Main process
     // @ts-ignore
-    window.ellipsa?.setUserId?.(userId);
+    window.ellipsa?.setUserProfile?.({ userId, name: userName, email: userEmail });
 
     // Check local storage first for speed
     const prefs = localStorage.getItem('ellipsa_preferences');
@@ -198,10 +201,93 @@ export default function App() {
       realtimeService.on('event_created', handleNewEvent);
     });
 
+    // [NEW] Listen for proactive assistant messages from Main Process (IPC)
+    // This is required because Main Process sends the audio, so it gets the direct response.
+    // RealtimeService (renderer WS) only gets a broadcast summary.
+    let removeAssistantListener: (() => void) | undefined;
+    if ((window as any).ellipsa?.realtime?.on) {
+      removeAssistantListener = (window as any).ellipsa.realtime.on('assistant_message', (data: any) => {
+        console.log('[App] Received assistant message via IPC:', data);
+
+        // INTELLIGENT FILTERING: Only show toasts for VALUABLE content
+        // Filter OUT bland observations like "You are working on X"
+        const isSessionSummary = data.metadata?.isSessionSummary === true;
+        const isRealtimeAudio = data.metadata?.isRealtimeAudio === true;
+        const hasActionItems = data.metadata?.action_items?.length > 0;
+        const hasActionPlan = !!data.metadata?.actionPlan;
+        const content = data.content || '';
+
+        // Detect if this looks like an answer to a question or valuable insight
+        const isLikelyAnswer = content.includes('?') || // Contains question being answered
+          content.toLowerCase().includes('i recommend') ||
+          content.toLowerCase().includes('you should') ||
+          content.toLowerCase().includes('here is') ||
+          content.toLowerCase().includes('the answer');
+
+        // Detect bland observations to FILTER OUT
+        const isBlandObservation = content.toLowerCase().startsWith('you are working on') ||
+          content.toLowerCase().startsWith('you are currently') ||
+          content.toLowerCase().startsWith('it seems like you') ||
+          content.toLowerCase().startsWith('this indicates') ||
+          content.toLowerCase().includes('seems to be a focused task');
+
+        // Detect USELESS content that should NEVER be shown
+        const isUselessContent =
+          content.toLowerCase() === 'audio processed' ||
+          content.toLowerCase().startsWith('audio processed') ||
+          content.toLowerCase().includes('thank you for watching') ||
+          content.toLowerCase().includes('thanks for watching') ||
+          content.toLowerCase().includes('see you next time') ||
+          content.trim().length < 10; // Too short to be useful
+
+        // Only show toast if it's valuable
+        // Real-time audio only shows if it has ACTUAL useful content (not fallback)
+        const isValuableRealtimeAudio = isRealtimeAudio && !isUselessContent;
+        const shouldShowToast = isSessionSummary || isValuableRealtimeAudio || hasActionItems || hasActionPlan || isLikelyAnswer;
+
+        // Filter out bland observations (but not for priority content)
+        const shouldFilter = (!isSessionSummary && !isValuableRealtimeAudio && isBlandObservation) || isUselessContent;
+
+        if (data.content && shouldShowToast && !shouldFilter) {
+          toast(data.content, {
+            description: isSessionSummary ? 'Session Summary' : isRealtimeAudio ? 'Real-time Response' : 'Ellipsa',
+            action: {
+              label: 'Chat',
+              onClick: () => {
+                // Open chat
+                // @ts-ignore
+                window.ellipsa?.toggleChat?.();
+              }
+            },
+            duration: 8000,
+          });
+        } else {
+          console.log('[App] Filtered out bland observation:', content.substring(0, 50));
+        }
+
+        // Show Auto-Draft Notification
+        if (data.metadata?.actionPlan) {
+          toast.success("Action Auto-Drafted", {
+            description: "I've prepared a draft based on your conversation.",
+            action: {
+              label: "Review",
+              onClick: () => {
+                setShowActionModal(true);
+                // Also refresh actions
+                // const { refresh } = usePendingActions(); refresh();
+              }
+            },
+            duration: 10000
+          });
+        }
+      });
+    }
+
     return () => {
       import('../services/RealtimeService').then(({ realtimeService }) => {
         realtimeService.off('event_created', handleNewEvent);
       });
+      if (removeAssistantListener) removeAssistantListener();
     };
   }, []);
 
@@ -225,8 +311,7 @@ export default function App() {
         <div className="fixed inset-0 bg-transparent text-black font-sans overflow-hidden">
           {/* Sonner Toaster for Nudges */}
           <React.Suspense fallback={null}>
-            {/* Dynamic import wrapper if needed, or just standard usage if imports were top-level. 
-                 Since I can't easily change top-level imports in this chunk, I'll assume sonner is available. */}
+            <Toaster position="top-right" richColors closeButton />
           </React.Suspense>
 
           {/* Main Content Area */}
@@ -283,8 +368,8 @@ export default function App() {
 
           {/* Chat is now rendered in a separate window via main process */}
 
-          {/* Observe Mode Overlay */}
-          <ObserveModeOverlay isActive={isObserving} />
+          {/* Observe Mode Overlay - Removed as per user request for minimal intrusion */}
+          {/* <ObserveModeOverlay isActive={isObserving} /> */}
 
 
           {/* Modals & Toasts */}

@@ -53,19 +53,9 @@ export function PostMeetingToast({
 
         {/* Preview */}
         <div className="p-6 bg-gray-50 border-t border-gray-100">
-          <div className="space-y-2 text-sm">
-            <div className="flex items-start gap-2">
-              <div className="w-1.5 h-1.5 rounded-full bg-black mt-2 flex-shrink-0" />
-              <span className="text-gray-700">Budget concerns discussed with Alice</span>
-            </div>
-            <div className="flex items-start gap-2">
-              <div className="w-1.5 h-1.5 rounded-full bg-black mt-2 flex-shrink-0" />
-              <span className="text-gray-700">Bob to provide forecast by Oct 2</span>
-            </div>
-            <div className="flex items-start gap-2">
-              <div className="w-1.5 h-1.5 rounded-full bg-black mt-2 flex-shrink-0" />
-              <span className="text-gray-700">Follow-up action items created</span>
-            </div>
+          {/* Items will be populated dynamically in future */}
+          <div className="text-sm text-gray-500 italic">
+            Review timeline for details...
           </div>
         </div>
 

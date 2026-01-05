@@ -159,10 +159,14 @@ export class GmailEmailService implements IEmailService {
   // IEmailService implementation
   private _isConnected = false;
   private connectionPromise: Promise<void> | null = null;
+  private activeTokenUserId: string | null = null;
 
   private async ensureConnected(): Promise<void> {
     // console.log('[GmailEmailService] ensureConnected called. isConnected:', this._isConnected);
-    if (this._isConnected) return;
+    if (this._isConnected) {
+      if (this.gmail && this.oAuth2Client) return;
+      this._isConnected = false;
+    }
 
     if (!this.connectionPromise) {
       this.connectionPromise = this.connect();
@@ -170,6 +174,9 @@ export class GmailEmailService implements IEmailService {
 
     try {
       await this.connectionPromise;
+      if (!this._isConnected) {
+        throw new Error('Failed to connect to Gmail (Authentication required)');
+      }
     } catch (error) {
       this.connectionPromise = null;
       throw error;
@@ -195,29 +202,56 @@ export class GmailEmailService implements IEmailService {
     if (this.tokenService) {
       let tokenData = await this.tokenService.getToken(this.userId, 'google');
 
-      // Fallback: If no token for current user (and it is default 'user'), look for ANY valid google token
-      if (!tokenData && this.userId === 'user') {
+      if (tokenData && tokenData.accessToken) {
+        // [TRACKING] Remember which user's token we are using
+        this.activeTokenUserId = this.userId === 'user' && !tokenData ? null : this.userId;
+
+        // If we found a fallback token, use that ID
         const found = await this.tokenService.findUserWithProvider('google');
-        if (found) {
+        if (!tokenData && this.userId === 'user' && found) {
           console.log(`[GmailEmailService] No token for '${this.userId}'. Found token for '${found.userId}', using it.`);
           tokenData = found.token;
-          // We keep this.userId as 'user' to avoid mutations, but we use the found token.
+          this.activeTokenUserId = found.userId;
         }
-      }
 
-      if (tokenData && tokenData.accessToken) {
-        client.setCredentials({
-          access_token: tokenData.accessToken,
-          refresh_token: tokenData.refreshToken,
-          expiry_date: tokenData.expiresAt,
-          token_type: tokenData.tokenType,
-          scope: tokenData.scope,
-        });
+        if (tokenData && tokenData.accessToken) {
+          console.log(`[GmailEmailService] Loading credentials for ${this.activeTokenUserId} (Refresh Token: ${!!tokenData.refreshToken})`);
+          client.setCredentials({
+            access_token: tokenData.accessToken,
+            refresh_token: tokenData.refreshToken,
+            expiry_date: tokenData.expiresAt,
+            token_type: tokenData.tokenType,
+            scope: tokenData.scope,
+          });
+
+          // [FIX] Only cache if we actually set credentials!
+          this.oAuth2Client = client;
+        }
       }
     }
 
-    this.oAuth2Client = client;
+    // Do NOT set this.oAuth2Client = client here unconditionally!
     return client;
+  }
+
+  /**
+   * Updates the user ID and forces a reconnection attempt with new credentials.
+   * Useful when an anonymous or default 'user' service needs to switch to a specific authenticated user.
+   */
+  public async setUserId(userId: string): Promise<void> {
+    console.log(`[GmailEmailService] Switching user from '${this.userId}' to '${userId}'`);
+    (this as any).userId = userId; // Force update readonly property
+    this.activeTokenUserId = null; // Reset active tracking
+    this.oAuth2Client = undefined; // Clear cached client
+    this._isConnected = false;
+    this.connectionPromise = null;
+
+    // Attempt to connect immediately with new ID
+    try {
+      await this.connect();
+    } catch (err) {
+      console.error(`[GmailEmailService] Failed to reconnect as '${userId}':`, err);
+    }
   }
 
   async connect(): Promise<void> {
@@ -254,6 +288,17 @@ export class GmailEmailService implements IEmailService {
       if (error instanceof Error &&
         (error.message.includes('invalid_grant') ||
           error.message.includes('No refresh token'))) {
+
+        // CRITICAL: Reset the client so we try to reload fresh tokens from TokenService next time
+        this.oAuth2Client = undefined;
+        this._isConnected = false;
+
+        // [PERSISTENCE FIX] Delete the invalid token so we don't pick it up again
+        if (this.tokenService && this.activeTokenUserId) {
+          console.log(`[GmailEmailService] Invalidating revoked token for user '${this.activeTokenUserId}'`);
+          await this.tokenService.deleteToken(this.activeTokenUserId, 'google');
+        }
+
         // Token has been revoked, expired, or not available
         throw new Error('Authentication token is invalid or has been revoked. Please re-authenticate.');
       }
@@ -730,11 +775,22 @@ export class GmailEmailService implements IEmailService {
     }
   }
 
+
+
   private async refreshAuthToken(): Promise<void> {
     if (this.tokenService && this.oAuth2Client && this.oAuth2Client.credentials.refresh_token) {
       try {
+        const currentRefreshToken = this.oAuth2Client.credentials.refresh_token; // Capture current refresh token
+
         const { credentials } = await this.oAuth2Client.refreshAccessToken();
+
+        // START FIX: Ensure we don't lose the refresh token
+        if (!credentials.refresh_token && currentRefreshToken) {
+          credentials.refresh_token = currentRefreshToken;
+        }
+
         this.oAuth2Client.setCredentials(credentials);
+
         // Save new tokens
         await this.tokenService.setToken(this.userId, 'google', {
           accessToken: credentials.access_token!,
@@ -743,6 +799,8 @@ export class GmailEmailService implements IEmailService {
           tokenType: credentials.token_type || undefined,
           scope: credentials.scope || undefined,
         });
+
+        console.log('[GmailEmailService] Token refreshed and saved successfully');
       } catch (error) {
         console.error('[GmailEmailService] Failed to refresh token:', error);
         throw new Error('Failed to refresh access token');

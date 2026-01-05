@@ -54,7 +54,13 @@ export class EventService extends EventEmitter {
 
     // Forward all WebSocket messages as events
     this.wsClient.on('message', (message: any) => {
+      console.log('[EventService] Received WebSocket message:', message?.type || 'no type', message);
       if (message.type) {
+        // Handle error messages separately to avoid unhandled 'error' event
+        if (message.type === 'error') {
+          console.warn('[EventService] Backend error:', message.error || message);
+          return;
+        }
         this.emit(message.type, message.data);
       }
     });
@@ -116,10 +122,12 @@ export class EventService extends EventEmitter {
 
         // Flatten the structure for the backend
         const payload = {
-          type: 'process_event',
+          type: event.type || 'process_event', // Use dynamic type
           content: event.data?.content,
+          data: event.data, // Include full data object for session audio (filePath, sessionId, etc.)
           metadata: {
             ...event.data?.metadata,
+            user_id: event.data?.user_id, // CRITICAL: Include user_id for correct attribution
             source: event.source,
             id: event.id,
             timestamp: event.timestamp

@@ -65,7 +65,10 @@ export class MemoryRetrievalService {
     async retrieveRelevantContext(query: string, userId: string, limit: number = 5): Promise<MemoryBullet[]> {
 
         try {
-            // 1. Vector search in ChromaDB
+            // 1. Get Self Identity (User Profile) - Always inject this first!
+            const selfIdentity = await this.getSelfEntity(userId);
+
+            // 2. Vector search in ChromaDB
             const vectorResults = await this.vectorSearch(query, userId, limit * 3);
 
 
@@ -77,12 +80,19 @@ export class MemoryRetrievalService {
             const scored = this.rerankWithRecency([...vectorResults, ...graphResults]);
 
             // 4. Return top K as bullet points
-            return scored.slice(0, limit).map(r => ({
+            const results = scored.slice(0, limit).map(r => ({
                 text: r.summary,
                 source: r.event_id,
                 timestamp: new Date(r.timestamp),
                 confidence: r.score
             }));
+
+            // Prepend Self Identity if available
+            if (selfIdentity) {
+                results.unshift(selfIdentity);
+            }
+
+            return results;
         } catch (error) {
             console.error('[MemoryRetrieval] Error retrieving context:', error);
             return [];
@@ -238,6 +248,73 @@ export class MemoryRetrievalService {
         } finally {
             await session.close();
         }
+    }
+
+    /**
+     * Retrieve the "Self" entity for the user to ensure identity context is always present
+     */
+    async getSelfEntity(userId: string): Promise<MemoryBullet | null> {
+        const session: Session = this.neo4jDriver.session();
+        try {
+            const result = await session.run(
+                `MATCH (u:Entity {user_id: $userId, is_self: true}) 
+                 RETURN u.name as name, u.type as type, u.description as description
+                 LIMIT 1`,
+                { userId }
+            );
+
+            if (result.records.length > 0) {
+                const record = result.records[0];
+                const name = record.get('name');
+                // const type = record.get('type'); 
+                const description = record.get('description') || 'This is the user currently interacting with the system.';
+
+                console.log(`[MemoryRetrieval] Found Self Entity: ${name} (${description})`);
+
+                return {
+                    text: `Identity: ${name} (Self). ${description}`,
+                    source: 'identity',
+                    timestamp: new Date(),
+                    confidence: 1.0
+                };
+            }
+            return null;
+        } catch (error) {
+            console.error('[MemoryRetrieval] Failed to fetch self entity:', error);
+            return null;
+        } finally {
+            await session.close();
+        }
+    }
+
+    /**
+     * Search for entities using vector similarity.
+     * Returns a list of unique entity names found.
+     */
+    async searchEntities(query: string, userId: string, limit: number = 5): Promise<string[]> {
+        // 1. Perform vector search for entities
+        // We use a higher limit to increase recall, then we'll dedupe names
+        if (!this.entitiesCollection) return [];
+
+        const results = await this.vectorSearch(query, userId, limit * 2);
+
+        // 2. Filter for only entity results (though vectorSearch currently mixes them, we can check IDs or metadata)
+        // In our vectorSearch, we prefix entity IDs with "entity:" in the result event_id
+        // or we can infer from metadata if it has a 'type' field that is an entity type.
+
+        const entityNames = new Set<string>();
+
+        results.forEach(res => {
+            // Check if it's an entity based on the ID prefix we set in vectorSearch
+            // or if the metadata has a name/type structure
+            if (res.event_id.startsWith('entity:') || (res.metadata && res.metadata.name && res.metadata.type)) {
+                if (res.metadata && res.metadata.name) {
+                    entityNames.add(res.metadata.name);
+                }
+            }
+        });
+
+        return Array.from(entityNames).slice(0, limit);
     }
 
     /**

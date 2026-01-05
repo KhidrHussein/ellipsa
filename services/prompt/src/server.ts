@@ -193,11 +193,25 @@ app.post("/prompt/v1/assist", async (req, res) => {
     // Deduplicate
     const uniqueMemory = Array.from(new Set(combinedMemory));
 
+    // AUTO-DETECT questions in the transcript
+    const hasQuestion = /\?|\bwhat is\b|\bwho is\b|\bhow do\b|\bwhen is\b|\bwhere is\b|\bwhy is\b|\btell me\b|\bcan you\b/i.test(context.transcript);
+
+    // Model and prompt selection based on activityType (source-based routing)
+    // Audio transcriptions → activityType='question_answering' → Q&A prompt + GPT-4.1
+    // Screen/window events → activityType='general' → Observation prompt + GPT-3.5-turbo
+    let activeModel = model;
     let systemPrompt = GENERAL_ASSISTANT_PROMPT;
-    if (context.activityType === 'meeting') {
-      systemPrompt = MEETING_ASSISTANT_PROMPT;
-    } else if (context.activityType === 'question_answering') {
+
+    if (context.activityType === 'question_answering' || hasQuestion) {
       systemPrompt = QUESTION_ANSWER_ASSISTANT_PROMPT;
+      // Use GPT-4o-mini for FAST real-time Q&A (much faster than GPT-4.1)
+      // GPT-4.1 takes 20-40s, GPT-4o-mini takes 1-3s
+      if (!model.includes('gpt-4')) {
+        activeModel = 'gpt-4o-mini';
+        console.log(`[${new Date().toISOString()}] Q&A mode, using ${activeModel} for faster responses`);
+      }
+    } else if (context.activityType === 'meeting') {
+      systemPrompt = MEETING_ASSISTANT_PROMPT;
     }
 
     // Replace placeholders
@@ -212,12 +226,12 @@ app.post("/prompt/v1/assist", async (req, res) => {
 
     // Prepare User Message (Text or Multimodal)
     let userContent: any = "Analyze the current context and provide assistance.";
-    let activeModel = model;
+    // NOTE: activeModel is already set above based on question detection
 
     if (context.image) {
       // Ensure we use a vision-capable model
-      if (activeModel.includes('gpt-3.5')) {
-        activeModel = 'gpt-4o';
+      if (activeModel.includes('gpt-3.5') || activeModel === 'gpt-4.1') {
+        activeModel = 'gpt-4o'; // Vision requires gpt-4o
       }
 
       const imageUrl = context.image.startsWith('data:')

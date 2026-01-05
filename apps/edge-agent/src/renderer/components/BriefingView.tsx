@@ -54,7 +54,7 @@ export function BriefingView({ onClose }: BriefingViewProps) {
   todayEnd.setHours(23, 59, 59, 999);
 
   // Only include actual calendar/meeting events, not system events
-  const calendarEventTypes = ['meeting', 'calendar', 'calendar_event'];
+  const calendarEventTypes = ['meeting', 'meeting_session', 'calendar', 'calendar_event'];
 
   const upcomingMeetings = events
     .filter(event => {

@@ -30,6 +30,7 @@ export type TaskPriority = z.infer<typeof TaskPriority>;
 // Schema with defaults for runtime validation
 export const TaskSchema = z.object({
   id: z.string().uuid().optional(),
+  user_id: z.string().default('user'),
   title: z.string(),
   description: z.string().optional(),
   status: TaskStatus.default('pending'),
@@ -70,6 +71,7 @@ export class TaskModel extends BaseModel<Task, TaskInput, TaskUpdate> {
     // Ensure required fields have default values
     const taskData: TaskInput = {
       ...data,
+      user_id: data.user_id || 'user',
       status: data.status || 'pending',
       priority: data.priority || 'medium',
       metadata: data.metadata || {},
@@ -84,6 +86,7 @@ export class TaskModel extends BaseModel<Task, TaskInput, TaskUpdate> {
         tx.run(
           `CREATE (t:Task {
             id: $id,
+            user_id: $userId,
             title: $title,
             status: $status,
             priority: $priority,
@@ -93,6 +96,7 @@ export class TaskModel extends BaseModel<Task, TaskInput, TaskUpdate> {
           })`,
           {
             id: task.id,
+            userId: task.user_id,
             title: task.title,
             status: task.status,
             priority: task.priority,

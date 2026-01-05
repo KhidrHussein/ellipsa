@@ -102,6 +102,7 @@ export function createEventsRouter(
         await Promise.all(
           eventData.tasks.map((task: any) =>
             taskModel.create({
+              user_id: userId,
               title: task.text || task.title || 'Untitled task',
               description: task.description,
               status: task.status || 'pending',

@@ -218,9 +218,12 @@ export function FloatingButton({
     return () => clearTimeout(timer);
   }, []);
 
+  const isLongPressTriggered = useRef(false);
+
   const handleMouseDown = (e: React.MouseEvent) => {
     isMouseDown.current = true;
     updateMouseFilter();
+    isLongPressTriggered.current = false;
 
     mouseButton.current = e.button;
     startY.current = e.clientY;
@@ -228,8 +231,9 @@ export function FloatingButton({
     // Only set up long press for left-click
     if (e.button === 0) {
       longPressTimer.current = setTimeout(() => {
+        isLongPressTriggered.current = true;
         onLongPress();
-      }, 500);
+      }, 1500); // 1.5 seconds for long press
     }
   };
 
@@ -243,8 +247,8 @@ export function FloatingButton({
       return;
     }
 
-    // Don't trigger click if we were dragging
-    if (isDragging) {
+    // Don't trigger click if we were dragging OR if long press triggered
+    if (isDragging || isLongPressTriggered.current) {
       return;
     }
 
@@ -418,22 +422,33 @@ export function FloatingButton({
         onMouseUp={handleMouseUp}
         onMouseMove={handleMouseMove}
         onContextMenu={handleContextMenu}
-        initial={{ scale: 1 }} /* DEBUG: Start visible */
-        animate={isObserving ? { scale: [1, 1.05, 1] } : { scale: 1 }}
+        initial={{ scale: 1 }}
+        animate={isObserving
+          ? {
+            scale: [1, 1.05, 1],
+            borderColor: ['rgba(239, 68, 68, 0)', 'rgba(239, 68, 68, 0.5)', 'rgba(239, 68, 68, 0)'],
+            boxShadow: ['0 0 0 0px rgba(239, 68, 68, 0)', '0 0 0 4px rgba(239, 68, 68, 0.3)', '0 0 0 0px rgba(239, 68, 68, 0)']
+          }
+          : {
+            scale: 1,
+            borderColor: 'rgba(0,0,0,0)',
+            boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)'
+          }
+        }
         transition={isObserving ? { repeat: Infinity, duration: 2 } : { type: 'spring', stiffness: 260, damping: 20 }}
         whileHover={{ scale: 1.05 }}
         whileTap={{ scale: 0.95 }}
         whileDrag={{ scale: 1.1 }}
       >
-        {/* Ellipsis Icon */}
+        {/* Ellipsis Icon or Observe Icon */}
         <div className="flex items-center gap-0.5">
-          <div className="w-1.5 h-1.5 rounded-full bg-current" />
-          <div className="w-1.5 h-1.5 rounded-full bg-current" />
-          <div className="w-1.5 h-1.5 rounded-full bg-current" />
+          <div className={`w-1.5 h-1.5 rounded-full transition-colors ${isObserving ? 'bg-red-500' : 'bg-current'}`} />
+          <div className={`w-1.5 h-1.5 rounded-full transition-colors ${isObserving ? 'bg-red-500' : 'bg-current'}`} />
+          <div className={`w-1.5 h-1.5 rounded-full transition-colors ${isObserving ? 'bg-red-500' : 'bg-current'}`} />
         </div>
 
         {/* Action Badge */}
-        {actionPending && actionCount > 0 && (
+        {actionPending && actionCount > 0 && !isObserving && (
           <motion.div
             className="absolute -top-1 -right-1 w-6 h-6 bg-blue-600 text-white rounded-full flex items-center justify-center text-xs"
             initial={{ scale: 0 }}
@@ -442,15 +457,6 @@ export function FloatingButton({
           >
             {actionCount}
           </motion.div>
-        )}
-
-        {/* Recording Indicator */}
-        {isObserving && (
-          <motion.div
-            className="absolute -top-1 -left-1 w-3 h-3 bg-red-500 rounded-full"
-            animate={{ opacity: [1, 0.3, 1] }}
-            transition={{ repeat: Infinity, duration: 1.5 }}
-          />
         )}
       </motion.button>
 

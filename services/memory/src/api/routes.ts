@@ -51,6 +51,7 @@ export function createRouter(
         await Promise.all(
           eventData.tasks.map((task: any) =>
             taskModel.create({
+              user_id: (req.headers['x-user-id'] as string) || 'user',
               title: task.text || task.title || 'Untitled task',
               description: task.description,
               status: task.status || 'pending',
